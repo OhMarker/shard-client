@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "shard",
+  "version": "${version}",
+  "name": "Shard",
+  "description": "Sharpen your crystal PvP. Legit HUD, visuals and performance tweaks for crystal PvP.",
+  "authors": ["Shard"],
+  "contact": {
+    "homepage": "https://github.com/OhMarker/shard-client",
+    "sources": "https://github.com/OhMarker/shard-client",
+    "issues": "https://github.com/OhMarker/shard-client/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/shard/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["gg.shard.client.ShardClient"],
+    "modmenu": ["gg.shard.client.compat.ShardModMenu"]
+  },
+  "mixins": ["shard.mixins.json"],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "sodium": "*",
+    "iris": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://github.com/OhMarker/shard-launcher"
+      }
+    }
+  }
+}

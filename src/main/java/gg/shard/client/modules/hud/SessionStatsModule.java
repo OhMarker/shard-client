@@ -1,0 +1,84 @@
+package gg.shard.client.modules.hud;
+
+import gg.shard.client.event.ShardEvents;
+import gg.shard.client.gui.Render2D;
+import gg.shard.client.gui.Theme;
+import gg.shard.client.hud.HudModule;
+import gg.shard.client.module.setting.BoolSetting;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Player;
+
+/** Pops given and taken, deaths and playtime since joining the server (vanilla-visible data only). */
+public final class SessionStatsModule extends HudModule {
+    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing", true));
+    private final BoolSetting playtime = add(new BoolSetting("Playtime", "Time since you joined", true));
+
+    private int popsTaken;
+    private int popsGiven;
+    private int deaths;
+    private long joinedAt = System.currentTimeMillis();
+    private boolean wasDead;
+
+    public SessionStatsModule() {
+        super("Session Stats", "Totems you popped, totems others popped near you, deaths and playtime.", 0.86, 0.30);
+        ShardEvents.onTotemPop(entity -> {
+            LocalPlayer p = mc().player;
+            if (p == null) return;
+            if (entity == p) popsTaken++;
+            else if (entity instanceof Player) popsGiven++;
+        });
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> reset());
+    }
+
+    public void reset() {
+        popsTaken = 0;
+        popsGiven = 0;
+        deaths = 0;
+        joinedAt = System.currentTimeMillis();
+    }
+
+    @Override
+    public void onTick() {
+        LocalPlayer p = mc().player;
+        if (p == null) return;
+        boolean dead = p.isDeadOrDying();
+        if (dead && !wasDead) deaths++;
+        wasDead = dead;
+    }
+
+    @Override
+    public void render(GuiGraphics g, DeltaTracker delta) {
+        String[] lines = {
+                "Pops taken  " + popsTaken,
+                "Pops seen  " + popsGiven,
+                "Deaths  " + deaths,
+                playtime.get() ? "Time  " + formatMs(System.currentTimeMillis() - joinedAt) : null
+        };
+        int w = 0;
+        int n = 0;
+        for (String l : lines) {
+            if (l == null) continue;
+            w = Math.max(w, font().width(l));
+            n++;
+        }
+        w += 8;
+        int h = n * 11 + 4;
+        if (background.get()) Render2D.rounded(g, 0, 0, w, h, 0x66000000);
+        int i = 0;
+        for (String l : lines) {
+            if (l == null) continue;
+            Render2D.text(g, font(), l, 4, 3 + i * 11, Theme.text(), true);
+            i++;
+        }
+        size(w, h);
+    }
+
+    static String formatMs(long ms) {
+        long s = ms / 1000;
+        if (s >= 3600) return String.format("%dh %02dm", s / 3600, (s % 3600) / 60);
+        return String.format("%dm %02ds", s / 60, s % 60);
+    }
+}

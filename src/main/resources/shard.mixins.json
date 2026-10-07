@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "gg.shard.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "LivingEntityMixin",
+    "GameRendererMixin",
+    "EndCrystalRendererMixin",
+    "ParticleEngineMixin",
+    "MinecraftMixin",
+    "ScreenEffectRendererMixin"
+  ],
+  "mixins": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,16 @@
+.gradle/
+build/
+out/
+run/
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+*.launch
+remappedSrc/
+*.log
+.smoke-server/
+smoke-out/
