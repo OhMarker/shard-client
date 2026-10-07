@@ -1,8 +1,11 @@
 package gg.shard.client.hud;
 
 import gg.shard.client.ShardClient;
+import gg.shard.client.dev.SmokeTest;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleManager;
+import gg.shard.client.modules.visual.CrosshairModule;
+import gg.shard.client.modules.visual.TotemPopModule;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -13,7 +16,7 @@ import org.joml.Matrix3x2fStack;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Draws every enabled HUD module through Fabric's HUD element registry. */
+/** Draws every enabled HUD module (plus the crosshair and totem flash) through Fabric's HUD registry. */
 public final class HudManager {
     public static final Identifier LAYER = Identifier.fromNamespaceAndPath(ShardClient.MOD_ID, "hud");
     private final ModuleManager modules;
@@ -33,12 +36,17 @@ public final class HudManager {
     }
 
     private void renderLayer(GuiGraphics g, DeltaTracker delta) {
+        SmokeTest.onFrame();
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.screen instanceof HudEditorScreen) return;
         for (HudModule m : hudModules()) {
             if (!m.isEnabled()) continue;
             if (m.needsPlayer() && mc.player == null) continue;
             renderOne(g, delta, m);
+        }
+        if (mc.player != null) {
+            modules.get(CrosshairModule.class).render(g);
+            modules.get(TotemPopModule.class).renderFlash(g);
         }
     }
 

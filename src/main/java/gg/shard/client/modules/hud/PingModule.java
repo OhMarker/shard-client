@@ -10,7 +10,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 
 public final class PingModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the text", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the text", true));
     private final BoolSetting colorize = add(new BoolSetting("Colour by latency", "Green under 60 ms, yellow under 150, red above", true));
 
     public PingModule() {
@@ -39,5 +39,10 @@ public final class PingModule extends HudModule {
         if (connection == null || HudModule.mc().player == null) return -1;
         PlayerInfo info = connection.getPlayerInfo(HudModule.mc().player.getUUID());
         return info == null ? -1 : info.getLatency();
+    }
+
+    @Override
+    public String icon() {
+        return "glyph:ping";
     }
 }

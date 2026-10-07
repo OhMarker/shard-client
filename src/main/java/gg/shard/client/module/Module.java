@@ -16,6 +16,11 @@ import java.util.function.Consumer;
  * A toggleable feature. Pure Java on purpose: modules declare settings and react to
  * enable/disable/tick; Minecraft-facing work happens in subclasses and mixins that consult
  * the module's state.
+ *
+ * <p>A module can be switched on by the user yet still be inactive: when another installed mod
+ * already provides the feature ({@link #blockedBy()}) or when the current server is on the
+ * module's blacklist ({@link #isSuppressed()}). {@link #isEnabled()} is the effective state that
+ * mixins and the HUD consult; {@link #isToggledOn()} is the user's intent shown by the switch.
  */
 public abstract class Module {
     private final String name;
@@ -24,6 +29,8 @@ public abstract class Module {
     private final List<Setting<?>> settings = new ArrayList<>();
     private boolean enabled;
     private int keybind = Keys.NONE;
+    private String blockedBy;
+    private boolean suppressed;
     private Consumer<Module> changeListener = m -> {};
 
     protected Module(String name, String description, ModuleCategory category) {
@@ -49,6 +56,23 @@ public abstract class Module {
         return category;
     }
 
+    /**
+     * Icon shown on the module card: {@code item:<minecraft item id>} for a vanilla item or
+     * {@code glyph:<name>} for one of Shard's built-in 16x16 glyphs. Null uses the category's
+     * glyph.
+     */
+    public String icon() {
+        return null;
+    }
+
+    /**
+     * Fabric mod ids that implement the same behaviour. When one is loaded this module stays
+     * inactive so nothing is applied twice; the settings screen explains why.
+     */
+    public List<String> conflictingMods() {
+        return List.of();
+    }
+
     public List<Setting<?>> settings() {
         return Collections.unmodifiableList(settings);
     }
@@ -64,16 +88,22 @@ public abstract class Module {
         return setting;
     }
 
+    /** Effective state: switched on, not shadowed by another mod, not blacklisted here. */
     public boolean isEnabled() {
+        return enabled && blockedBy == null && !suppressed;
+    }
+
+    /** What the user's switch says, regardless of mods or server rules. */
+    public boolean isToggledOn() {
         return enabled;
     }
 
     public void setEnabled(boolean value) {
         if (enabled == value) return;
+        boolean wasActive = isEnabled();
         enabled = value;
         try {
-            if (value) onEnable();
-            else onDisable();
+            transition(wasActive, isEnabled());
         } finally {
             changeListener.accept(this);
         }
@@ -81,6 +111,35 @@ public abstract class Module {
 
     public void toggle() {
         setEnabled(!enabled);
+    }
+
+    /** Name of the installed mod that shadows this module, or null. */
+    public String blockedBy() {
+        return blockedBy;
+    }
+
+    public void setBlockedBy(String modName) {
+        if (Objects.equals(blockedBy, modName)) return;
+        boolean wasActive = isEnabled();
+        blockedBy = modName;
+        transition(wasActive, isEnabled());
+    }
+
+    /** True while the current server's blacklist forces this module off. */
+    public boolean isSuppressed() {
+        return suppressed;
+    }
+
+    public void setSuppressed(boolean value) {
+        if (suppressed == value) return;
+        boolean wasActive = isEnabled();
+        suppressed = value;
+        transition(wasActive, isEnabled());
+    }
+
+    private void transition(boolean wasActive, boolean active) {
+        if (active && !wasActive) onEnable();
+        else if (!active && wasActive) onDisable();
     }
 
     public int keybind() {
@@ -134,6 +193,8 @@ public abstract class Module {
         if (in.has("settings") && in.get("settings").isJsonObject()) {
             for (Map.Entry<String, JsonElement> e : in.getAsJsonObject("settings").entrySet()) {
                 Setting<?> s = setting(e.getKey());
+                // 0.1.0 called every "Show background" switch "Background".
+                if (s == null && e.getKey().equals("background")) s = setting("show-background");
                 if (s != null) s.fromJson(e.getValue());
             }
         }

@@ -9,7 +9,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class CpsModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the text", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the text", true));
     private final BoolSetting right = add(new BoolSetting("Right button", "Also show right-click CPS", true));
 
     public CpsModule() {
@@ -28,5 +28,10 @@ public final class CpsModule extends HudModule {
         if (background.get()) Render2D.rounded(g, 0, 0, w, 12, 0x66000000);
         Render2D.text(g, font(), text, 3, 2, Theme.text(), true);
         size(w, 12);
+    }
+
+    @Override
+    public String icon() {
+        return "glyph:cps";
     }
 }

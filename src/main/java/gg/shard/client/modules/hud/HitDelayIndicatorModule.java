@@ -41,4 +41,9 @@ public final class HitDelayIndicatorModule extends HudModule {
         if (!(ready && hideWhenReady.get())) Render2D.bar(g, 0, 0, w, h, strength, ready ? Theme.success() : Theme.accent());
         size(w, h);
     }
+
+    @Override
+    public String icon() {
+        return "item:netherite_sword";
+    }
 }

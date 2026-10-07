@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public final class TotemCounterModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the counter", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the counter", true));
     private final BoolSetting pops = add(new BoolSetting("Pop count", "Show how many totems you have popped this session", true));
     private final BoolSetting flash = add(new BoolSetting("Flash on pop", "Briefly highlight the counter when you pop", true));
 
@@ -69,5 +69,15 @@ public final class TotemCounterModule extends HudModule {
             if (s.is(Items.TOTEM_OF_UNDYING)) n += s.getCount();
         }
         return n;
+    }
+
+    @Override
+    public String icon() {
+        return "item:totem_of_undying";
+    }
+
+    @Override
+    public java.util.List<String> conflictingMods() {
+        return java.util.List.of("totemcounter");
     }
 }

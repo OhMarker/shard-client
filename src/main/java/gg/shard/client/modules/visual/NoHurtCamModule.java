@@ -13,4 +13,14 @@ public final class NoHurtCamModule extends Module {
     public boolean defaultEnabled() {
         return true;
     }
+
+    @Override
+    public String icon() {
+        return "glyph:camera";
+    }
+
+    @Override
+    public java.util.List<String> conflictingMods() {
+        return java.util.List.of("betterhurtcam");
+    }
 }

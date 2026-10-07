@@ -67,4 +67,9 @@ public final class KeystrokesModule extends HudModule {
             Render2D.textCentered(g, font(), label, x + w / 2, y + (h - 8) / 2, color, false);
         }
     }
+
+    @Override
+    public String icon() {
+        return "glyph:keys";
+    }
 }

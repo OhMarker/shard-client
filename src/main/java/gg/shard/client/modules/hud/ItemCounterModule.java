@@ -22,15 +22,15 @@ public final class ItemCounterModule extends HudModule {
 
     private final EnumSetting<Layout> layout = add(new EnumSetting<>("Layout", "Row or column", Layout.ROW));
     private final BoolSetting hideEmpty = add(new BoolSetting("Hide empty", "Skip items you have none of", false));
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing", true));
-    private final BoolSetting crystals = add(new BoolSetting("Crystals", "", true));
-    private final BoolSetting obsidian = add(new BoolSetting("Obsidian", "", true));
-    private final BoolSetting totems = add(new BoolSetting("Totems", "", true));
-    private final BoolSetting gapples = add(new BoolSetting("Gapples", "Enchanted golden apples", true));
-    private final BoolSetting anchors = add(new BoolSetting("Anchors", "Respawn anchors", true));
-    private final BoolSetting glowstone = add(new BoolSetting("Glowstone", "", true));
-    private final BoolSetting pearls = add(new BoolSetting("Pearls", "", true));
-    private final BoolSetting xp = add(new BoolSetting("XP bottles", "", false));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing", true));
+    private final BoolSetting crystals = add(new BoolSetting("Crystals", "", true).group("Items"));
+    private final BoolSetting obsidian = add(new BoolSetting("Obsidian", "", true).group("Items"));
+    private final BoolSetting totems = add(new BoolSetting("Totems", "", true).group("Items"));
+    private final BoolSetting gapples = add(new BoolSetting("Gapples", "Enchanted golden apples", true).group("Items"));
+    private final BoolSetting anchors = add(new BoolSetting("Anchors", "Respawn anchors", true).group("Items"));
+    private final BoolSetting glowstone = add(new BoolSetting("Glowstone", "", true).group("Items"));
+    private final BoolSetting pearls = add(new BoolSetting("Pearls", "", true).group("Items"));
+    private final BoolSetting xp = add(new BoolSetting("XP bottles", "", false).group("Items"));
 
     public ItemCounterModule() {
         super("Item Counter", "How much of your crystal kit you have left.", 0.30, 0.80);
@@ -91,5 +91,10 @@ public final class ItemCounterModule extends HudModule {
             if (s.is(item)) n += s.getCount();
         }
         return n;
+    }
+
+    @Override
+    public String icon() {
+        return "item:end_crystal";
     }
 }

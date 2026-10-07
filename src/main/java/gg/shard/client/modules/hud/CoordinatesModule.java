@@ -12,7 +12,7 @@ import net.minecraft.core.Direction;
 import java.util.Locale;
 
 public final class CoordinatesModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the text", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the text", true));
     private final BoolSetting direction = add(new BoolSetting("Direction", "Show the facing direction", true));
     private final BoolSetting decimals = add(new BoolSetting("Decimals", "One decimal place instead of block coordinates", false));
 
@@ -49,5 +49,10 @@ public final class CoordinatesModule extends HudModule {
             case WEST -> "W (-X)";
             default -> String.format(Locale.ROOT, "%.0f°", yaw);
         };
+    }
+
+    @Override
+    public String icon() {
+        return "item:compass";
     }
 }

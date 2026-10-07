@@ -8,13 +8,14 @@ import java.util.function.Supplier;
 
 /**
  * A typed, persisted, GUI-driven module option. Adding a setting field to a module is all it
- * takes to get a widget in the click GUI, a line in the config file and a chat command.
+ * takes to get a row in the settings screen, a line in the config file and a chat command.
  */
 public abstract class Setting<T> {
     private final String name;
     private final String description;
     private final T defaultValue;
     private T value;
+    private String group = "";
     private Consumer<T> onChange = v -> {};
     private Supplier<Boolean> visible = () -> true;
 
@@ -36,6 +37,18 @@ public abstract class Setting<T> {
 
     public String description() {
         return description;
+    }
+
+    /** Optional heading the settings screen shows above this setting and its neighbours. */
+    public String group() {
+        return group;
+    }
+
+    /** Returns this setting typed as the caller's subclass so {@code add(new X(...).group(..))} infers X. */
+    @SuppressWarnings("unchecked")
+    public <S extends Setting<T>> S group(String label) {
+        this.group = label == null ? "" : label;
+        return (S) this;
     }
 
     public T get() {

@@ -7,6 +7,8 @@ import gg.shard.client.hud.HudManager;
 import gg.shard.client.input.Keybinds;
 import gg.shard.client.launcher.LauncherInfo;
 import gg.shard.client.module.ModuleManager;
+import gg.shard.client.modules.combat.AnchorOptimizerModule;
+import gg.shard.client.modules.combat.CrystalOptimizerModule;
 import gg.shard.client.modules.combat.ToggleSprintModule;
 import gg.shard.client.modules.hud.ArmorStatusModule;
 import gg.shard.client.modules.hud.ClockModule;
@@ -22,15 +24,24 @@ import gg.shard.client.modules.hud.PotionEffectsModule;
 import gg.shard.client.modules.hud.ServerAddressModule;
 import gg.shard.client.modules.hud.SessionStatsModule;
 import gg.shard.client.modules.hud.TotemCounterModule;
-import gg.shard.client.modules.perf.TotemAnimationModule;
+import gg.shard.client.modules.perf.ExplosionOptimizerModule;
+import gg.shard.client.modules.visual.CrosshairModule;
 import gg.shard.client.modules.visual.CrystalTweaksModule;
+import gg.shard.client.modules.visual.DeathAnimationModule;
+import gg.shard.client.modules.visual.FullbrightModule;
+import gg.shard.client.modules.visual.HitColorModule;
+import gg.shard.client.modules.visual.HitboxModule;
+import gg.shard.client.modules.visual.LowFireModule;
+import gg.shard.client.modules.visual.LowShieldModule;
+import gg.shard.client.modules.visual.NametagsModule;
 import gg.shard.client.modules.visual.NoHurtCamModule;
-import gg.shard.client.modules.visual.ParticleMultiplierModule;
-import gg.shard.client.modules.visual.PopMessagesModule;
+import gg.shard.client.modules.visual.TotemPopModule;
 import gg.shard.client.modules.visual.ZoomModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.multiplayer.ServerData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +73,16 @@ public final class ShardClient implements ClientModInitializer {
         modules.onTick(config::flushIfDirty);
         config.load();
 
+        // Modules whose feature another installed mod already provides stay off, with a notice.
+        for (String notice : modules.applyModConflicts(ShardClient::modNameIfLoaded)) LOGGER.info(notice);
+
+        // Per-server rules follow the connection.
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            ServerData data = handler.getServerData();
+            modules.setCurrentServer(data == null ? null : data.ip);
+        });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> modules.setCurrentServer(null));
+
         hud = new HudManager(modules);
         hud.start();
         modules.start();
@@ -72,6 +93,10 @@ public final class ShardClient implements ClientModInitializer {
         ready = true;
         LOGGER.info("Shard ready: {} modules", modules.all().size());
         gg.shard.client.dev.SmokeTest.init();
+    }
+
+    private static String modNameIfLoaded(String id) {
+        return FabricLoader.getInstance().getModContainer(id).map(c -> c.getMetadata().getName()).orElse(null);
     }
 
     private static void registerModules(ModuleManager m) {
@@ -91,15 +116,24 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new MemoryModule());
         m.register(new HitDelayIndicatorModule());
         // Visuals
+        m.register(new TotemPopModule());
         m.register(new NoHurtCamModule());
-        m.register(new ParticleMultiplierModule());
         m.register(new CrystalTweaksModule());
+        m.register(new DeathAnimationModule());
+        m.register(new HitColorModule());
+        m.register(new LowFireModule());
+        m.register(new LowShieldModule());
+        m.register(new FullbrightModule());
+        m.register(new HitboxModule());
+        m.register(new NametagsModule());
+        m.register(new CrosshairModule());
         m.register(new ZoomModule());
-        m.register(new PopMessagesModule());
         // Combat QoL
+        m.register(new CrystalOptimizerModule());
+        m.register(new AnchorOptimizerModule());
         m.register(new ToggleSprintModule());
         // Performance
-        m.register(new TotemAnimationModule());
+        m.register(new ExplosionOptimizerModule());
     }
 
     /** True once modules and config exist; mixins check this because they can run very early. */

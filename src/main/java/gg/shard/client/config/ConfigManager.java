@@ -8,6 +8,7 @@ import com.google.gson.JsonParser;
 import gg.shard.client.ShardClient;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleManager;
+import gg.shard.client.server.ServerBlacklist;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,15 +17,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * JSON persistence for modules, HUD layout and GUI panel positions. Writes are atomic
+ * JSON persistence for modules, HUD layout, server rules and GUI state. Writes are atomic
  * (temp file + move) and debounced: callers mark dirty, the tick loop flushes.
  */
 public final class ConfigManager {
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     private final Path dir;
@@ -46,7 +46,7 @@ public final class ConfigManager {
         return dir;
     }
 
-    /** Opaque GUI state (panel positions) owned by the click GUI. */
+    /** Opaque GUI state (last category, panel widths) owned by the settings screen. */
     public JsonObject gui() {
         return gui;
     }
@@ -109,9 +109,20 @@ public final class ConfigManager {
         return true;
     }
 
+    public boolean deleteProfile(String name) {
+        String safe = safeName(name);
+        if (safe == null) return false;
+        try {
+            return Files.deleteIfExists(profilesDir.resolve(safe + ".json"));
+        } catch (IOException e) {
+            ShardClient.LOGGER.warn("Could not delete profile {}", safe, e);
+            return false;
+        }
+    }
+
     /** Letters, digits, '-' and '_' only; anything else is rejected rather than silently renamed. */
-    private static String safeName(String name) {
-        String s = name.trim();
+    public static String safeName(String name) {
+        String s = name == null ? "" : name.trim();
         return s.matches("[A-Za-z0-9_-]{1,32}") ? s : null;
     }
 
@@ -143,6 +154,7 @@ public final class ConfigManager {
             else m.setEnabled(m.defaultEnabled());
         }
         gui = root.has("gui") && root.get("gui").isJsonObject() ? root.getAsJsonObject("gui") : new JsonObject();
+        modules.setBlacklist(ServerBlacklist.fromJson(root.get("servers")));
     }
 
     private void writeTo(Path path) throws IOException {
@@ -151,6 +163,7 @@ public final class ConfigManager {
         JsonObject moduleStates = new JsonObject();
         for (Module m : modules.all()) moduleStates.add(m.key(), m.save());
         root.add("modules", moduleStates);
+        root.add("servers", modules.blacklist().toJson());
         root.add("gui", gui);
         Files.createDirectories(path.getParent());
         Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
@@ -175,10 +188,5 @@ public final class ConfigManager {
         JsonObject out = new JsonObject();
         for (Module m : modules.all()) out.add(m.key(), m.save());
         return out;
-    }
-
-    @SuppressWarnings("unused")
-    private static void debugDump(Map<String, JsonElement> values) {
-        values.forEach((k, v) -> ShardClient.LOGGER.debug("{} = {}", k, v));
     }
 }

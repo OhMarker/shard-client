@@ -108,6 +108,33 @@ public final class Colors {
         return argb(255, (int) Math.round((r + m) * 255), (int) Math.round((g + m) * 255), (int) Math.round((bl + m) * 255));
     }
 
+    /**
+     * ARGB -> {hue, saturation, brightness}, each 0..1 (alpha ignored). Hue of a grey is 0.
+     * Inverse of {@link #hsb}: the colour picker edits these three numbers.
+     */
+    public static double[] toHsb(int argb) {
+        double r = red(argb) / 255.0;
+        double g = green(argb) / 255.0;
+        double b = blue(argb) / 255.0;
+        double max = Math.max(r, Math.max(g, b));
+        double min = Math.min(r, Math.min(g, b));
+        double delta = max - min;
+        double h;
+        if (delta == 0) h = 0;
+        else if (max == r) h = ((g - b) / delta) % 6;
+        else if (max == g) h = (b - r) / delta + 2;
+        else h = (r - g) / delta + 4;
+        h /= 6;
+        if (h < 0) h += 1;
+        double s = max == 0 ? 0 : delta / max;
+        return new double[]{h, s, max};
+    }
+
+    /** HSB plus alpha (0..255) -> ARGB. */
+    public static int hsba(double h, double s, double b, int alpha) {
+        return withAlpha(hsb(h, s, b), alpha);
+    }
+
     /** Health-style gradient: green at 1.0, yellow mid, red at 0. */
     public static int health(double fraction) {
         fraction = Math.max(0, Math.min(1, fraction));

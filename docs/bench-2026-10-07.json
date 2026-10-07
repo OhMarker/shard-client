@@ -1,0 +1,150 @@
+{
+  "runs": [
+    {
+      "run": 1,
+      "optimizer": "off",
+      "crystals": 100,
+      "frames": 197,
+      "avgMs": 14.86,
+      "avgFps": 67.28,
+      "p99Ms": 59.2,
+      "onePercentLowFps": 16.89,
+      "worstMs": 62.96
+    },
+    {
+      "run": 2,
+      "optimizer": "on",
+      "crystals": 100,
+      "frames": 187,
+      "avgMs": 15.94,
+      "avgFps": 62.74,
+      "p99Ms": 42.24,
+      "onePercentLowFps": 23.68,
+      "worstMs": 46.13
+    },
+    {
+      "run": 3,
+      "optimizer": "off",
+      "crystals": 100,
+      "frames": 151,
+      "avgMs": 19.77,
+      "avgFps": 50.59,
+      "p99Ms": 71.95,
+      "onePercentLowFps": 13.9,
+      "worstMs": 81.06
+    },
+    {
+      "run": 4,
+      "optimizer": "on",
+      "crystals": 100,
+      "frames": 170,
+      "avgMs": 17.63,
+      "avgFps": 56.71,
+      "p99Ms": 50.13,
+      "onePercentLowFps": 19.95,
+      "worstMs": 58.83
+    },
+    {
+      "run": 5,
+      "optimizer": "off",
+      "crystals": 100,
+      "frames": 140,
+      "avgMs": 21.38,
+      "avgFps": 46.78,
+      "p99Ms": 83.07,
+      "onePercentLowFps": 12.04,
+      "worstMs": 89.61
+    },
+    {
+      "run": 6,
+      "optimizer": "on",
+      "crystals": 100,
+      "frames": 179,
+      "avgMs": 16.63,
+      "avgFps": 60.14,
+      "p99Ms": 51.94,
+      "onePercentLowFps": 19.25,
+      "worstMs": 56.48
+    },
+    {
+      "run": 7,
+      "optimizer": "off",
+      "crystals": 100,
+      "frames": 156,
+      "avgMs": 19.13,
+      "avgFps": 52.26,
+      "p99Ms": 66.0,
+      "onePercentLowFps": 15.15,
+      "worstMs": 66.09
+    },
+    {
+      "run": 8,
+      "optimizer": "on",
+      "crystals": 100,
+      "frames": 120,
+      "avgMs": 24.72,
+      "avgFps": 40.46,
+      "p99Ms": 70.28,
+      "onePercentLowFps": 14.23,
+      "worstMs": 78.72
+    },
+    {
+      "run": 9,
+      "optimizer": "off",
+      "crystals": 100,
+      "frames": 149,
+      "avgMs": 19.98,
+      "avgFps": 50.06,
+      "p99Ms": 71.28,
+      "onePercentLowFps": 14.03,
+      "worstMs": 79.28
+    },
+    {
+      "run": 10,
+      "optimizer": "on",
+      "crystals": 100,
+      "frames": 143,
+      "avgMs": 20.68,
+      "avgFps": 48.35,
+      "p99Ms": 61.47,
+      "onePercentLowFps": 16.27,
+      "worstMs": 97.35
+    },
+    {
+      "run": 11,
+      "optimizer": "off",
+      "crystals": 100,
+      "frames": 131,
+      "avgMs": 22.67,
+      "avgFps": 44.1,
+      "p99Ms": 72.98,
+      "onePercentLowFps": 13.7,
+      "worstMs": 97.17
+    },
+    {
+      "run": 12,
+      "optimizer": "on",
+      "crystals": 100,
+      "frames": 126,
+      "avgMs": 23.3,
+      "avgFps": 42.91,
+      "p99Ms": 83.0,
+      "onePercentLowFps": 12.05,
+      "worstMs": 86.52
+    }
+  ],
+  "summary": {
+    "on": {
+      "runs": 6,
+      "avgFps": 51.89,
+      "onePercentLowFps": 17.57,
+      "worstMs": 70.67
+    },
+    "off": {
+      "runs": 6,
+      "avgFps": 51.85,
+      "onePercentLowFps": 14.28,
+      "worstMs": 79.36
+    }
+  }
+}

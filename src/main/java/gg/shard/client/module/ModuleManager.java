@@ -2,6 +2,7 @@ package gg.shard.client.module;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gg.shard.client.ShardClient;
+import gg.shard.client.server.ServerBlacklist;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 
@@ -12,12 +13,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-/** Registry of modules plus the tick and keybind dispatch loop. */
+/** Registry of modules plus the tick and keybind dispatch loop, server rules and mod conflicts. */
 public final class ModuleManager {
+    /** Answers "is this Fabric mod loaded, and what is it called?"; null when it is not. */
+    public interface ModResolver {
+        String nameIfLoaded(String modId);
+    }
+
     private final List<Module> modules = new ArrayList<>();
     private final Set<Integer> heldKeys = new HashSet<>();
     private final List<Runnable> tickListeners = new ArrayList<>();
     private Consumer<Module> changeListener = m -> {};
+    private ServerBlacklist blacklist = new ServerBlacklist();
+    private String currentServer;
 
     public void register(Module module) {
         if (find(module.key()) != null) throw new IllegalStateException("Duplicate module " + module.key());
@@ -59,6 +67,63 @@ public final class ModuleManager {
         for (Module m : modules) if (type.isInstance(m)) return type.cast(m);
         throw new IllegalStateException("Module not registered: " + type.getSimpleName());
     }
+
+    // ---- mod conflicts ------------------------------------------------------------------------
+
+    /** Marks every module whose feature another installed mod already provides. */
+    public List<String> applyModConflicts(ModResolver resolver) {
+        List<String> notices = new ArrayList<>();
+        for (Module m : modules) {
+            String blocker = null;
+            for (String id : m.conflictingMods()) {
+                String name = resolver.nameIfLoaded(id);
+                if (name != null) {
+                    blocker = name;
+                    break;
+                }
+            }
+            m.setBlockedBy(blocker);
+            if (blocker != null) notices.add(m.name() + " stays off because " + blocker + " is installed");
+        }
+        return notices;
+    }
+
+    // ---- server blacklist ---------------------------------------------------------------------
+
+    public ServerBlacklist blacklist() {
+        return blacklist;
+    }
+
+    public void setBlacklist(ServerBlacklist list) {
+        this.blacklist = list == null ? new ServerBlacklist() : list;
+        refreshSuppression();
+    }
+
+    /** The multiplayer address the client is connected to, or null (menu, singleplayer). */
+    public String currentServer() {
+        return currentServer;
+    }
+
+    public void setCurrentServer(String address) {
+        this.currentServer = address == null || address.isBlank() ? null : address;
+        refreshSuppression();
+    }
+
+    /** Re-evaluates which modules the current server forces off. */
+    public void refreshSuppression() {
+        Set<String> off = currentServer == null ? Set.of() : blacklist.modulesFor(currentServer);
+        for (Module m : modules) m.setSuppressed(off.contains(m.key()));
+    }
+
+    /** Toggles a module on the current server's rule and applies it immediately. */
+    public void setDisabledOnCurrentServer(Module module, boolean disabled) {
+        if (currentServer == null) return;
+        blacklist.setDisabled(currentServer, module.key(), disabled);
+        refreshSuppression();
+        changeListener.accept(module);
+    }
+
+    // ---- tick loop ----------------------------------------------------------------------------
 
     public void start() {
         ClientTickEvents.END_CLIENT_TICK.register(this::tick);

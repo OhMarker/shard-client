@@ -13,7 +13,7 @@ import net.minecraft.world.entity.player.Player;
 
 /** Pops given and taken, deaths and playtime since joining the server (vanilla-visible data only). */
 public final class SessionStatsModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing", true));
     private final BoolSetting playtime = add(new BoolSetting("Playtime", "Time since you joined", true));
 
     private int popsTaken;
@@ -80,5 +80,10 @@ public final class SessionStatsModule extends HudModule {
         long s = ms / 1000;
         if (s >= 3600) return String.format("%dh %02dm", s / 3600, (s % 3600) / 60);
         return String.format("%dm %02ds", s / 60, s % 60);
+    }
+
+    @Override
+    public String icon() {
+        return "glyph:stats";
     }
 }

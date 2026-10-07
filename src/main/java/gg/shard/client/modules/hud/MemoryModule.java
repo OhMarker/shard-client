@@ -8,7 +8,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class MemoryModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing", true));
     private final BoolSetting bar = add(new BoolSetting("Bar", "Show a usage bar under the text", true));
 
     private long lastSampleMs;
@@ -41,5 +41,10 @@ public final class MemoryModule extends HudModule {
         Render2D.text(g, font(), text, 3, 2, percent > 85 ? Theme.warning() : Theme.text(), true);
         if (bar.get()) Render2D.bar(g, 3, 12, w - 6, 2, percent / 100.0, percent > 85 ? Theme.warning() : Theme.accent());
         size(w, h);
+    }
+
+    @Override
+    public String icon() {
+        return "glyph:memory";
     }
 }

@@ -9,7 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ServerData;
 
 public final class ServerAddressModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the text", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the text", true));
 
     public ServerAddressModule() {
         super("Server Address", "The server you are connected to.", 0.01, 0.18);
@@ -23,5 +23,10 @@ public final class ServerAddressModule extends HudModule {
         if (background.get()) Render2D.rounded(g, 0, 0, w, 12, 0x66000000);
         Render2D.text(g, font(), text, 3, 2, Theme.muted(), true);
         size(w, 12);
+    }
+
+    @Override
+    public String icon() {
+        return "glyph:server";
     }
 }

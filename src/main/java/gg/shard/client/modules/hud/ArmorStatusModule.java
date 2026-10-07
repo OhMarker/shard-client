@@ -23,7 +23,7 @@ public final class ArmorStatusModule extends HudModule {
     private final BoolSetting hands = add(new BoolSetting("Held items", "Include main hand and offhand", true));
     private final BoolSetting percent = add(new BoolSetting("Percent", "Show durability as a percentage instead of points", false));
     private final IntSetting warnAt = add(new IntSetting("Warn below", "Turn red under this durability percentage", 20, 5, 60, 5, "%"));
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the items", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the items", true));
 
     public ArmorStatusModule() {
         super("Armor Status", "Durability of your armor and held items, with a low-durability warning.", 0.01, 0.40);
@@ -75,5 +75,10 @@ public final class ArmorStatusModule extends HudModule {
             i++;
         }
         size(w, h);
+    }
+
+    @Override
+    public String icon() {
+        return "item:diamond_chestplate";
     }
 }

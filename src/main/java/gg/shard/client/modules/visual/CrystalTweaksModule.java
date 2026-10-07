@@ -20,4 +20,9 @@ public final class CrystalTweaksModule extends Module {
     public float renderScale() {
         return isEnabled() ? scale.getFloat() : 1f;
     }
+
+    @Override
+    public String icon() {
+        return "item:end_crystal";
+    }
 }

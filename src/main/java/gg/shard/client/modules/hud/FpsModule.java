@@ -9,7 +9,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class FpsModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the text", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the text", true));
     private final BoolSetting label = add(new BoolSetting("Label", "Show the FPS prefix", true));
     private final ColorSetting color = add(new ColorSetting("Color", "Text colour", 0xFFE8ECF4));
 
@@ -39,5 +39,10 @@ public final class FpsModule extends HudModule {
 
     static int accentOrText(boolean accent) {
         return accent ? Theme.accent() : Theme.text();
+    }
+
+    @Override
+    public String icon() {
+        return "glyph:fps";
     }
 }

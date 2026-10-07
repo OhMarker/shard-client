@@ -64,6 +64,8 @@ loom {
             ideConfigGenerated(true)
             runDir = "run"
             programArgs("--width", "1280", "--height", "720")
+            // Fixed dev username so the offline smoke server can op it (see .smoke-server/ops.json).
+            programArgs("--username", "ShardSmoke")
             // Verification hooks: -PquickPlay=host:port joins a server on start;
             // -PsmokeDir=<dir> makes the dev-only SmokeTest screenshot the HUD/GUI and quit.
             if (project.hasProperty("quickPlay")) {
@@ -74,6 +76,10 @@ loom {
             }
             if (project.hasProperty("smokeDir")) {
                 vmArgs("-Dshard.smoke.dir=" + project.property("smokeDir").toString())
+            }
+            // -PsmokeBench runs the BENCHMARKS.md scenario instead of the screenshot pass.
+            if (project.hasProperty("smokeBench")) {
+                vmArgs("-Dshard.smoke.bench=1")
             }
         }
     }

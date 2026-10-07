@@ -1,20 +1,27 @@
 package gg.shard.client.mixin;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import gg.shard.client.ShardClient;
-import gg.shard.client.modules.perf.TotemAnimationModule;
+import gg.shard.client.modules.visual.LowFireModule;
 import net.minecraft.client.renderer.ScreenEffectRenderer;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-/** Optional removal of the full-screen totem pop animation (a measurable frame-time spike). */
+/**
+ * Low Fire: vanilla's renderFire translates each flame quad by (±0.24, -0.3, 0) and colours it
+ * with alpha 0.9; both constants are adjusted here. Both hooks are optional so a vanilla change
+ * degrades the feature instead of crashing.
+ */
 @Mixin(ScreenEffectRenderer.class)
 abstract class ScreenEffectRendererMixin {
-    @Inject(method = "renderItemActivationAnimation", at = @At("HEAD"), cancellable = true, require = 0)
-    private void shard$hideTotemAnimation(PoseStack poseStack, float partialTick, SubmitNodeCollector collector, CallbackInfo ci) {
-        if (ShardClient.isReady() && ShardClient.modules().get(TotemAnimationModule.class).hideAnimation()) ci.cancel();
+    @ModifyArg(method = "renderFire", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(FFF)V"), index = 1, require = 0)
+    private static float shard$fireHeight(float y) {
+        return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).fireY(y) : y;
+    }
+
+    @ModifyArg(method = "renderFire", at = @At(value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/vertex/VertexConsumer;setColor(FFFF)Lcom/mojang/blaze3d/vertex/VertexConsumer;"), index = 3, require = 0)
+    private static float shard$fireAlpha(float alpha) {
+        return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).fireAlpha(alpha) : alpha;
     }
 }

@@ -40,4 +40,14 @@ public final class ZoomModule extends Module {
         } else current = target;
         return fov * current;
     }
+
+    @Override
+    public String icon() {
+        return "item:spyglass";
+    }
+
+    @Override
+    public java.util.List<String> conflictingMods() {
+        return java.util.List.of("wi_zoom");
+    }
 }

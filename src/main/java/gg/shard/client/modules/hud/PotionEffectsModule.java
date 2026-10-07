@@ -14,7 +14,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class PotionEffectsModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Background", "Dark backing behind the list", true));
+    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the list", true));
     private final BoolSetting hideAmbient = add(new BoolSetting("Hide beacon effects", "Skip ambient effects from beacons and conduits", false));
     private final BoolSetting blink = add(new BoolSetting("Blink when ending", "Flash effects with under 5 seconds left", true));
 
@@ -79,5 +79,10 @@ public final class PotionEffectsModule extends HudModule {
             case 5 -> "V";
             default -> String.valueOf(n);
         };
+    }
+
+    @Override
+    public String icon() {
+        return "item:potion";
     }
 }

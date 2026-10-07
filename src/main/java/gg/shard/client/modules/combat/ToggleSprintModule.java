@@ -48,4 +48,14 @@ public final class ToggleSprintModule extends HudModule {
         Render2D.text(g, font(), text, 0, 0, Theme.muted(), true);
         size(font().width(text), 10);
     }
+
+    @Override
+    public String icon() {
+        return "glyph:sprint";
+    }
+
+    @Override
+    public java.util.List<String> conflictingMods() {
+        return java.util.List.of("sprintbydefault");
+    }
 }
