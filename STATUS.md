@@ -24,8 +24,11 @@ Last updated 2026-10-07 (0.3.0).
   ../meta/shard-manifest.json lists 0.3.0 as latest (committed locally in meta).
 - Mojang approved the launcher's Azure app on 2026-10-07 (owner's report), so Microsoft sign-in
   in the launcher should work; see the launcher's STATUS.md.
-- Git: committed locally on `main`; NOT pushed. Claude's sandbox is not allowed to create public
-  repositories, so the owner runs the publish steps below.
+- Published 2026-10-08: https://github.com/OhMarker/shard-client with releases v0.2.0 and v0.3.0
+  (downloaded jars match the local sha512s), and https://github.com/OhMarker/meta serves the
+  manifest with `latest` 0.3.0. The owner ran the steps below via a Desktop script because
+  Claude's sandbox may not create public repositories or releases; pushing to the existing
+  repos works.
 
 ## Publish (owner runs once, from this folder)
 
