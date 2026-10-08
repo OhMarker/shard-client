@@ -7,6 +7,7 @@
     "ClientPacketListenerMixin",
     "EndCrystalRendererMixin",
     "EntityRendererMixin",
+    "FlameFeatureRendererMixin",
     "FontTextureMixin",
     "GameRendererMixin",
     "GuiMixin",

@@ -84,6 +84,7 @@ public final class ShardClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> modules.setCurrentServer(null));
 
         hud = new HudManager(modules);
+        gg.shard.client.render.LowFireModels.init();
         hud.start();
         modules.start();
         Keybinds.init();

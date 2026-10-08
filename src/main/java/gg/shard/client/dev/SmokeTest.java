@@ -144,6 +144,12 @@ public final class SmokeTest {
             Benchmark.tick(mc, ticksInWorld);
             return;
         }
+        if (ticksInWorld == 2) {
+            // A previous run may have left the player dead or in another game mode; start from a known spot.
+            if (mc.player.isDeadOrDying()) mc.player.respawn();
+            mc.player.connection.sendCommand("gamemode creative");
+            mc.player.connection.sendCommand("tp @s -5 -22 2 180 30");
+        }
         if (ticksInWorld == 5) quietHud(mc);
         if (ticksInWorld < 10) return;
         int t = ticksInWorld - 10;
@@ -164,6 +170,11 @@ public final class SmokeTest {
             return;
         }
         after -= EDITOR_TICKS;
+        if (after < FIRE_TICKS) {
+            fireBlock(mc, after);
+            return;
+        }
+        after -= FIRE_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -329,6 +340,78 @@ public final class SmokeTest {
             default -> {
             }
         }
+    }
+
+    private static final int FIRE_TICKS = 200;
+
+    private static void cmd(Minecraft mc, String format, Object... args) {
+        if (mc.player != null) mc.player.connection.sendCommand(String.format(java.util.Locale.ROOT, format, args));
+    }
+
+    private static Module module(String key) {
+        for (var m : ShardClient.modules().all()) if (m.key().equals(key)) return m;
+        throw new IllegalStateException("no module " + key);
+    }
+
+    /** Low Fire: fire and soul fire on the ground, a burning zombie and a burning player; off, on, tinted, and the preview. */
+    private static void fireBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Direction dir = p.getDirection();
+        BlockPos base = p.blockPosition();
+        BlockPos fire = base.relative(dir, 3).below(base.getY() - groundY(mc, base));
+        BlockPos soul = fire.relative(dir.getClockWise());
+        BlockPos fire2 = fire.relative(dir.getCounterClockWise());
+        BlockPos mob = fire.relative(dir, 2).relative(dir.getCounterClockWise(), 2);
+        switch (local) {
+            case 0 -> {
+                mc.setScreen(null);
+                setScale(mc, 2);
+                cmd(mc, "setblock %d %d %d minecraft:soul_sand", soul.getX(), soul.getY() - 1, soul.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:fire", fire.getX(), fire.getY(), fire.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:fire", fire2.getX(), fire2.getY(), fire2.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:soul_fire", soul.getX(), soul.getY(), soul.getZ());
+                cmd(mc, "difficulty easy");
+                cmd(mc, "gamerule doFireTick false");
+                cmd(mc, "summon minecraft:zombie %d %d %d {Fire:2000s,NoAI:1b,Silent:1b,PersistenceRequired:1b}", mob.getX(), mob.getY(), mob.getZ());
+                // Look at the fire.
+                p.setXRot(32f);
+                module("low-fire").setEnabled(false);
+            }
+            case 50 -> shot(mc, "smoke-fire-vanilla.png", null);
+            case 55 -> module("low-fire").setEnabled(true);
+            case 100 -> shot(mc, "smoke-fire-low.png", null);
+            case 105 -> {
+                setSetting("low-fire", "fire-colour", "#7DD3FC");
+                setSetting("low-fire", "soul-fire-colour", "#F472B6");
+                setSetting("low-fire", "entity-fire-colour", "#86EFAC");
+                setSetting("low-fire", "colour", "#C4B5FD");
+            }
+            case 150 -> shot(mc, "smoke-fire-tinted.png", null);
+            case 155 -> {
+                openGui(mc);
+                openPanel(mc, "low-fire");
+            }
+            case 157 -> parkCursor(mc);
+            case 175 -> shot(mc, "smoke-fire-panel.png", null);
+            case 180 -> {
+                mc.setScreen(null);
+                for (String k : new String[]{"fire-colour", "soul-fire-colour", "entity-fire-colour", "colour"}) setSetting("low-fire", k, "#FFFFFF");
+                cmd(mc, "kill @e[type=minecraft:zombie]");
+                cmd(mc, "difficulty peaceful");
+                for (BlockPos b : new BlockPos[]{fire, fire2, soul}) cmd(mc, "setblock %d %d %d minecraft:air", b.getX(), b.getY(), b.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:obsidian", soul.getX(), soul.getY() - 1, soul.getZ());
+            }
+            default -> {
+            }
+        }
+    }
+
+    /** Y of the first air block above the floor under {@code from} (the player hovers in the smoke world). */
+    private static int groundY(Minecraft mc, BlockPos from) {
+        BlockPos.MutableBlockPos m = from.mutable();
+        for (int i = 0; i < 6 && mc.level.getBlockState(m.below()).isAir(); i++) m.move(Direction.DOWN);
+        return m.getY();
     }
 
     private static final int DENSITY_TICKS = 80;

@@ -108,6 +108,12 @@
 - **Enum labels.** Enums can implement `Labeled` to show "WASD" instead of the derived "Wasd".
 - **1% low** comes from `FrameStats` (tested): the HUD layer records every frame's time; the 1% low is the frame rate of the slowest 1% of the last 1000 frames. It includes hitches from opening screens; in the smoke test it reads low because of the screenshot captures themselves.
 
+### Step 6: the owner's must-have list
+
+- **Low Fire covers three fires.** Your screen (height, opacity down to hidden, tint), fire and soul fire blocks on the ground (height, opacity, separate tints) and the flames on burning players and mobs (height, opacity, tint). Ground fire is part of the world mesh, which Sodium (bundled by the launcher) builds itself, so a vanilla mixin would not reach it. Instead the fire and soul fire block models are wrapped through Fabric's model loading API (`LowFireModels`): each quad is scaled down from the block's floor, multiplied by the tint and moved to the translucent layer when it is see-through. Both Indigo and Sodium honour the Fabric rendering API. Meshes are built on worker threads, so they read an immutable snapshot; when it changes (slider, switch, server rule) the world is re-meshed once the value has been still for 250 ms. Entity flames are squashed in `FlameFeatureRenderer.renderFlame` and drawn with the translucent item sheet when needed. Blocks, hitboxes, burning and damage are untouched.
+- **Tints multiply.** Vertex colour can only multiply the fire texture, so a blue tint on orange fire comes out yellow-green, not blue. True recolouring needs a greyscale fire sprite in the block atlas; shipping one derived from Mojang's texture is not allowed and generating one at runtime needs a custom atlas source. Deferred; the panel preview shows the real result, and white keeps vanilla.
+- **Smoke world reset.** The fire pass once switched the player to survival, which made it fall from where it hovers and die, and the next run joined dead. The smoke test now respawns the player, sets creative and teleports to the usual spot on join.
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.
