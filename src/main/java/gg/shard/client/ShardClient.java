@@ -133,6 +133,7 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new LowShieldModule());
         m.register(new gg.shard.client.modules.visual.AnchorGlowModule());
         m.register(new gg.shard.client.modules.utility.GuiScalesModule());
+        m.register(new gg.shard.client.modules.utility.DisplayModule());
         m.register(new FullbrightModule());
         m.register(new HitboxModule());
         m.register(new NametagsModule());

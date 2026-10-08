@@ -6,10 +6,12 @@
   "client": [
     "AbstractContainerScreenAccessor",
     "ClientPacketListenerMixin",
+    "DisplayWindowMixin",
     "EndCrystalModelMixin",
     "EndCrystalRendererMixin",
     "EntityRendererMixin",
     "FlameFeatureRendererMixin",
+    "FramerateLimitTrackerMixin",
     "FontTextureMixin",
     "GameRendererMixin",
     "GuiMixin",

@@ -197,6 +197,11 @@ public final class SmokeTest {
             return;
         }
         after -= SCALES_TICKS;
+        if (after < DISPLAY_TICKS) {
+            displayBlock(mc, after);
+            return;
+        }
+        after -= DISPLAY_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -632,6 +637,39 @@ public final class SmokeTest {
         } else if (local == 20 + 47 * 2 + 22) {
             setSetting("gui-scales", "hotbar-scale", "100");
             scales.setEnabled(false);
+        }
+    }
+
+    private static final int DISPLAY_TICKS = 70;
+    private static int[] windowBefore;
+
+    /** Display: borderless on (window = monitor), then off (window restored); the title. */
+    private static void displayBlock(Minecraft mc, int local) {
+        var display = ShardClient.modules().get(gg.shard.client.modules.utility.DisplayModule.class);
+        var w = mc.getWindow();
+        switch (local) {
+            case 0 -> {
+                windowBefore = new int[]{w.getX(), w.getY(), w.getScreenWidth(), w.getScreenHeight()};
+                display.setBorderless(true);
+            }
+            case 20 -> {
+                var mode = org.lwjgl.glfw.GLFW.glfwGetVideoMode(org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor());
+                boolean covers = mode != null && w.getScreenWidth() == mode.width() && w.getScreenHeight() == mode.height();
+                ShardClient.LOGGER.info("Smoke: borderless window {}x{} at {},{}; monitor {}x{}; covers monitor: {}; title \"{}\"",
+                        w.getScreenWidth(), w.getScreenHeight(), w.getX(), w.getY(), mode == null ? 0 : mode.width(), mode == null ? 0 : mode.height(),
+                        covers, display.titleOverride());
+                SUMMARY.addProperty("borderlessCoversMonitor", covers);
+                shot(mc, "smoke-borderless.png", null);
+            }
+            case 25 -> display.setBorderless(false);
+            case 50 -> {
+                boolean restored = w.getScreenWidth() == windowBefore[2] && w.getScreenHeight() == windowBefore[3];
+                ShardClient.LOGGER.info("Smoke: after borderless off the window is {}x{} (was {}x{}); restored: {}",
+                        w.getScreenWidth(), w.getScreenHeight(), windowBefore[2], windowBefore[3], restored);
+                SUMMARY.addProperty("borderlessRestoresWindow", restored);
+            }
+            default -> {
+            }
         }
     }
 
