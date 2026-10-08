@@ -187,6 +187,11 @@ public final class SmokeTest {
             return;
         }
         after -= SHIELD_TICKS;
+        if (after < ANCHOR_TICKS) {
+            anchorCrystalBlock(mc, after);
+            return;
+        }
+        after -= ANCHOR_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -494,6 +499,71 @@ public final class SmokeTest {
                 mc.setScreen(null);
                 cmd(mc, "item replace entity @s weapon.offhand with minecraft:air");
                 p.getInventory().setSelectedSlot(0);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int ANCHOR_TICKS = 140;
+
+    /** Anchor Glow on anchors with 0-4 charges, then crystals vanilla and with Crystal Visuals colours. */
+    private static void anchorCrystalBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Direction dir = p.getDirection();
+        BlockPos base = p.blockPosition();
+        int gy = groundY(mc, base);
+        BlockPos row = new BlockPos(base.getX(), gy, base.getZ()).relative(dir, 4);
+        Direction side = dir.getClockWise();
+        switch (local) {
+            case 0 -> {
+                mc.setScreen(null);
+                setScale(mc, 2);
+                p.setXRot(28f);
+                for (int i = 0; i <= 4; i++) {
+                    BlockPos a = row.relative(side, (i - 2) * 2);
+                    cmd(mc, "setblock %d %d %d minecraft:respawn_anchor[charges=%d]", a.getX(), a.getY(), a.getZ(), i);
+                }
+                module("anchor-glow").setEnabled(true);
+                setSetting("anchor-glow", "outline-empty-anchors", "true");
+            }
+            case 30 -> shot(mc, "smoke-anchor-glow.png", null);
+            case 32 -> {
+                for (int i = 0; i <= 4; i++) {
+                    BlockPos a = row.relative(side, (i - 2) * 2);
+                    cmd(mc, "setblock %d %d %d minecraft:air", a.getX(), a.getY(), a.getZ());
+                }
+                for (int i = -1; i <= 1; i++) {
+                    BlockPos c = row.relative(side, i * 2);
+                    cmd(mc, "summon minecraft:end_crystal %d.5 %d %d.5 {ShowBottom:1b}", c.getX(), c.getY(), c.getZ());
+                }
+                module("crystal-size").setEnabled(false);
+            }
+            case 60 -> shot(mc, "smoke-crystals-vanilla.png", null);
+            case 62 -> {
+                module("crystal-size").setEnabled(true);
+                setSetting("crystal-size", "core-colour", "#22D3EE");
+                setSetting("crystal-size", "frame-colour", "#F472B6");
+                setSetting("crystal-size", "opacity", "70");
+                setSetting("crystal-size", "spin-speed", "0");
+                setSetting("crystal-size", "bounce", "false");
+                setSetting("crystal-size", "show-base", "false");
+            }
+            case 90 -> shot(mc, "smoke-crystals-styled.png", null);
+            case 92 -> {
+                openGui(mc);
+                openPanel(mc, "crystal-size");
+            }
+            case 94 -> parkCursor(mc);
+            case 110 -> shot(mc, "smoke-crystals-panel.png", null);
+            case 115 -> {
+                mc.setScreen(null);
+                cmd(mc, "kill @e[type=minecraft:end_crystal]");
+                module("anchor-glow").setEnabled(false);
+                for (String[] kv : new String[][]{{"core-colour", "#FFFFFF"}, {"frame-colour", "#FFFFFF"}, {"opacity", "100"}, {"spin-speed", "100"}, {"bounce", "true"}, {"show-base", "true"}}) {
+                    setSetting("crystal-size", kv[0], kv[1]);
+                }
             }
             default -> {
             }

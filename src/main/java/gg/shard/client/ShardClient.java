@@ -85,6 +85,9 @@ public final class ShardClient implements ClientModInitializer {
 
         hud = new HudManager(modules);
         gg.shard.client.render.LowFireModels.init();
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
+            if (isReady()) modules.get(gg.shard.client.modules.visual.AnchorGlowModule.class).render(ctx);
+        });
         hud.start();
         modules.start();
         Keybinds.init();
@@ -127,6 +130,7 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new HitColorModule());
         m.register(new LowFireModule());
         m.register(new LowShieldModule());
+        m.register(new gg.shard.client.modules.visual.AnchorGlowModule());
         m.register(new FullbrightModule());
         m.register(new HitboxModule());
         m.register(new NametagsModule());
