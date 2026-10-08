@@ -50,9 +50,13 @@ abstract class ClientPacketListenerMixin {
 
     @Inject(method = "handleEntityEvent", at = @At(value = "INVOKE", target = SAME_THREAD, shift = At.Shift.AFTER))
     private void shard$onEntityEvent(ClientboundEntityEventPacket packet, CallbackInfo ci) {
-        if (!ShardClient.isReady() || level == null || packet.getEventId() != EntityEvent.PROTECTED_FROM_DEATH) return;
+        if (!ShardClient.isReady() || level == null) return;
+        byte id = packet.getEventId();
+        if (id != EntityEvent.PROTECTED_FROM_DEATH && id != EntityEvent.DEATH) return;
         Entity entity = packet.getEntity(level);
-        if (entity instanceof LivingEntity living) ShardEvents.fireTotemPop(living);
+        if (!(entity instanceof LivingEntity living)) return;
+        if (id == EntityEvent.DEATH) ShardEvents.fireDeath(living);
+        else ShardEvents.fireTotemPop(living);
     }
 
     @WrapOperation(method = "handleEntityEvent", at = @At(value = "INVOKE", target = PLAY_LOCAL_SOUND))
@@ -72,6 +76,13 @@ abstract class ClientPacketListenerMixin {
     private void shard$totemAnimation(GameRenderer renderer, ItemStack stack, Operation<Void> original) {
         if (ShardClient.isReady() && ShardClient.modules().get(TotemPopModule.class).hideAnimation()) return;
         original.call(renderer, stack);
+    }
+
+    // ---- TPS estimate ---------------------------------------------------------------------------
+
+    @Inject(method = "handleSetTime", at = @At(value = "INVOKE", target = SAME_THREAD, shift = At.Shift.AFTER), require = 0)
+    private void shard$onTime(net.minecraft.network.protocol.game.ClientboundSetTimePacket packet, CallbackInfo ci) {
+        gg.shard.client.modules.hud.TpsModule.ESTIMATOR.onTimePacket(packet.gameTime(), System.nanoTime());
     }
 
     // ---- crystal prediction readout ------------------------------------------------------------

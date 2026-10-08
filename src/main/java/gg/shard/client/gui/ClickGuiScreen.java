@@ -1484,6 +1484,7 @@ public final class ClickGuiScreen extends DesignScreen {
         int sectionW = Math.min(contentW, SECTION_MAX_W);
         int x = contentX;
 
+        y += section(g, "favorites", "Quick setup", "One click to a setup made for crystal PvP; change anything afterwards", x, y, sectionW, this::renderQuickSetupBody) + GRID_GAP;
         y += section(g, "appearance", "Appearance", "Accent, interface size, font, blur and motion", x, y, sectionW,
                 (ix, iy, iw) -> renderSettingRows(g, ShardClient.appearance(), ShardClient.appearance().settings(), ix, iy, iw)) + GRID_GAP;
         y += section(g, "hud", "HUD", "Scale and the style every HUD element inherits", x, y, sectionW,
@@ -1498,6 +1499,27 @@ public final class ClickGuiScreen extends DesignScreen {
         int contentHeight = y + pageScroll - top;
         pageScroll = Math.max(0, Math.min(pageScroll, contentHeight - viewH));
         unclip(g);
+    }
+
+    private int renderQuickSetupBody(int x, int y, int w) {
+        GuiGraphics g = g0;
+        int cols = w >= 420 ? 3 : 1;
+        int bw = (w - (cols - 1) * 8) / cols;
+        int i = 0;
+        int rowY = y;
+        for (QuickSetup.Choice c : QuickSetup.choices()) {
+            int bx = x + (i % cols) * (bw + 8);
+            int by = rowY + (i / cols) * (BUTTON_H + 8);
+            button(g, "quick:" + c.name(), bx, by, bw, BUTTON_H, c.name(), i == 0, true, b -> {
+                if (QuickSetup.apply(c.name())) showToast("Applied " + c.name());
+            });
+            i++;
+        }
+        int rows = (QuickSetup.choices().size() + cols - 1) / cols;
+        y = rowY + rows * (BUTTON_H + 8);
+        Fonts.drawClipped(g, "Pro turns on the fight modules and the minimal HUD; Minimal keeps things vanilla; Recording is clean for videos.",
+                Fonts.Weight.REGULAR, HINT, x, y, w, Theme.subtle());
+        return y + Fonts.lineHeight(HINT);
     }
 
     private int renderKeybindsBody(int x, int y, int w) {

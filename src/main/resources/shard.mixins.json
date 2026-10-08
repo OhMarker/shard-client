@@ -5,6 +5,8 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "AbstractContainerScreenAccessor",
+    "ChatComponentMixin",
+    "ClientLevelWeatherMixin",
     "ClientPacketListenerMixin",
     "DisplayWindowMixin",
     "EndCrystalModelMixin",
@@ -15,6 +17,7 @@
     "FontTextureMixin",
     "GameRendererMixin",
     "GuiMixin",
+    "GuiOverlaysMixin",
     "ItemInHandRendererMixin",
     "LightTextureMixin",
     "LivingEntityMixin",
@@ -28,7 +31,8 @@
     "OverlayTextureAccessor",
     "ParticleEngineMixin",
     "ScreenEffectRendererMixin",
-    "ScreenScaleMixin"
+    "ScreenScaleMixin",
+    "SoundEngineMixin"
   ],
   "mixins": [],
   "injectors": {

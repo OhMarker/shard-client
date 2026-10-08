@@ -30,7 +30,8 @@ public final class KeystrokesModule extends HudModule {
         }
     }
 
-    private final java.util.Map<String, Float> fade = new java.util.HashMap<>();
+    private final float[] fade = new float[16];
+    private int keyIndex;
     private long lastFrameNs;
     private float frameDt;
 
@@ -63,6 +64,7 @@ public final class KeystrokesModule extends HudModule {
         long now = System.nanoTime();
         frameDt = lastFrameNs == 0 ? 0f : Math.min(0.1f, (now - lastFrameNs) / 1e9f);
         lastFrameNs = now;
+        keyIndex = 0;
         Options o = mc().options;
         HudStyle.Resolved st = style();
         int k = keySize.get();
@@ -113,9 +115,9 @@ public final class KeystrokesModule extends HudModule {
 
     private void key(GuiGraphics g, HudStyle.Resolved st, int x, int y, int w, int h, String label, boolean down) {
         // Presses light up at once and fade out over 120 ms, so fast taps are still visible.
-        String id = x + ":" + y;
-        float t = down ? 1f : Math.max(0f, fade.getOrDefault(id, 0f) - frameDt / 0.12f);
-        fade.put(id, t);
+        int id = Math.min(fade.length - 1, keyIndex++);
+        float t = down ? 1f : Math.max(0f, fade[id] - frameDt / 0.12f);
+        fade[id] = t;
         Render2D.roundedRect(g, x, y, w, h, Math.min(st.radius(), Math.min(w, h) / 2), Colors.mix(idle.get(), pressed.get(), t));
         if (labels.get() && !label.isEmpty()) {
             int color = t > 0.5f ? Colors.contrastText(pressed.get()) : st.text();

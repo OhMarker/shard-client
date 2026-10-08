@@ -19,10 +19,15 @@ Work follows `docs/PROMPT-ui-overhaul-0.4.0.md` step by step, stopping for the o
   Shield (blocking/holding sets), Anchor Glow, Crystal Visuals (colours, spin, bounce, base),
   GUI Scales (inventory scale with 0 slot misses, HUD part scales), Display (borderless, FPS
   caps, title), HUD styles (Pill, label position, brackets, previews, use-for-all). Screenshots
-  `docs/screenshots/0.4.0/step6*`. Waiting for the owner's OK on step 6.
+  `docs/screenshots/0.4.0/step6*`. Owner approved.
 - Known limits recorded in DECISIONS.md: fire tints multiply (no greyscale sprite), no shield
   opacity, alt-tab speed not automated.
-- Next: step 7 (other new crystal PvP modules + performance work), then step 8.
+- Step 7 done: fight log (target, combo, reach, recap, kills/K/D), Cooldowns, Compass, Speed, TPS,
+  Low Health, Sounds, Block Outline with crystal-spot hint, Clean Screen, Weather and Time, Chat,
+  Quick setup (Pro / Minimal / Recording) and a first-run welcome. HUD layer 0.31 -> 0.18 ms per
+  frame with a busy HUD (BENCHMARKS.md). Waiting for the owner's OK on step 7.
+- Next: step 8 (full verification across resolutions and GUI scales, docs, version bump 0.4.0,
+  build the jar; ask the owner before any GitHub release or meta push).
 - The 0.3.0 notes below still describe the released build.
 
 Last updated 2026-10-07 (0.3.0).

@@ -59,6 +59,9 @@ public final class Fonts {
     private static final String ELLIPSIS = "…";
 
     private static final Map<Integer, Style> STYLES = new HashMap<>();
+    /** Measured widths per style; text is drawn every frame, so measuring it again is the HUD's main cost. */
+    private static final Map<Style, Map<String, Float>> WIDTHS = new java.util.IdentityHashMap<>();
+    private static int cachedWidths;
     private static boolean smooth = true;
 
     /** Switches between Inter and the vanilla bitmap font (Settings → Appearance → Font). */
@@ -116,7 +119,20 @@ public final class Fonts {
     public static float width(String text, Weight weight, int size) {
         if (text == null || text.isEmpty()) return 0f;
         if (!smooth) return font().width(text) * vanillaScale(size);
-        return font().getSplitter().stringWidth(FormattedText.of(text, style(weight, size)));
+        Style st = style(weight, size);
+        Map<String, Float> perStyle = WIDTHS.computeIfAbsent(st, k -> new HashMap<>());
+        Float cached = perStyle.get(text);
+        if (cached != null) return cached;
+        if (cachedWidths > 8192) {
+            // Changing numbers (FPS, coordinates) would grow it forever; start over now and then.
+            WIDTHS.clear();
+            cachedWidths = 0;
+            perStyle = WIDTHS.computeIfAbsent(st, k -> new HashMap<>());
+        }
+        float w = font().getSplitter().stringWidth(FormattedText.of(text, st));
+        perStyle.put(text, w);
+        cachedWidths++;
+        return w;
     }
 
     public static int widthInt(String text, Weight weight, int size) {
@@ -149,8 +165,9 @@ public final class Fonts {
     public static void draw(GuiGraphics g, String text, Weight weight, int size, int x, int y, int color, boolean shadow) {
         if (text == null || text.isEmpty() || (color >>> 24) == 0) return;
         if (smooth) {
-            // Vanilla places the baseline 7 units below the y it is given.
-            g.drawString(font(), text(text, weight, size), x, y + baseline(size) - 7, color, shadow);
+            // Vanilla places the baseline 7 units below the y it is given. A plain left-to-right
+            // sequence skips the bidirectional reordering a Component goes through on every draw.
+            g.drawString(font(), net.minecraft.util.FormattedCharSequence.forward(text, style(weight, size)), x, y + baseline(size) - 7, color, shadow);
             return;
         }
         int k = vanillaScale(size);

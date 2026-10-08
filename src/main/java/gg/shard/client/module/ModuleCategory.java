@@ -6,7 +6,8 @@ public enum ModuleCategory {
     COMBAT("Combat", "Crystal and anchor tools. The server stays in charge."),
     INPUT("Input", "Keys and mouse"),
     PERFORMANCE("Performance", "Measured optimizers"),
-    UTILITY("Utility", "Window, scales and quality of life");
+    CHAT("Chat", "Cleaner, easier chat"),
+    UTILITY("Utility", "Window, scales, sounds and quality of life");
 
     private final String displayName;
     private final String description;

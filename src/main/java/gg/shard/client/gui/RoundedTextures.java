@@ -52,4 +52,45 @@ final class RoundedTextures {
         CACHE.put(key, id);
         return id;
     }
+
+    // ---- whole boxes ----------------------------------------------------------------------------
+
+    /** Least recently used first; old sizes are released so changing numbers do not pile up. */
+    private static final java.util.LinkedHashMap<Long, Identifier> BOXES = new java.util.LinkedHashMap<>(64, 0.75f, true);
+    private static final int MAX_BOXES = 160;
+    private static int boxSerial;
+
+    /**
+     * A whole {@code wPx} x {@code hPx} rounded rectangle with corner radius {@code rPx}, as one
+     * texture, so a box is a single draw instead of four corners and three fills (the HUD draws
+     * dozens of them every frame).
+     */
+    static Identifier box(int wPx, int hPx, int rPx) {
+        int r = Math.max(1, Math.min(rPx, Math.min(wPx, hPx) / 2));
+        long key = ((long) wPx << 40) | ((long) hPx << 20) | r;
+        Identifier id = BOXES.get(key);
+        if (id != null) return id;
+        int[] disc = CornerMask.mask(r, 0);
+        int d = r * 2;
+        NativeImage image = new NativeImage(wPx, hPx, false);
+        for (int y = 0; y < hPx; y++) {
+            for (int x = 0; x < wPx; x++) {
+                int cx = x < r ? x : x >= wPx - r ? d - (wPx - x) : -1;
+                int cy = y < r ? y : y >= hPx - r ? d - (hPx - y) : -1;
+                image.setPixel(x, y, cx >= 0 && cy >= 0 ? disc[cy * d + cx] : 0xFFFFFFFF);
+            }
+        }
+        Identifier newId = Identifier.fromNamespaceAndPath("shard", "box/" + (boxSerial++));
+        int fw = wPx;
+        int fh = hPx;
+        Minecraft.getInstance().getTextureManager().register(newId, new DynamicTexture(() -> "shard box " + fw + "x" + fh, image));
+        BOXES.put(key, newId);
+        if (BOXES.size() > MAX_BOXES) {
+            var it = BOXES.entrySet().iterator();
+            Identifier old = it.next().getValue();
+            it.remove();
+            Minecraft.getInstance().getTextureManager().release(old);
+        }
+        return newId;
+    }
 }

@@ -33,7 +33,7 @@ public final class HudStyle {
 
     /** Where the label goes relative to the value: "FPS 240" or "240 FPS". */
     public enum LabelSide implements gg.shard.client.module.setting.Labeled {
-        BEFORE("Before the value"), AFTER("After the value");
+        BEFORE("Before"), AFTER("After");
 
         private final String label;
 

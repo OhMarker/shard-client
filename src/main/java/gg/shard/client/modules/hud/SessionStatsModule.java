@@ -15,6 +15,7 @@ import java.util.List;
 /** Pops given and taken, deaths and playtime since joining the server (vanilla-visible data only). */
 public final class SessionStatsModule extends HudModule {
     private final BoolSetting playtime = add(new BoolSetting("Playtime", "Time since you joined", true));
+    private final BoolSetting killStats = add(new BoolSetting("Kills and K/D", "Kills, kill/death ratio and your current streak", true));
 
     private int popsTaken;
     private int popsGiven;
@@ -23,7 +24,7 @@ public final class SessionStatsModule extends HudModule {
     private boolean wasDead;
 
     public SessionStatsModule() {
-        super("Session", "Totems you popped, totems others popped near you, deaths and playtime.", 0.86, 0.30);
+        super("Session", "Pops, deaths, kills, K/D, streak and playtime this session.", 0.86, 0.30);
         ShardEvents.onTotemPop(entity -> {
             LocalPlayer p = mc().player;
             if (p == null) return;
@@ -70,6 +71,11 @@ public final class SessionStatsModule extends HudModule {
         lines.add("Pops taken  " + popsTaken);
         lines.add("Pops seen  " + popsGiven);
         lines.add("Deaths  " + deaths);
+        if (killStats.get()) {
+            var log = gg.shard.client.combat.CombatTracker.LOG;
+            lines.add("Kills  " + log.kills() + "   K/D " + String.format(java.util.Locale.ROOT, "%.2f", log.kdr()));
+            lines.add("Streak  " + log.streak() + "   best " + log.bestStreak());
+        }
         if (playtime.get()) lines.add("Time  " + formatMs(System.currentTimeMillis() - joinedAt));
         lines(g, lines, null);
     }

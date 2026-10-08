@@ -58,6 +58,10 @@ public final class SmokeTest {
     private static int ticksOutOfWorld;
     private static boolean connectRequested;
     private static boolean active;
+
+    public static boolean active() {
+        return active;
+    }
     private static boolean bench;
     private static Path out;
 
@@ -207,6 +211,11 @@ public final class SmokeTest {
             return;
         }
         after -= STYLE_TICKS;
+        if (after < STEP7_TICKS) {
+            step7Block(mc, after);
+            return;
+        }
+        after -= STEP7_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -706,6 +715,90 @@ public final class SmokeTest {
             default -> {
             }
         }
+    }
+
+    private static final int STEP7_TICKS = 220;
+    private static java.util.Map<String, gg.shard.client.hud.HudPresets.Entry> layoutBefore7;
+    private static int zombieId = -1;
+
+    /** Step 7: welcome, Crystal PvP Pro, a fight against a zombie (target, combo, reach, recap), cooldowns, compass, TPS, chat. */
+    private static void step7Block(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Direction dir = p.getDirection();
+        BlockPos base = p.blockPosition();
+        BlockPos zpos = new BlockPos(base.getX(), groundY(mc, base), base.getZ()).relative(dir, 2);
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                layoutBefore7 = gg.shard.client.hud.HudPresets.snapshot(ShardClient.hud());
+                var welcome = new gg.shard.client.gui.WelcomeScreen();
+                mc.setScreen(welcome);
+                welcome.showStep(0, gg.shard.client.gui.QuickSetup.PRO);
+            }
+            case 2 -> parkCursor(mc);
+            case 15 -> shot(mc, "smoke-welcome.png", null);
+            case 18 -> {
+                mc.setScreen(null);
+                gg.shard.client.gui.QuickSetup.apply(gg.shard.client.gui.QuickSetup.PRO);
+                for (String k : new String[]{"combo", "reach", "fight-recap", "compass", "speed", "tps", "chat"}) module(k).setEnabled(true);
+                setSetting("target-hud", "players-only", "false");
+                setSetting("target-hud", "show-who-you-aim-at", "false");
+                cmd(mc, "difficulty easy");
+                cmd(mc, "summon minecraft:zombie %d %d %d {NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"shardsmoke\"],ArmorItems:[{id:\"minecraft:diamond_boots\",count:1},{id:\"minecraft:diamond_leggings\",count:1},{id:\"minecraft:diamond_chestplate\",count:1},{id:\"minecraft:diamond_helmet\",count:1}]}",
+                        zpos.getX(), zpos.getY(), zpos.getZ());
+                p.setXRot(15f);
+                p.getInventory().setSelectedSlot(8);
+            }
+            case 40, 50, 60 -> {
+                var z = mc.level.getEntitiesOfClass(net.minecraft.world.entity.monster.zombie.Zombie.class, p.getBoundingBox().inflate(6)).stream().findFirst().orElse(null);
+                if (z != null) {
+                    zombieId = z.getId();
+                    mc.gameMode.attack(p, z);
+                    p.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                }
+            }
+            case 62 -> {
+                p.getCooldowns().addCooldown(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL), 200);
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: chat line"));
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));
+            }
+            case 75 -> {
+                ShardClient.LOGGER.info("Smoke: fight log combo {} reach {} target {}", gg.shard.client.combat.CombatTracker.LOG.combo(),
+                        gg.shard.client.combat.CombatTracker.LOG.lastReach(), gg.shard.client.combat.CombatTracker.LOG.targetId());
+                shot(mc, "smoke-step7-fight.png", null);
+            }
+            case 80 -> cmd(mc, "kill @e[type=minecraft:zombie,tag=shardsmoke]");
+            case 100 -> {
+                var log = gg.shard.client.combat.CombatTracker.LOG;
+                ShardClient.LOGGER.info("Smoke: after the kill: kills {} streak {} recap {}", log.kills(), log.streak(), log.lastRecap());
+                SUMMARY.addProperty("fightLogKills", log.kills());
+                shot(mc, "smoke-step7-recap.png", null);
+            }
+            case 105 -> {
+                openGui(mc);
+                openSettingsPageSmoke(mc);
+            }
+            case 107 -> parkCursor(mc);
+            case 125 -> shot(mc, "smoke-step7-settings.png", null);
+            case 130 -> {
+                mc.setScreen(null);
+                for (String k : new String[]{"combo", "reach", "fight-recap", "compass", "speed", "tps", "chat"}) module(k).setEnabled(false);
+                setSetting("target-hud", "players-only", "true");
+                setSetting("target-hud", "show-who-you-aim-at", "true");
+                gg.shard.client.hud.HudPresets.restore(ShardClient.hud(), layoutBefore7);
+                cmd(mc, "difficulty peaceful");
+                p.getInventory().setSelectedSlot(0);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static void openSettingsPageSmoke(Minecraft mc) {
+        if (mc.screen instanceof ClickGuiScreen gui) gui.openSettingsPage();
     }
 
     private static final int DENSITY_TICKS = 80;

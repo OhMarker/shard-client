@@ -109,3 +109,47 @@ the loaded-machine numbers above remain the better picture of what it does under
 2. `./gradlew runClient -PquickPlay=localhost:25599 -PsmokeDir="$PWD/bench-out" -PsmokeBench`.
 3. Read `bench-out/bench.json` (`summary` holds the averages per configuration) and update the
    tables above. Keep the warm-up run excluded.
+
+## 0.4.0 (2026-10-08): the HUD's own cost, with a busy HUD
+
+Same scenario, plus a deliberately busy HUD on every run: the Crystal PvP Pro setup, the "Crystal
+PvP full" layout, Target HUD, Combo, Reach, Fight Recap, Cooldowns, Compass, Speed, TPS,
+Keystrokes, CPS, and the FPS and ping graphs. The harness now also times Shard's whole HUD layer
+every frame (CPU time to build it; `HudManager.LAYER_MS`) and, per element, while sampling.
+The dev window runs at vanilla's 120 fps cap, so frame rates are capped; the HUD numbers are the
+point here.
+
+| Change | HUD layer avg | HUD layer p99 |
+| --- | --- | --- |
+| Before (step 7 start) | 0.31 ms | 0.44 ms |
+| Text drawn as plain left-to-right sequences, widths cached | 0.30 ms | 0.49 ms |
+| Module lookups cached by class (helps every mixin, not the HUD) | 0.30 ms | 0.45 ms |
+| Small rounded boxes drawn as one cached texture instead of 4 corners + 3 fills | **0.18 ms** | **0.29 ms** |
+
+The box was the cost: a one-line element spent 8.5 us of about 11 us drawing its background
+(seven draw calls); it now spends 1.3 us. All three changes are kept (the first two are cheap and
+correct). Final run, Explosion Optimizer on vs off:
+
+| Explosion Optimizer | Runs | Avg fps | 1% low fps | Worst frame | HUD avg | HUD p99 |
+| --- | --- | --- | --- | --- | --- | --- |
+| on | 6 | 117.99 | 97.63 | 13.17 ms | 0.181 ms | 0.3 ms |
+| off | 6 | 118.03 | 97.17 | 11.17 ms | 0.179 ms | 0.284 ms |
+
+| Run | Optimizer | Frames | Avg fps | 1% low fps | Worst ms | HUD avg ms | HUD p99 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | off | 353 | 118.03 | 93.32 | 13.11 | 0.201 | 0.34 |
+| 2 | on | 351 | 117.45 | 93.41 | 16.81 | 0.225 | 0.417 |
+| 3 | off | 351 | 117.68 | 94.51 | 10.82 | 0.195 | 0.314 |
+| 4 | on | 353 | 117.95 | 96.37 | 10.89 | 0.186 | 0.272 |
+| 5 | off | 354 | 118.24 | 97.7 | 10.61 | 0.177 | 0.268 |
+| 6 | on | 353 | 118.1 | 99.7 | 10.31 | 0.177 | 0.301 |
+| 7 | off | 353 | 118.01 | 99.04 | 10.45 | 0.171 | 0.244 |
+| 8 | on | 353 | 118.15 | 98.26 | 10.53 | 0.167 | 0.264 |
+| 9 | off | 353 | 118.15 | 100.88 | 10.71 | 0.171 | 0.244 |
+| 10 | on | 353 | 118.07 | 97.59 | 19.73 | 0.174 | 0.309 |
+| 11 | off | 353 | 118.09 | 97.59 | 11.34 | 0.159 | 0.292 |
+| 12 | on | 354 | 118.2 | 100.43 | 10.73 | 0.154 | 0.238 |
+
+Raw: `docs/bench-0.4.0.json`. Most expensive elements after the change (per frame): Item
+Counter about 28 us (eight item renders), Session about 24 us (five lines), FPS with its graph
+about 23 us (one fill per bar), Compass about 19 us.

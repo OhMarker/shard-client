@@ -83,6 +83,14 @@ public final class Render2D {
             return;
         }
         int radiusPx = px(r);
+        int wPx = px(w);
+        int hPx = px(h);
+        if (wPx <= 256 && hPx <= 256) {
+            // Small boxes (every HUD element, rows, buttons) are one cached texture: one draw.
+            Identifier box = RoundedTextures.box(wPx, hPx, radiusPx);
+            g.blit(RenderPipelines.GUI_TEXTURED, box, x, y, 0f, 0f, w, h, wPx, hPx, wPx, hPx, color);
+            return;
+        }
         Identifier tex = RoundedTextures.disc(radiusPx);
         corners(g, tex, x, y, w, h, r, radiusPx, color);
         fill(g, x + r, y, w - 2 * r, r, color);

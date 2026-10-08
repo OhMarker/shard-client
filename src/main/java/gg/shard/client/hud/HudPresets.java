@@ -31,13 +31,15 @@ public final class HudPresets {
     public static final String MINIMAL = "Crystal PvP minimal";
     public static final String FULL = "Crystal PvP full";
     public static final String STREAMER = "Streamer";
+    /** FPS, ping and totems only (Quick setup: Minimal). */
+    public static final String BARE = "Bare";
 
     private static double[] at(int ax, int ay, double ox, double oy) {
         return new double[]{ax, ay, ox, oy, 1.0};
     }
 
     public static List<String> builtIn() {
-        return List.of(MINIMAL, FULL, STREAMER);
+        return List.of(MINIMAL, FULL, STREAMER, BARE);
     }
 
     /** Built-in layout by name, or null. Elements not listed are switched off. */
@@ -51,6 +53,13 @@ public final class HudPresets {
                 m.put("armor-status", at(CENTER, END, 180, 4));
                 m.put("item-counter", at(CENTER, END, 0, 52));
                 m.put("hit-delay", at(CENTER, CENTER, 0, 12));
+                m.put("target-hud", at(CENTER, CENTER, 90, 30));
+                m.put("cooldowns", at(CENTER, END, 0, 78));
+            }
+            case BARE -> {
+                m.put("fps", at(START, START, 4, 4));
+                m.put("ping", at(START, START, 4, 20));
+                m.put("totem-counter", at(CENTER, END, -150, 4));
             }
             case FULL -> {
                 m.putAll(builtIn(MINIMAL));

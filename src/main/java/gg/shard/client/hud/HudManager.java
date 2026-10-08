@@ -29,6 +29,11 @@ public final class HudManager {
     private static double hudScale = 1.0;
     /** Every frame's time while the HUD layer draws (FPS 1% low and graph). */
     public static final gg.shard.client.util.FrameStats FRAMES = new gg.shard.client.util.FrameStats(1000);
+    /** Benchmark only: total nanoseconds per HUD element while profiling. */
+    public static final java.util.Map<String, long[]> PROFILE = new java.util.concurrent.ConcurrentHashMap<>();
+    public static boolean profiling;
+    /** CPU time of the whole Shard HUD layer per frame, in ms (benchmark). */
+    public static final gg.shard.client.util.FrameStats LAYER_MS = new gg.shard.client.util.FrameStats(4000);
     private static long lastFrameNs;
     private final ModuleManager modules;
 
@@ -64,17 +69,34 @@ public final class HudManager {
         long now = System.nanoTime();
         if (lastFrameNs != 0) FRAMES.add((now - lastFrameNs) / 1_000_000f);
         lastFrameNs = now;
+        try {
+            renderLayerTimed(g, delta);
+        } finally {
+            LAYER_MS.add(Math.max(0.0001f, (System.nanoTime() - now) / 1_000_000f));
+        }
+    }
+
+    private void renderLayerTimed(GuiGraphics g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.screen instanceof HudEditorScreen) return;
         updateScale(mc);
         for (HudModule m : hudModules()) {
             if (!m.isEnabled()) continue;
             if (m.needsPlayer() && mc.player == null) continue;
+            if (!profiling) {
+                renderOne(g, delta, m);
+                continue;
+            }
+            long t = System.nanoTime();
             renderOne(g, delta, m);
+            long[] acc = PROFILE.computeIfAbsent(m.key(), k -> new long[2]);
+            acc[0] += System.nanoTime() - t;
+            acc[1]++;
         }
         if (mc.player != null) {
             modules.get(CrosshairModule.class).render(g);
             modules.get(TotemPopModule.class).renderFlash(g);
+            modules.get(gg.shard.client.modules.visual.LowHealthModule.class).render(g);
             modules.get(gg.shard.client.modules.combat.CrystalOptimizerModule.class).renderReadout(g);
         }
     }

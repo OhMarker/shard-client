@@ -37,6 +37,14 @@ abstract class MultiPlayerGameModeMixin {
         if (!ShardClient.isReady()) return;
         ShardClient.modules().get(CrystalOptimizerModule.class).onAttack(target);
         ShardClient.modules().get(gg.shard.client.modules.visual.CrosshairModule.class).onAttack(target);
+        gg.shard.client.combat.CombatTracker.onAttack(player, target);
+    }
+
+    private boolean shard$heldCrystal;
+
+    @Inject(method = "useItemOn", at = @At("HEAD"))
+    private void shard$useItemOnHead(LocalPlayer player, InteractionHand hand, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
+        shard$heldCrystal = player.getItemInHand(hand).is(net.minecraft.world.item.Items.END_CRYSTAL);
     }
 
     /** After vanilla processed the block use (and its own charge prediction), predict the rest. */
@@ -45,6 +53,7 @@ abstract class MultiPlayerGameModeMixin {
         if (!ShardClient.isReady()) return;
         InteractionResult result = cir.getReturnValue();
         if (result == null || !result.consumesAction()) return;
+        if (shard$heldCrystal) gg.shard.client.combat.CombatTracker.onCrystalPlaced();
         ShardClient.modules().get(AnchorOptimizerModule.class).onUseItemOn(player, hand, hit);
         ShardClient.modules().get(CrystalOptimizerModule.class).onUseItemOn(player, hand, hit);
     }
