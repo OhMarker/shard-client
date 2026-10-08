@@ -84,6 +84,18 @@ public final class ShardClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> modules.setCurrentServer(null));
 
         hud = new HudManager(modules);
+        gg.shard.client.render.LowFireModels.init();
+        gg.shard.client.combat.CombatTracker.init();
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> {
+            if (gg.shard.client.dev.SmokeTest.active() || !gg.shard.client.gui.WelcomeScreen.needed()) return;
+            if (client.screen == null) client.setScreen(new gg.shard.client.gui.WelcomeScreen());
+        }));
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register((ctx, state) ->
+                !isReady() || modules.get(gg.shard.client.modules.visual.BlockOutlineModule.class).render(ctx, state));
+        gg.shard.client.modules.utility.GuiScalesModule.registerHudScaling();
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
+            if (isReady()) modules.get(gg.shard.client.modules.visual.AnchorGlowModule.class).render(ctx);
+        });
         hud.start();
         modules.start();
         Keybinds.init();
@@ -115,6 +127,14 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new ItemCounterModule());
         m.register(new ServerAddressModule());
         m.register(new SessionStatsModule());
+        m.register(new gg.shard.client.modules.hud.TargetHudModule());
+        m.register(new gg.shard.client.modules.hud.ComboModule());
+        m.register(new gg.shard.client.modules.hud.ReachModule());
+        m.register(new gg.shard.client.modules.hud.FightRecapModule());
+        m.register(new gg.shard.client.modules.hud.CooldownsModule());
+        m.register(new gg.shard.client.modules.hud.CompassModule());
+        m.register(new gg.shard.client.modules.hud.SpeedModule());
+        m.register(new gg.shard.client.modules.hud.TpsModule());
         m.register(new ClockModule());
         m.register(new MemoryModule());
         m.register(new HitDelayIndicatorModule());
@@ -126,6 +146,15 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new HitColorModule());
         m.register(new LowFireModule());
         m.register(new LowShieldModule());
+        m.register(new gg.shard.client.modules.visual.AnchorGlowModule());
+        m.register(new gg.shard.client.modules.utility.GuiScalesModule());
+        m.register(new gg.shard.client.modules.utility.DisplayModule());
+        m.register(new gg.shard.client.modules.utility.SoundsModule());
+        m.register(new gg.shard.client.modules.visual.LowHealthModule());
+        m.register(new gg.shard.client.modules.visual.BlockOutlineModule());
+        m.register(new gg.shard.client.modules.visual.CleanScreenModule());
+        m.register(new gg.shard.client.modules.visual.WeatherTimeModule());
+        m.register(new gg.shard.client.modules.chat.ChatModule());
         m.register(new FullbrightModule());
         m.register(new HitboxModule());
         m.register(new NametagsModule());

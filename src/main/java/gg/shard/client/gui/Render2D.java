@@ -83,6 +83,14 @@ public final class Render2D {
             return;
         }
         int radiusPx = px(r);
+        int wPx = px(w);
+        int hPx = px(h);
+        if (wPx <= 256 && hPx <= 256) {
+            // Small boxes (every HUD element, rows, buttons) are one cached texture: one draw.
+            Identifier box = RoundedTextures.box(wPx, hPx, radiusPx);
+            g.blit(RenderPipelines.GUI_TEXTURED, box, x, y, 0f, 0f, w, h, wPx, hPx, wPx, hPx, color);
+            return;
+        }
         Identifier tex = RoundedTextures.disc(radiusPx);
         corners(g, tex, x, y, w, h, r, radiusPx, color);
         fill(g, x + r, y, w - 2 * r, r, color);
@@ -188,26 +196,29 @@ public final class Render2D {
 
     // ---- controls -------------------------------------------------------------------------------
 
-    /** Toggle switch: pill track, round knob; {@code knob} is the animated 0..1 position. */
+    /**
+     * Toggle switch (docs/DESIGN.md): quiet neutral track when off, accent track when on, round
+     * knob; {@code knob} is the animated 0..1 position. Never the loudest thing in a row.
+     */
     public static void toggle(GuiGraphics g, int x, int y, int w, int h, float knob, boolean on, boolean focused) {
         int track = Colors.mix(Theme.control(), Theme.accent(), knob);
         roundedRect(g, x, y, w, h, h / 2, track);
         if (focused) roundedOutline(g, x - 2, y - 2, w + 4, h + 4, h / 2 + 2, Theme.accentAlpha(0xA0));
-        else roundedOutline(g, x, y, w, h, h / 2, on ? Theme.accentAlpha(0x60) : Theme.lineStrong());
-        int inset = 3;
+        else if (knob < 0.5f) roundedOutline(g, x, y, w, h, h / 2, Theme.line());
+        int inset = 2;
         int kd = h - inset * 2;
         int kx = x + inset + Math.round(knob * (w - inset * 2 - kd));
-        roundedRect(g, kx, y + inset, kd, kd, kd / 2, on ? Theme.accentText() : Theme.muted());
+        roundedRect(g, kx, y + inset, kd, kd, kd / 2, Colors.mix(Theme.subtle(), Theme.accentText(), knob));
     }
 
     /** Slider track with the filled portion in accent and a round knob, centred in a box {@code h} tall. */
     public static void slider(GuiGraphics g, int x, int y, int w, int h, double fraction, boolean active, boolean focused) {
-        int trackH = 4;
+        int trackH = 2;
         int ty = y + (h - trackH) / 2;
         roundedRect(g, x, ty, w, trackH, trackH / 2, Theme.control());
         int fw = (int) Math.round(w * Math.max(0, Math.min(1, fraction)));
         if (fw > 0) roundedRect(g, x, ty, fw, trackH, trackH / 2, Theme.accent());
-        int knobD = 16;
+        int knobD = 12;
         int kx = x + fw - knobD / 2;
         kx = Math.max(x - 2, Math.min(x + w - knobD + 2, kx));
         int ky = ty + trackH / 2 - knobD / 2;

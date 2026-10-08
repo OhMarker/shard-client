@@ -1,5 +1,46 @@
 # Status (handoff for a new session)
 
+## 0.4.0: built and verified (branch `v0.4.0`, not merged, not released)
+Last updated 2026-10-08. All eight steps of `docs/PROMPT-ui-overhaul-0.4.0.md` are done; the
+owner approved steps 1-7. What changed is in CHANGELOG.md, the reasons in DECISIONS.md ("0.4.0",
+including "Step 8: final verification").
+- **Jar:** build/libs/shard-0.4.0.jar (fabric.mod.json says 0.4.0), sha512
+  c4058524568ff2fc266af76282f10b16dcb4a5e3313513681cc24fafc47cba8bd80599f4bf6abd3ca00825f75e4f159c11eea752e2276664e2e82135d6dab1b3
+  (also in build/libs/shard-0.4.0.jar.sha512). Note: build/libs/shard-0.3.0.jar was rebuilt
+  from later code during step 7 and is NOT the published 0.3.0; the GitHub release is.
+- **Tests:** `./gradlew build` passes, 86 JUnit tests, 0 failures.
+- **Smoke test** at 1280x720, 1920x1080 and 2560x1440 (this monitor is 1920x1080, so the
+  1440 window is 2560x1061): `layoutIdenticalAcrossScales: true`, `inventoryScaleSlotMisses: 0`
+  (47 slots), `borderlessCoversMonitor: true`, `borderlessRestoresWindow: true`,
+  `fightLogKills: 1`, HUD editor undo and the crystal place/hit check pass at all three sizes.
+  The new `clippedTexts` list contains no module name at any size, only one-line descriptions,
+  placeholders and long hints. All 216 PNGs were looked at; 4x crops are smooth. Summaries in
+  docs/smoke-summary-0.4.0-{720,1080,1440}.json.
+- **Benchmark:** HUD layer 0.18-0.19 ms per frame with the busy HUD, frame rates at the cap,
+  1% lows 99 fps (BENCHMARKS.md, "0.4.0 final check").
+- **Screenshots:** docs/screenshots/0.4.0/final-* (before/after of the owner's 0.3.0 view:
+  final-before-after-hud.png).
+- **Known limits (recorded, not fixed):** fire tints multiply instead of recolouring, no shield
+  opacity, alt-tab speed in borderless is not automated, a wide HUD editor toolbar can cover
+  top-left elements, chat on a 720p window can reach the kit counter.
+
+### Publishing 0.4.0 (only after the owner says yes)
+1. Merge `v0.4.0` into `main` (`git checkout main && git merge --no-ff v0.4.0`) and push main.
+2. Release (Claude's sandbox may not create releases; if refused, the owner runs it from a
+   Desktop .cmd):
+
+```bash
+gh release create v0.4.0 build/libs/shard-0.4.0.jar build/libs/shard-0.4.0.jar.sha512 --repo OhMarker/shard-client --title "Shard Client 0.4.0" --notes-file docs/release-notes-0.4.0.md
+```
+
+3. In ../meta, add the 0.4.0 build to shard-manifest.json (url
+   `https://github.com/OhMarker/shard-client/releases/download/v0.4.0/shard-0.4.0.jar`, the
+   sha512 above, `"minecraft": ["1.21.11"]`, `"fabricLoader": ">=0.19.0"`, the changelog,
+   `releasedAt`), set `latest` to 0.4.0, commit and push. Check the downloaded jar's sha512
+   matches before pushing meta.
+
+## 0.3.0 (released)
+
 Last updated 2026-10-07 (0.3.0).
 
 - Fabric mod for Minecraft 1.21.11 (Loader 0.19.5, Fabric API 0.141.6, Mojang official mappings,

@@ -15,13 +15,32 @@ import net.minecraft.client.Options;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class KeystrokesModule extends HudModule {
-    public enum Layout { WASD, ARROWS }
+    public enum Layout implements gg.shard.client.module.setting.Labeled {
+        WASD("WASD"), ARROWS("Arrows");
+
+        private final String label;
+
+        Layout(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String label() {
+            return label;
+        }
+    }
+
+    private final float[] fade = new float[16];
+    private int keyIndex;
+    private long lastFrameNs;
+    private float frameDt;
 
     private final EnumSetting<Layout> layout = add(new EnumSetting<>("Layout", "WASD shows the keys you bound; Arrows shows arrow symbols", Layout.WASD).group("Keys"));
     private final BoolSetting labels = add(new BoolSetting("Key labels", "Print the key name on each key", true).group("Keys"));
     private final IntSetting keySize = add(new IntSetting("Key size", "Size of one key", 20, 14, 36, 1, "").group("Keys"));
     private final IntSetting gap = add(new IntSetting("Gap", "Space between keys", 2, 0, 8, 1, "").group("Keys"));
     private final BoolSetting mouse = add(new BoolSetting("Mouse buttons", "Show LMB and RMB", true).group("Keys"));
+    private final BoolSetting cps = add(new BoolSetting("CPS on mouse keys", "Show clicks per second on LMB and RMB instead of the key names", true));
     private final BoolSetting space = add(new BoolSetting("Space bar", "Show the jump key", true).group("Keys"));
     private final ColorSetting pressed = add(new ColorSetting("Pressed", "Fill colour while a key is held", 0xFF22D3EE).group("Colours"));
     private final ColorSetting idle = add(new ColorSetting("Idle", "Fill colour while released", 0x80000000).group("Colours"));
@@ -42,6 +61,10 @@ public final class KeystrokesModule extends HudModule {
 
     @Override
     public void render(GuiGraphics g, DeltaTracker delta) {
+        long now = System.nanoTime();
+        frameDt = lastFrameNs == 0 ? 0f : Math.min(0.1f, (now - lastFrameNs) / 1e9f);
+        lastFrameNs = now;
+        keyIndex = 0;
         Options o = mc().options;
         HudStyle.Resolved st = style();
         int k = keySize.get();
@@ -65,8 +88,9 @@ public final class KeystrokesModule extends HudModule {
         y += k + gp;
         if (mouse.get()) {
             int half = (inner - gp) / 2;
-            key(g, st, pad, y, half, mouseH, "LMB", mc().mouseHandler.isLeftPressed());
-            key(g, st, pad + half + gp, y, inner - half - gp, mouseH, "RMB", mc().mouseHandler.isRightPressed());
+            boolean showCps = cps.get();
+            key(g, st, pad, y, half, mouseH, showCps ? cpsLabel(gg.shard.client.input.ClickTracker.left(), half) : "LMB", mc().mouseHandler.isLeftPressed());
+            key(g, st, pad + half + gp, y, inner - half - gp, mouseH, showCps ? cpsLabel(gg.shard.client.input.ClickTracker.right(), inner - half - gp) : "RMB", mc().mouseHandler.isRightPressed());
             y += mouseH + gp;
         }
         if (space.get()) {
@@ -83,10 +107,20 @@ public final class KeystrokesModule extends HudModule {
         return n.length() <= 3 ? n.toUpperCase() : n;
     }
 
+    /** "12 CPS" when it fits the key, else just "12". */
+    private static String cpsLabel(int cps, int keyW) {
+        String full = cps + " CPS";
+        return textW(full) <= keyW - 4 ? full : String.valueOf(cps);
+    }
+
     private void key(GuiGraphics g, HudStyle.Resolved st, int x, int y, int w, int h, String label, boolean down) {
-        Render2D.roundedRect(g, x, y, w, h, Math.min(st.radius(), Math.min(w, h) / 2), down ? pressed.get() : idle.get());
+        // Presses light up at once and fade out over 120 ms, so fast taps are still visible.
+        int id = Math.min(fade.length - 1, keyIndex++);
+        float t = down ? 1f : Math.max(0f, fade[id] - frameDt / 0.12f);
+        fade[id] = t;
+        Render2D.roundedRect(g, x, y, w, h, Math.min(st.radius(), Math.min(w, h) / 2), Colors.mix(idle.get(), pressed.get(), t));
         if (labels.get() && !label.isEmpty()) {
-            int color = down ? Colors.contrastText(pressed.get()) : st.text();
+            int color = t > 0.5f ? Colors.contrastText(pressed.get()) : st.text();
             String shown = Fonts.clip(label, WEIGHT, TEXT_SIZE, w - 4);
             Fonts.draw(g, shown, WEIGHT, TEXT_SIZE, x + (w - Fonts.widthInt(shown, WEIGHT, TEXT_SIZE)) / 2, y + (h - lineH()) / 2 + lineOffset(), color, st.shadow());
         }
@@ -94,6 +128,6 @@ public final class KeystrokesModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:keys";
+        return "keystrokes";
     }
 }

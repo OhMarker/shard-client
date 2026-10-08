@@ -35,6 +35,6 @@ public final class CpsModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:cps";
+        return "cps";
     }
 }

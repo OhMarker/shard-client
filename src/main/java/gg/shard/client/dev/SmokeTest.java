@@ -58,6 +58,10 @@ public final class SmokeTest {
     private static int ticksOutOfWorld;
     private static boolean connectRequested;
     private static boolean active;
+
+    public static boolean active() {
+        return active;
+    }
     private static boolean bench;
     private static Path out;
 
@@ -144,6 +148,14 @@ public final class SmokeTest {
             Benchmark.tick(mc, ticksInWorld);
             return;
         }
+        if (ticksInWorld == 2) {
+            // A previous run may have left the player dead or in another game mode; start from a known spot.
+            if (mc.player.isDeadOrDying()) mc.player.respawn();
+            mc.player.connection.sendCommand("gamemode creative");
+            mc.player.connection.sendCommand("tp @s -5 -22 2 180 30");
+            mc.player.connection.sendCommand("time set noon");
+            mc.player.connection.sendCommand("gamerule doDaylightCycle false");
+        }
         if (ticksInWorld == 5) quietHud(mc);
         if (ticksInWorld < 10) return;
         int t = ticksInWorld - 10;
@@ -154,7 +166,61 @@ public final class SmokeTest {
             return;
         }
         int after = t - SCALES.length * STEP_TICKS;
-        switch (after) {
+        if (after < MENU_TICKS) {
+            menuBlock(mc, after);
+            return;
+        }
+        after -= MENU_TICKS;
+        if (after < EDITOR_TICKS) {
+            editorBlock(mc, after);
+            return;
+        }
+        after -= EDITOR_TICKS;
+        if (after < FIRE_TICKS) {
+            fireBlock(mc, after);
+            return;
+        }
+        after -= FIRE_TICKS;
+        if (after < CROSSHAIR_TICKS) {
+            crosshairBlock(mc, after);
+            return;
+        }
+        after -= CROSSHAIR_TICKS;
+        if (after < SHIELD_TICKS) {
+            shieldBlock(mc, after);
+            return;
+        }
+        after -= SHIELD_TICKS;
+        if (after < ANCHOR_TICKS) {
+            anchorCrystalBlock(mc, after);
+            return;
+        }
+        after -= ANCHOR_TICKS;
+        if (after < SCALES_TICKS) {
+            scalesBlock(mc, after);
+            return;
+        }
+        after -= SCALES_TICKS;
+        if (after < DISPLAY_TICKS) {
+            displayBlock(mc, after);
+            return;
+        }
+        after -= DISPLAY_TICKS;
+        if (after < STYLE_TICKS) {
+            styleBlock(mc, after);
+            return;
+        }
+        after -= STYLE_TICKS;
+        if (after < STEP7_TICKS) {
+            step7Block(mc, after);
+            return;
+        }
+        after -= STEP7_TICKS;
+        if (after < DENSITY_TICKS) {
+            densityBlock(mc, after);
+            return;
+        }
+        switch (after - DENSITY_TICKS) {
             case 0 -> {
                 mc.setScreen(null);
                 setScale(mc, 2);
@@ -208,9 +274,594 @@ public final class SmokeTest {
         }
     }
 
+    private static final int MENU_TICKS = 125;
+
+    /** The 0.4.0 menu: list view, grid view, search over settings, and jumping to a setting. */
+    private static void menuBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                openGui(mc);
+                gui(mc).setGridView(false);
+                openPanel(mc, "crystal-optimizer");
+            }
+            case 2 -> {
+                // On windows under 1640 px the detail column covers the list; show the list itself.
+                gui(mc).showList();
+                parkCursor(mc);
+            }
+            case 27, 47, 67 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-menu-list.png", null);
+            case 25 -> gui(mc).setGridView(true);
+            case 40 -> shot(mc, "smoke-menu-grid.png", null);
+            case 45 -> {
+                gui(mc).setGridView(false);
+                gui(mc).setSearch("hit sound");
+            }
+            case 60 -> shot(mc, "smoke-menu-search.png", null);
+            case 65 -> gui(mc).openSearchResult(0);
+            case 80 -> shot(mc, "smoke-menu-jump.png", null);
+            case 85 -> {
+                // The view of the owner's 0.3.0 feedback screenshot: the HUD category.
+                gui(mc).setSearch("");
+                gui(mc).showCategory(gg.shard.client.module.ModuleCategory.HUD);
+                gui(mc).setGridView(true);
+            }
+            case 87 -> {
+                gui(mc).showList();
+                parkCursor(mc);
+            }
+            case 100 -> shot(mc, "smoke-menu-hud-grid.png", null);
+            case 102 -> gui(mc).setGridView(false);
+            case 115 -> shot(mc, "smoke-menu-hud-list.png", null);
+            case 120 -> mc.setScreen(null);
+            default -> {
+            }
+        }
+    }
+
+    private static final int EDITOR_TICKS = 150;
+    private static java.util.Map<String, gg.shard.client.hud.HudPresets.Entry> layoutBefore;
+
+    private static gg.shard.client.hud.HudModule hudModule(String key) {
+        for (var m : ShardClient.hud().hudModules()) if (m.key().equals(key)) return m;
+        throw new IllegalStateException("no HUD module " + key);
+    }
+
+    private static void setSetting(String moduleKey, String settingKey, String value) {
+        for (var m : ShardClient.modules().all()) {
+            if (!m.key().equals(moduleKey)) continue;
+            for (var st : m.settings()) if (st.key().equals(settingKey)) st.parse(value);
+        }
+    }
+
+    private static HudEditorScreen editor(Minecraft mc) {
+        return mc.screen instanceof HudEditorScreen e ? e : null;
+    }
+
+    /** The 0.4.0 HUD editor: presets, the presets menu, snap guides, the side panel, undo, then the live HUD. */
+    private static void editorBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                layoutBefore = gg.shard.client.hud.HudPresets.snapshot(ShardClient.hud());
+                mc.setScreen(new HudEditorScreen(null, ShardClient.hud()));
+            }
+            case 2, 27, 47, 67, 87 -> parkCursor(mc);
+            case 5 -> editor(mc).applyPreset(gg.shard.client.hud.HudPresets.MINIMAL);
+            case 20 -> shot(mc, "smoke-hudeditor-preset.png", null);
+            case 25 -> editor(mc).setPresetsOpen(true);
+            case 40 -> {
+                shot(mc, "smoke-hudeditor-presets-menu.png", null);
+            }
+            case 45 -> {
+                editor(mc).setPresetsOpen(false);
+                editor(mc).select(hudModule("item-counter"));
+                editor(mc).previewDrag(1.5, -0.5);
+            }
+            case 60 -> shot(mc, "smoke-hudeditor-drag.png", null);
+            case 65 -> {
+                editor(mc).endPreviewDrag();
+                editor(mc).select(hudModule("fps"), hudModule("ping"));
+                editor(mc).openPanel(hudModule("fps"));
+            }
+            case 85 -> shot(mc, "smoke-hudeditor-panel.png", null);
+            case 90 -> {
+                var counter = hudModule("item-counter");
+                double before = counter.posX(mc.getWindow().getGuiScaledWidth());
+                editor(mc).undo(); // the preview drag
+                editor(mc).undo(); // the preset
+                double after = counter.posX(mc.getWindow().getGuiScaledWidth());
+                ShardClient.LOGGER.info("Smoke: HUD editor undo moved Item Counter from {} to {}", before, after);
+                SUMMARY.addProperty("hudEditorUndoWorks", Math.abs(before - after) > 0.01);
+                mc.setScreen(null);
+                gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.MINIMAL);
+            }
+            case 110 -> shot(mc, "smoke-hud-preset-minimal.png", null);
+            case 115 -> {
+                gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.FULL);
+                setSetting("fps", "frame-time-graph", "true");
+                setSetting("ping", "graph", "true");
+                // Room for the graphs.
+                hudModule("ping").applyLayout(new double[]{0, 0, 4, 40, 1});
+                hudModule("cps").applyLayout(new double[]{0, 0, 4, 76, 1});
+                hudModule("coordinates").applyLayout(new double[]{0, 0, 4, 92, 1});
+            }
+            case 135 -> shot(mc, "smoke-hud-preset-full.png", null);
+            case 140 -> {
+                setSetting("fps", "frame-time-graph", "false");
+                setSetting("ping", "graph", "false");
+                gg.shard.client.hud.HudPresets.restore(ShardClient.hud(), layoutBefore);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int FIRE_TICKS = 200;
+
+    private static void cmd(Minecraft mc, String format, Object... args) {
+        if (mc.player != null) mc.player.connection.sendCommand(String.format(java.util.Locale.ROOT, format, args));
+    }
+
+    private static Module module(String key) {
+        for (var m : ShardClient.modules().all()) if (m.key().equals(key)) return m;
+        throw new IllegalStateException("no module " + key);
+    }
+
+    /** Low Fire: fire and soul fire on the ground, a burning zombie and a burning player; off, on, tinted, and the preview. */
+    private static void fireBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Direction dir = p.getDirection();
+        BlockPos base = p.blockPosition();
+        BlockPos fire = base.relative(dir, 3).below(base.getY() - groundY(mc, base));
+        BlockPos soul = fire.relative(dir.getClockWise());
+        BlockPos fire2 = fire.relative(dir.getCounterClockWise());
+        BlockPos mob = fire.relative(dir, 2).relative(dir.getCounterClockWise(), 2);
+        switch (local) {
+            case 0 -> {
+                mc.setScreen(null);
+                setScale(mc, 2);
+                cmd(mc, "setblock %d %d %d minecraft:soul_sand", soul.getX(), soul.getY() - 1, soul.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:fire", fire.getX(), fire.getY(), fire.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:fire", fire2.getX(), fire2.getY(), fire2.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:soul_fire", soul.getX(), soul.getY(), soul.getZ());
+                cmd(mc, "difficulty easy");
+                cmd(mc, "gamerule doFireTick false");
+                cmd(mc, "summon minecraft:zombie %d %d %d {Fire:2000s,NoAI:1b,Silent:1b,PersistenceRequired:1b}", mob.getX(), mob.getY(), mob.getZ());
+                // Look at the fire.
+                p.setXRot(32f);
+                module("low-fire").setEnabled(false);
+            }
+            case 50 -> shot(mc, "smoke-fire-vanilla.png", null);
+            case 55 -> module("low-fire").setEnabled(true);
+            case 100 -> shot(mc, "smoke-fire-low.png", null);
+            case 105 -> {
+                setSetting("low-fire", "fire-colour", "#7DD3FC");
+                setSetting("low-fire", "soul-fire-colour", "#F472B6");
+                setSetting("low-fire", "entity-fire-colour", "#86EFAC");
+                setSetting("low-fire", "colour", "#C4B5FD");
+            }
+            case 150 -> shot(mc, "smoke-fire-tinted.png", null);
+            case 155 -> {
+                openGui(mc);
+                openPanel(mc, "low-fire");
+            }
+            case 157 -> parkCursor(mc);
+            case 175 -> shot(mc, "smoke-fire-panel.png", null);
+            case 180 -> {
+                mc.setScreen(null);
+                for (String k : new String[]{"fire-colour", "soul-fire-colour", "entity-fire-colour", "colour"}) setSetting("low-fire", k, "#FFFFFF");
+                cmd(mc, "kill @e[type=minecraft:zombie]");
+                cmd(mc, "difficulty peaceful");
+                for (BlockPos b : new BlockPos[]{fire, fire2, soul}) cmd(mc, "setblock %d %d %d minecraft:air", b.getX(), b.getY(), b.getZ());
+                cmd(mc, "setblock %d %d %d minecraft:obsidian", soul.getX(), soul.getY() - 1, soul.getZ());
+            }
+            default -> {
+            }
+        }
+    }
+
+    /** Y of the first air block above the floor under {@code from} (the player hovers in the smoke world). */
+    private static int groundY(Minecraft mc, BlockPos from) {
+        BlockPos.MutableBlockPos m = from.mutable();
+        for (int i = 0; i < 6 && mc.level.getBlockState(m.below()).isAir(); i++) m.move(Direction.DOWN);
+        return m.getY();
+    }
+
+    private static final int CROSSHAIR_TICKS = 90;
+
+    /** Crosshair: the preview, the pixel editor, and a styled crosshair in the world. */
+    private static void crosshairBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                module("crosshair").setEnabled(true);
+                openGui(mc);
+                openPanel(mc, "crosshair");
+            }
+            case 2, 27 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-crosshair-panel.png", null);
+            case 25 -> setSetting("crosshair", "style", "CUSTOM");
+            case 40 -> shot(mc, "smoke-crosshair-editor.png", null);
+            case 45 -> {
+                setSetting("crosshair", "style", "CIRCLE");
+                setSetting("crosshair", "colour", "#22D3EE");
+                mc.setScreen(null);
+            }
+            case 60 -> shot(mc, "smoke-crosshair-world.png", null);
+            case 65 -> {
+                setSetting("crosshair", "style", "CROSS");
+                setSetting("crosshair", "colour", "#FFFFFF");
+                module("crosshair").setEnabled(false);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int SHIELD_TICKS = 130;
+
+    /** Shield: holding and blocking with the module off and on, and the panel preview. */
+    private static void shieldBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Module shield = module("low-shield");
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                mc.setScreen(null);
+                cmd(mc, "item replace entity @s weapon.offhand with minecraft:shield");
+                p.getInventory().setSelectedSlot(8);
+                p.setXRot(10f);
+                shield.setEnabled(false);
+            }
+            case 20 -> shot(mc, "smoke-shield-vanilla-hold.png", null);
+            case 22 -> mc.options.keyUse.setDown(true);
+            case 40 -> shot(mc, "smoke-shield-vanilla-block.png", null);
+            case 42 -> {
+                mc.options.keyUse.setDown(false);
+                shield.setEnabled(true);
+            }
+            case 60 -> shot(mc, "smoke-shield-hold.png", null);
+            case 62 -> mc.options.keyUse.setDown(true);
+            case 80 -> shot(mc, "smoke-shield-block.png", null);
+            case 82 -> {
+                mc.options.keyUse.setDown(false);
+                openGui(mc);
+                openPanel(mc, "low-shield");
+            }
+            case 84 -> parkCursor(mc);
+            case 100 -> shot(mc, "smoke-shield-panel.png", null);
+            case 105 -> {
+                mc.setScreen(null);
+                cmd(mc, "item replace entity @s weapon.offhand with minecraft:air");
+                p.getInventory().setSelectedSlot(0);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int ANCHOR_TICKS = 140;
+
+    /** Anchor Glow on anchors with 0-4 charges, then crystals vanilla and with Crystal Visuals colours. */
+    private static void anchorCrystalBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Direction dir = p.getDirection();
+        BlockPos base = p.blockPosition();
+        int gy = groundY(mc, base);
+        BlockPos row = new BlockPos(base.getX(), gy, base.getZ()).relative(dir, 4);
+        Direction side = dir.getClockWise();
+        switch (local) {
+            case 0 -> {
+                mc.setScreen(null);
+                setScale(mc, 2);
+                p.setXRot(28f);
+                for (int i = 0; i <= 4; i++) {
+                    BlockPos a = row.relative(side, (i - 2) * 2);
+                    cmd(mc, "setblock %d %d %d minecraft:respawn_anchor[charges=%d]", a.getX(), a.getY(), a.getZ(), i);
+                }
+                module("anchor-glow").setEnabled(true);
+                setSetting("anchor-glow", "outline-empty-anchors", "true");
+            }
+            case 30 -> shot(mc, "smoke-anchor-glow.png", null);
+            case 32 -> {
+                for (int i = 0; i <= 4; i++) {
+                    BlockPos a = row.relative(side, (i - 2) * 2);
+                    cmd(mc, "setblock %d %d %d minecraft:air", a.getX(), a.getY(), a.getZ());
+                }
+                for (int i = -1; i <= 1; i++) {
+                    BlockPos c = row.relative(side, i * 2);
+                    cmd(mc, "summon minecraft:end_crystal %d.5 %d %d.5 {ShowBottom:1b}", c.getX(), c.getY(), c.getZ());
+                }
+                module("crystal-size").setEnabled(false);
+            }
+            case 60 -> shot(mc, "smoke-crystals-vanilla.png", null);
+            case 62 -> {
+                module("crystal-size").setEnabled(true);
+                setSetting("crystal-size", "core-colour", "#22D3EE");
+                setSetting("crystal-size", "frame-colour", "#F472B6");
+                setSetting("crystal-size", "opacity", "70");
+                setSetting("crystal-size", "spin-speed", "0");
+                setSetting("crystal-size", "bounce", "false");
+                setSetting("crystal-size", "show-base", "false");
+            }
+            case 90 -> shot(mc, "smoke-crystals-styled.png", null);
+            case 92 -> {
+                openGui(mc);
+                openPanel(mc, "crystal-size");
+            }
+            case 94 -> parkCursor(mc);
+            case 110 -> shot(mc, "smoke-crystals-panel.png", null);
+            case 115 -> {
+                mc.setScreen(null);
+                cmd(mc, "kill @e[type=minecraft:end_crystal]");
+                module("anchor-glow").setEnabled(false);
+                for (String[] kv : new String[][]{{"core-colour", "#FFFFFF"}, {"frame-colour", "#FFFFFF"}, {"opacity", "100"}, {"spin-speed", "100"}, {"bounce", "true"}, {"show-base", "true"}}) {
+                    setSetting("crystal-size", kv[0], kv[1]);
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int SCALES_TICKS = 160;
+    private static int slotIndex;
+    private static int slotMisses;
+    private static int slotChecks;
+
+    /** GUI Scales: the inventory at scale 3 while the game is at 2, every slot hovered by the real pointer; a smaller hotbar. */
+    private static void scalesBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Module scales = module("gui-scales");
+        if (local == 0) {
+            setScale(mc, 2);
+            scales.setEnabled(true);
+            setSetting("gui-scales", "inventory-scale", "GAME");
+            mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(p));
+        } else if (local == 2) {
+            parkCursor(mc);
+        } else if (local == 15) {
+            shot(mc, "smoke-inventory-game-scale.png", null);
+            mc.setScreen(null);
+            setSetting("gui-scales", "inventory-scale", "S3");
+            mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(p));
+            slotIndex = 0;
+            slotMisses = 0;
+            slotChecks = 0;
+        } else if (local >= 20 && local < 20 + 47 * 2 && mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+            var acc = (gg.shard.client.mixin.AbstractContainerScreenAccessor) screen;
+            var slots = screen.getMenu().slots;
+            int step = local - 20;
+            if (step % 2 == 0 && slotIndex < slots.size()) {
+                // Move the real pointer to the centre of the next slot, in physical pixels.
+                var slot = slots.get(slotIndex);
+                double f = gg.shard.client.gui.ScaledScreen.factorOf(screen);
+                int gs = mc.getWindow().getGuiScale();
+                // Mouse events arrive in window coordinates, which equal the framebuffer's only when
+                // the window fits the monitor; convert the way vanilla's mouse handler does.
+                var win = mc.getWindow();
+                double sx = win.getScreenWidth() / (double) win.getWidth();
+                double sy = win.getScreenHeight() / (double) win.getHeight();
+                if (slotIndex == 0) ShardClient.LOGGER.info("Smoke: window {}x{}, framebuffer {}x{}", win.getScreenWidth(), win.getScreenHeight(), win.getWidth(), win.getHeight());
+                double px = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$leftPos() + slot.x + 8, f, gs) * sx;
+                double py = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$topPos() + slot.y + 8, f, gs) * sy;
+                ((gg.shard.client.mixin.MouseHandlerInvoker) mc.mouseHandler).shard$onMove(mc.getWindow().handle(), px, py);
+            } else if (step % 2 == 1 && slotIndex < slots.size()) {
+                var hovered = acc.shard$hoveredSlot();
+                slotChecks++;
+                if (hovered != slots.get(slotIndex)) slotMisses++;
+                slotIndex++;
+            }
+        } else if (local == 20 + 47 * 2 + 1) {
+            ShardClient.LOGGER.info("Smoke: inventory at GUI scale 3 over game scale 2: {} slots checked, {} wrong", slotChecks, slotMisses);
+            SUMMARY.addProperty("inventoryScaleSlotsChecked", slotChecks);
+            SUMMARY.addProperty("inventoryScaleSlotMisses", slotMisses);
+            shot(mc, "smoke-inventory-scale3.png", null);
+        } else if (local == 20 + 47 * 2 + 4) {
+            mc.setScreen(null);
+            setSetting("gui-scales", "inventory-scale", "GAME");
+            setSetting("gui-scales", "hotbar-scale", "75");
+        } else if (local == 20 + 47 * 2 + 20) {
+            shot(mc, "smoke-hotbar-75.png", null);
+        } else if (local == 20 + 47 * 2 + 22) {
+            setSetting("gui-scales", "hotbar-scale", "100");
+            scales.setEnabled(false);
+        }
+    }
+
+    private static final int DISPLAY_TICKS = 70;
+    private static int[] windowBefore;
+
+    /** Display: borderless on (window = monitor), then off (window restored); the title. */
+    private static void displayBlock(Minecraft mc, int local) {
+        var display = ShardClient.modules().get(gg.shard.client.modules.utility.DisplayModule.class);
+        var w = mc.getWindow();
+        switch (local) {
+            case 0 -> {
+                windowBefore = new int[]{w.getX(), w.getY(), w.getScreenWidth(), w.getScreenHeight()};
+                display.setBorderless(true);
+            }
+            case 20 -> {
+                var mode = org.lwjgl.glfw.GLFW.glfwGetVideoMode(org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor());
+                boolean covers = mode != null && w.getScreenWidth() == mode.width() && w.getScreenHeight() == mode.height();
+                ShardClient.LOGGER.info("Smoke: borderless window {}x{} at {},{}; monitor {}x{}; covers monitor: {}; title \"{}\"",
+                        w.getScreenWidth(), w.getScreenHeight(), w.getX(), w.getY(), mode == null ? 0 : mode.width(), mode == null ? 0 : mode.height(),
+                        covers, display.titleOverride());
+                SUMMARY.addProperty("borderlessCoversMonitor", covers);
+                shot(mc, "smoke-borderless.png", null);
+            }
+            case 25 -> display.setBorderless(false);
+            case 50 -> {
+                boolean restored = w.getScreenWidth() == windowBefore[2] && w.getScreenHeight() == windowBefore[3];
+                ShardClient.LOGGER.info("Smoke: after borderless off the window is {}x{} (was {}x{}); restored: {}",
+                        w.getScreenWidth(), w.getScreenHeight(), windowBefore[2], windowBefore[3], restored);
+                SUMMARY.addProperty("borderlessRestoresWindow", restored);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int STYLE_TICKS = 70;
+
+    /** HUD styles: the FPS element's style preview, then Pill with the label after the value and brackets. */
+    private static void styleBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                openGui(mc);
+                openPanel(mc, "fps");
+            }
+            case 2 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-hudstyle-panel.png", null);
+            case 25 -> {
+                mc.setScreen(null);
+                setSetting("fps", "custom-style", "true");
+                setSetting("fps", "style", "PILL");
+                setSetting("fps", "label-position", "AFTER");
+                setSetting("fps", "brackets", "true");
+            }
+            case 45 -> shot(mc, "smoke-hudstyle-pill.png", null);
+            case 50 -> {
+                setSetting("fps", "custom-style", "false");
+                setSetting("fps", "label-position", "BEFORE");
+                setSetting("fps", "brackets", "false");
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int STEP7_TICKS = 220;
+    private static java.util.Map<String, gg.shard.client.hud.HudPresets.Entry> layoutBefore7;
+    private static int zombieId = -1;
+
+    /** Step 7: welcome, Crystal PvP Pro, a fight against a zombie (target, combo, reach, recap), cooldowns, compass, TPS, chat. */
+    private static void step7Block(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Direction dir = p.getDirection();
+        BlockPos base = p.blockPosition();
+        BlockPos zpos = new BlockPos(base.getX(), groundY(mc, base), base.getZ()).relative(dir, 2);
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                layoutBefore7 = gg.shard.client.hud.HudPresets.snapshot(ShardClient.hud());
+                var welcome = new gg.shard.client.gui.WelcomeScreen();
+                mc.setScreen(welcome);
+                welcome.showStep(0, gg.shard.client.gui.QuickSetup.PRO);
+            }
+            case 2 -> parkCursor(mc);
+            case 15 -> shot(mc, "smoke-welcome.png", null);
+            case 18 -> {
+                mc.setScreen(null);
+                gg.shard.client.gui.QuickSetup.apply(gg.shard.client.gui.QuickSetup.PRO);
+                for (String k : new String[]{"combo", "reach", "fight-recap", "compass", "speed", "tps", "chat"}) module(k).setEnabled(true);
+                setSetting("target-hud", "players-only", "false");
+                setSetting("target-hud", "show-who-you-aim-at", "false");
+                cmd(mc, "difficulty easy");
+                cmd(mc, "summon minecraft:zombie %d %d %d {NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"shardsmoke\"],ArmorItems:[{id:\"minecraft:diamond_boots\",count:1},{id:\"minecraft:diamond_leggings\",count:1},{id:\"minecraft:diamond_chestplate\",count:1},{id:\"minecraft:diamond_helmet\",count:1}]}",
+                        zpos.getX(), zpos.getY(), zpos.getZ());
+                p.setXRot(15f);
+                p.getInventory().setSelectedSlot(8);
+            }
+            case 40, 50, 60 -> {
+                var z = mc.level.getEntitiesOfClass(net.minecraft.world.entity.monster.zombie.Zombie.class, p.getBoundingBox().inflate(6)).stream().findFirst().orElse(null);
+                if (z != null) {
+                    zombieId = z.getId();
+                    mc.gameMode.attack(p, z);
+                    p.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                }
+            }
+            case 62 -> {
+                p.getCooldowns().addCooldown(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL), 200);
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: chat line"));
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));
+                mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));
+            }
+            case 75 -> {
+                ShardClient.LOGGER.info("Smoke: fight log combo {} reach {} target {}", gg.shard.client.combat.CombatTracker.LOG.combo(),
+                        gg.shard.client.combat.CombatTracker.LOG.lastReach(), gg.shard.client.combat.CombatTracker.LOG.targetId());
+                shot(mc, "smoke-step7-fight.png", null);
+            }
+            case 80 -> cmd(mc, "kill @e[type=minecraft:zombie,tag=shardsmoke]");
+            case 100 -> {
+                var log = gg.shard.client.combat.CombatTracker.LOG;
+                ShardClient.LOGGER.info("Smoke: after the kill: kills {} streak {} recap {}", log.kills(), log.streak(), log.lastRecap());
+                SUMMARY.addProperty("fightLogKills", log.kills());
+                shot(mc, "smoke-step7-recap.png", null);
+            }
+            case 105 -> {
+                openGui(mc);
+                openSettingsPageSmoke(mc);
+            }
+            case 107 -> parkCursor(mc);
+            case 125 -> shot(mc, "smoke-step7-settings.png", null);
+            case 130 -> {
+                mc.setScreen(null);
+                for (String k : new String[]{"combo", "reach", "fight-recap", "compass", "speed", "tps", "chat"}) module(k).setEnabled(false);
+                setSetting("target-hud", "players-only", "true");
+                setSetting("target-hud", "show-who-you-aim-at", "true");
+                gg.shard.client.hud.HudPresets.restore(ShardClient.hud(), layoutBefore7);
+                cmd(mc, "difficulty peaceful");
+                p.getInventory().setSelectedSlot(0);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static void openSettingsPageSmoke(Minecraft mc) {
+        if (mc.screen instanceof ClickGuiScreen gui) gui.openSettingsPage();
+    }
+
+    private static final int DENSITY_TICKS = 80;
+
+    /**
+     * Sharp-text pass: the settings page at 125% and 150% interface size and a HUD element at a
+     * non-integer scale, the cases that used to stair-step. Crops are made from these offline.
+     */
+    private static void densityBlock(Minecraft mc, int local) {
+        var appearance = ShardClient.appearance();
+        var fps = ShardClient.modules().get(gg.shard.client.modules.hud.FpsModule.class);
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                appearance.interfaceSize.set(125);
+                openGui(mc);
+            }
+            case 2, 27 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-density-gui-125.png", null);
+            case 25 -> {
+                appearance.interfaceSize.set(150);
+                openGui(mc);
+            }
+            case 45 -> shot(mc, "smoke-density-gui-150.png", null);
+            case 50 -> {
+                appearance.interfaceSize.set(100);
+                mc.setScreen(null);
+                fps.setScale(1.65);
+            }
+            case 65 -> shot(mc, "smoke-density-hud-fps165.png", null);
+            case 70 -> fps.setScale(1.0);
+            default -> {
+            }
+        }
+    }
+
     /** Opening a screen recentres the cursor; move it into the page margin so no hover state shows. */
     private static void parkCursor(Minecraft mc) {
         org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().handle(), 4, 4);
+        // The unfocused dev window gets no move event for that, so tell the mouse handler directly;
+        // otherwise the pointer stays where opening a screen centred it and hovers leak into shots.
+        ((gg.shard.client.mixin.MouseHandlerInvoker) mc.mouseHandler).shard$onMove(mc.getWindow().handle(), 4, 4);
     }
 
     // ---- GUI steps -----------------------------------------------------------------------------
@@ -389,11 +1040,19 @@ public final class SmokeTest {
         for (int i = 1; i < LAYOUTS.size(); i++) {
             JsonObject a = LAYOUTS.get(0).getAsJsonObject();
             JsonObject b = LAYOUTS.get(i).getAsJsonObject();
-            for (String k : new String[]{"designWidth", "designHeight", "narrow", "gridColumns", "cardWidth", "cardHeight", "sidebarWidth", "panelWidth"}) {
+            for (String k : new String[]{"narrow", "gridColumns", "cardWidth", "cardHeight", "sidebarWidth", "panelWidth"}) {
                 if (!a.get(k).equals(b.get(k))) identical = false;
+            }
+            // Vanilla rounds the GUI size up, so a window height that does not divide by the GUI
+            // scale (1061 on a 1080p monitor) shifts the page by a unit or two; that is not a layout change.
+            for (String k : new String[]{"designWidth", "designHeight"}) {
+                if (Math.abs(a.get(k).getAsInt() - b.get(k).getAsInt()) > 2) identical = false;
             }
         }
         SUMMARY.addProperty("layoutIdenticalAcrossScales", identical);
+        var clipped = new com.google.gson.JsonArray();
+        gg.shard.client.gui.Fonts.CLIPPED.stream().sorted().forEach(clipped::add);
+        SUMMARY.add("clippedTexts", clipped);
         SUMMARY.addProperty("configSchemaLoaded", ShardClient.config().loadedVersion());
         try {
             Files.writeString(out.resolve("smoke-summary.json"), new GsonBuilder().setPrettyPrinting().create().toJson(SUMMARY), StandardCharsets.UTF_8);

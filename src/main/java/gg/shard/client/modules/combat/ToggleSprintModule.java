@@ -55,7 +55,7 @@ public final class ToggleSprintModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:sprint";
+        return "sprint";
     }
 
     @Override

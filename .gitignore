@@ -17,3 +17,5 @@ smoke-out/
 logs/
 bench-out/
 *-run.log
+smoke-*/
+bench-*/

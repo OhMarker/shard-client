@@ -3,9 +3,11 @@ package gg.shard.client.module;
 public enum ModuleCategory {
     HUD("HUD", "Information overlays"),
     VISUALS("Visuals", "How the fight looks"),
-    COMBAT("Combat QoL", "Vanilla-legal fight helpers"),
+    COMBAT("Combat", "Crystal and anchor tools. The server stays in charge."),
     INPUT("Input", "Keys and mouse"),
-    PERFORMANCE("Performance", "Measured optimizers");
+    PERFORMANCE("Performance", "Measured optimizers"),
+    CHAT("Chat", "Cleaner, easier chat"),
+    UTILITY("Utility", "Window, scales, sounds and quality of life");
 
     private final String displayName;
     private final String description;

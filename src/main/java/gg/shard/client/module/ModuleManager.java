@@ -63,10 +63,26 @@ public final class ModuleManager {
         return null;
     }
 
+    /**
+     * The module of this class. Mixins call this many times per frame (weather, time, crystals,
+     * sounds, the HUD), so lookups are cached by class instead of scanning the list.
+     */
     public <T extends Module> T get(Class<T> type) {
-        for (Module m : modules) if (type.isInstance(m)) return type.cast(m);
-        throw new IllegalStateException("Module not registered: " + type.getSimpleName());
+        Module cached = BY_CLASS.get(type);
+        if (cached == null) {
+            for (Module m : modules) {
+                if (type.isInstance(m)) {
+                    cached = m;
+                    break;
+                }
+            }
+            if (cached == null) throw new IllegalStateException("Module not registered: " + type.getSimpleName());
+            BY_CLASS.put(type, cached);
+        }
+        return type.cast(cached);
     }
+
+    private final java.util.Map<Class<?>, Module> BY_CLASS = new java.util.concurrent.ConcurrentHashMap<>();
 
     // ---- mod conflicts ------------------------------------------------------------------------
 

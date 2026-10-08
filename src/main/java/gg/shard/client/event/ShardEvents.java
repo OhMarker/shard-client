@@ -12,6 +12,22 @@ public final class ShardEvents {
     private ShardEvents() {}
 
     private static final List<Consumer<LivingEntity>> TOTEM_POP = new CopyOnWriteArrayList<>();
+    private static final List<Consumer<LivingEntity>> DEATH = new CopyOnWriteArrayList<>();
+
+    /** A living entity died (the death entity event every client receives). */
+    public static void onDeath(Consumer<LivingEntity> listener) {
+        DEATH.add(listener);
+    }
+
+    public static void fireDeath(LivingEntity entity) {
+        for (Consumer<LivingEntity> l : DEATH) {
+            try {
+                l.accept(entity);
+            } catch (RuntimeException e) {
+                ShardClient.LOGGER.error("Death listener failed", e);
+            }
+        }
+    }
 
     /** A living entity's totem of undying activated (client-side entity event 35). */
     public static void onTotemPop(Consumer<LivingEntity> listener) {

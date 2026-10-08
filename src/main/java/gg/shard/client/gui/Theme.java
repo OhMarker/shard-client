@@ -3,7 +3,7 @@ package gg.shard.client.gui;
 import gg.shard.client.util.Colors;
 
 /**
- * Dark, calm palette driven by one accent colour (the launcher's, defaulting to crystal cyan,
+ * Neutral graphite palette (docs/DESIGN.md) driven by one accent colour (the launcher's, defaulting to crystal cyan,
  * optionally overridden in Settings → Appearance). Surfaces are near-opaque so they read
  * cleanly over the blurred world; lines are 1 design unit and low-contrast; the accent only
  * ever appears on the active switch, the focused control, the selected category and the
@@ -42,9 +42,9 @@ public final class Theme {
 
     // ---- shape --------------------------------------------------------------------------------
 
-    /** Cards and popovers. */
+    /** Rows, cards and inputs. */
     public static int radius() {
-        return 12;
+        return 8;
     }
 
     /** Controls: buttons, fields, dropdowns, swatches. */
@@ -52,9 +52,9 @@ public final class Theme {
         return 6;
     }
 
-    /** The sidebar and the settings panel. */
+    /** The rail, the detail panel and popovers. */
     public static int radiusLarge() {
-        return 16;
+        return 12;
     }
 
     // ---- accent -------------------------------------------------------------------------------
@@ -79,35 +79,35 @@ public final class Theme {
 
     /** Full-screen tint behind the settings page (drawn over the blur). */
     public static int overlay() {
-        return 0xB8070A12;
+        return 0xB80A0B0E;
     }
 
     /** Sidebar and settings panel. */
     public static int surface() {
-        return 0xF50E131C;
+        return 0xF5111317;
     }
 
     /** Cards and list rows. */
     public static int surfaceRaised() {
-        return 0xF8131927;
+        return 0xFF171A1F;
     }
 
     public static int surfaceHover() {
-        return 0xFC19202F;
+        return 0xFF1D2026;
     }
 
     /** Inputs, switch tracks, dropdown buttons. */
     public static int control() {
-        return 0xFF1C2433;
+        return 0xFF22262D;
     }
 
     public static int controlHover() {
-        return 0xFF232C3D;
+        return 0xFF2A2E36;
     }
 
     /** Popovers (dropdown lists, colour picker, confirmations). */
     public static int popover() {
-        return 0xFF161D2A;
+        return 0xFF16181D;
     }
 
     /** Tinted square behind a module icon. */
@@ -116,11 +116,11 @@ public final class Theme {
     }
 
     public static int line() {
-        return 0x1EFFFFFF;
+        return 0x12FFFFFF;
     }
 
     public static int lineStrong() {
-        return 0x38FFFFFF;
+        return 0x24FFFFFF;
     }
 
     public static int shadow() {
@@ -130,33 +130,33 @@ public final class Theme {
     // ---- text ---------------------------------------------------------------------------------
 
     public static int text() {
-        return 0xFFE8ECF4;
+        return 0xFFECEEF2;
     }
 
     public static int muted() {
-        return 0xFF9AA3B5;
+        return 0xFFA3A9B5;
     }
 
     public static int subtle() {
-        return 0xFF5F6779;
+        return 0xFF6B717D;
     }
 
     public static int success() {
-        return 0xFF34D399;
+        return 0xFF4ADE80;
     }
 
     public static int warning() {
-        return 0xFFFBBF24;
+        return 0xFFFACC15;
     }
 
     public static int danger() {
-        return 0xFFFB7185;
+        return 0xFFF87171;
     }
 
     // ---- legacy names kept for HUD modules ---------------------------------------------------
 
     public static int bg() {
-        return 0xF00B0F18;
+        return 0xF00F1114;
     }
 
     public static int panel() {
@@ -168,6 +168,6 @@ public final class Theme {
     }
 
     public static int header() {
-        return 0xF8101624;
+        return 0xF8131519;
     }
 }

@@ -37,6 +37,17 @@ public final class Scale {
         return Math.max(1, (int) Math.floor(guiSize / pageScale + 1e-6));
     }
 
+    /**
+     * Size of the window in design units, from its physical pixels. Vanilla rounds the GUI size
+     * up (2560 px at GUI scale 3 is 854 GUI units, 1281 design units), so the GUI size alone
+     * makes the page a unit wider at some scales; the physical size is the same at every scale,
+     * and it never exceeds the GUI size, so the page still fits.
+     */
+    public static int designSize(int guiSize, double pageScale, int physicalSize, int guiScale) {
+        int fromPixels = Math.max(1, (int) Math.floor(physicalSize / pixelsPerUnit(pageScale, guiScale) + 1e-6));
+        return Math.min(designSize(guiSize, pageScale), fromPixels);
+    }
+
     /** Mouse or scroll coordinate from GUI units to design units. */
     public static double toDesign(double guiCoordinate, double pageScale) {
         return guiCoordinate / pageScale;
@@ -69,5 +80,15 @@ public final class Scale {
     /** Pose scale for HUD elements: like {@link #pageScale} but driven by the HUD size setting (percent). */
     public static double hudScale(int guiScale, int hudSizePercent) {
         return pageScale(guiScale, Math.max(25, Math.min(300, hudSizePercent)) / 100.0);
+    }
+
+    /**
+     * Smallest of {@code available} (ascending) at or above {@code needed}, allowing {@code slack}
+     * below; the largest when none is. Picks font raster densities and icon atlas sizes so
+     * nothing is ever stretched up by more than the slack.
+     */
+    public static int atLeast(double needed, int[] available, double slack) {
+        for (int v : available) if (v >= needed - slack) return v;
+        return available[available.length - 1];
     }
 }

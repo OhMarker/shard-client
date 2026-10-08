@@ -39,6 +39,20 @@ class ScaleTest {
     }
 
     @Test
+    void designSizeFromPixelsIsExactlyTheSameAtEveryGuiScale() {
+        int[][] windows = {{1280, 720}, {1920, 1080}, {2560, 1440}, {2560, 1061}, {1366, 768}};
+        for (int[] w : windows) {
+            for (int guiScale = 1; guiScale <= 4; guiScale++) {
+                double page = Scale.pageScale(guiScale, 1.0);
+                int guiW = (int) Math.ceil(w[0] / (double) guiScale);
+                int guiH = (int) Math.ceil(w[1] / (double) guiScale);
+                assertEquals(w[0] / 2, Scale.designSize(guiW, page, w[0], guiScale), "width " + w[0] + " at scale " + guiScale);
+                assertEquals(w[1] / 2, Scale.designSize(guiH, page, w[1], guiScale), "height " + w[1] + " at scale " + guiScale);
+            }
+        }
+    }
+
+    @Test
     void mouseMapsIntoDesignUnits() {
         double page = Scale.pageScale(4, 1.0);
         assertEquals(200.0, Scale.toDesign(100.0, page), 1e-9);
@@ -80,5 +94,21 @@ class ScaleTest {
         }
         assertEquals(Scale.pageScale(2, 1.5), Scale.hudScale(2, 150), 1e-9);
         assertEquals(Scale.hudScale(2, 300), Scale.hudScale(2, 900), 1e-9, "clamped");
+    }
+
+    @Test
+    void textAndIconsAreNeverRasterisedBelowTheirOnScreenSize() {
+        int[] densities = {2, 3, 4, 6};
+        assertEquals(2, Scale.atLeast(1.0, densities, 0.15), "interface 50%: smallest raster");
+        assertEquals(2, Scale.atLeast(2.0, densities, 0.15), "100% at any GUI scale");
+        assertEquals(3, Scale.atLeast(2.5, densities, 0.15), "125% rounds up, never stretches");
+        assertEquals(3, Scale.atLeast(3.1, densities, 0.15), "within slack");
+        assertEquals(4, Scale.atLeast(3.2, densities, 0.15));
+        assertEquals(6, Scale.atLeast(9.0, densities, 0.15), "caps at the largest");
+        int[] atlases = {32, 64, 128};
+        assertEquals(32, Scale.atLeast(16 * 2.0, atlases, 0.5), "16-unit icon at 2 px/unit");
+        assertEquals(64, Scale.atLeast(16 * 3.0, atlases, 0.5));
+        assertEquals(128, Scale.atLeast(20 * 6.0, atlases, 0.5));
+        assertEquals(128, Scale.atLeast(400, atlases, 0.5));
     }
 }

@@ -46,7 +46,7 @@ public final class HitColorModule extends Module {
 
     @Override
     public String icon() {
-        return "glyph:drop";
+        return "hit-color";
     }
 
     @Override

@@ -83,6 +83,15 @@ final class Benchmark {
                     send(player, "gamemode creative");
                     SmokeTest.giveKit(player);
                     player.getInventory().setSelectedSlot(1);
+                    // A busy HUD: the Pro setup, the full layout, every new element and both graphs, so its cost shows.
+                    gg.shard.client.gui.QuickSetup.apply(gg.shard.client.gui.QuickSetup.PRO);
+                    gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.FULL);
+                    for (var m : ShardClient.modules().all()) {
+                        if (java.util.Set.of("combo", "reach", "fight-recap", "compass", "speed", "tps", "target-hud", "cooldowns", "keystrokes", "cps").contains(m.key())) m.setEnabled(true);
+                        for (var st : m.settings()) {
+                            if ((m.key().equals("fps") && st.key().equals("frame-time-graph")) || (m.key().equals("ping") && st.key().equals("graph"))) st.parse("true");
+                        }
+                    }
                     ShardClient.LOGGER.info("Bench: centre {}", center);
                 }
                 if (phaseTick == 40) {
@@ -142,6 +151,8 @@ final class Benchmark {
                     }
                 }
                 SmokeTest.startSampling();
+                gg.shard.client.hud.HudManager.LAYER_MS.clear();
+                gg.shard.client.hud.HudManager.profiling = run >= WARMUP_RUNS;
                 if (target != null) {
                     mc.gameMode.attack(player, target);
                     player.swing(InteractionHand.MAIN_HAND);
@@ -205,6 +216,19 @@ final class Benchmark {
                     run + 1 - WARMUP_RUNS, optimizerOn ? "on" : "off", frames.size(), round(avgMs), round(1000.0 / avgMs),
                     round(p99 / 1_000_000.0), round(1_000_000_000.0 / p99), round(worst / 1_000_000.0));
         }
+        var hud = gg.shard.client.hud.HudManager.LAYER_MS;
+        if (hud.count() > 0) {
+            float[] ms = new float[hud.count()];
+            double sum = 0;
+            for (int i = 0; i < ms.length; i++) {
+                ms[i] = hud.recent(i);
+                sum += ms[i];
+            }
+            java.util.Arrays.sort(ms);
+            o.addProperty("hudAvgMs", Math.round(sum / ms.length * 1000.0) / 1000.0);
+            o.addProperty("hudP99Ms", Math.round(ms[Math.min(ms.length - 1, (int) (ms.length * 0.99))] * 1000.0) / 1000.0);
+            ShardClient.LOGGER.info("Bench: HUD layer avg {} ms, p99 {} ms over {} frames", o.get("hudAvgMs"), o.get("hudP99Ms"), ms.length);
+        }
         RUNS.add(o);
     }
 
@@ -223,6 +247,9 @@ final class Benchmark {
             ShardClient.LOGGER.error("Bench: could not write results", e);
         }
         ShardClient.LOGGER.info("Bench summary: {}", root.get("summary"));
+        gg.shard.client.hud.HudManager.PROFILE.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue()[0] / Math.max(1, b.getValue()[1]), a.getValue()[0] / Math.max(1, a.getValue()[1])))
+                .forEach(e -> ShardClient.LOGGER.info("Bench: HUD element {} avg {} us", e.getKey(), Math.round(e.getValue()[0] / 1000.0 / Math.max(1, e.getValue()[1]) * 10) / 10.0));
         mc.stop();
     }
 
@@ -232,6 +259,8 @@ final class Benchmark {
             double avg = 0;
             double low = 0;
             double worst = 0;
+            double hudAvg = 0;
+            double hudP99 = 0;
             int n = 0;
             for (var e : RUNS) {
                 JsonObject o = e.getAsJsonObject();
@@ -239,6 +268,10 @@ final class Benchmark {
                 avg += o.get("avgFps").getAsDouble();
                 low += o.get("onePercentLowFps").getAsDouble();
                 worst += o.get("worstMs").getAsDouble();
+                if (o.has("hudAvgMs")) {
+                    hudAvg += o.get("hudAvgMs").getAsDouble();
+                    hudP99 += o.get("hudP99Ms").getAsDouble();
+                }
                 n++;
             }
             JsonObject c = new JsonObject();
@@ -247,6 +280,8 @@ final class Benchmark {
                 c.addProperty("avgFps", round(avg / n));
                 c.addProperty("onePercentLowFps", round(low / n));
                 c.addProperty("worstMs", round(worst / n));
+                c.addProperty("hudAvgMs", Math.round(hudAvg / n * 1000.0) / 1000.0);
+                c.addProperty("hudP99Ms", Math.round(hudP99 / n * 1000.0) / 1000.0);
             }
             out.add(config, c);
         }

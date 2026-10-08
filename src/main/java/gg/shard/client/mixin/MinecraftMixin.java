@@ -20,4 +20,12 @@ abstract class MinecraftMixin {
     private void shard$onUse(CallbackInfo ci) {
         ClickTracker.recordRight();
     }
+
+    /** Display: custom window title. */
+    @com.llamalad7.mixinextras.injector.ModifyReturnValue(method = "createTitle", at = @At("RETURN"), require = 0)
+    private String shard$title(String original) {
+        if (!gg.shard.client.ShardClient.isReady()) return original;
+        String custom = gg.shard.client.ShardClient.modules().get(gg.shard.client.modules.utility.DisplayModule.class).titleOverride();
+        return custom != null ? custom : original;
+    }
 }

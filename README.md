@@ -21,88 +21,100 @@ Crystals, the anchor optimizers, No Death Animation, BetterHurtCam, WI Zoom, Spr
 Custom Crosshair, TotemCounter, Sodium Fullbright, Visual Tweaks' hurt tint), Shard's equivalent
 stays off and the card says why, so nothing is ever applied twice.
 
-## Modules (0.3.0)
+## Modules (0.4.0)
 
 | Category | Modules |
 | --- | --- |
-| HUD | FPS, Ping, Coordinates, CPS, Keystrokes, Armor Status, Totem Counter, Potion Effects, Item Counter, Server Address, Session Stats, Clock, Memory, Hit Delay |
-| Visuals | Totem Pop Tweaks, No Hurt Cam, Crystal Size, No Death Animation, Hit Color, Low Fire, Low Shield, Fullbright, Hitboxes, Nametags, Crosshair, Zoom |
-| Combat QoL | Crystal Optimizer, Anchor Optimizer, Toggle Sprint |
+| HUD | FPS (with 1% low and an optional graph), Ping (spike warnings, graph), CPS, Coords, Keystrokes, Armor, Totem Counter, Item Counter, Effects, Attack Cooldown, Cooldowns, Target HUD, Combo, Reach, Fight Recap, Session (kills, K/D, streak), Compass, Speed, TPS, Server, Clock, Memory |
+| Visuals | Low Fire, Crosshair, Shield, Crystal Visuals, Anchor Glow, Totem Pops, Hit Color, Nametags, Block Outline, Low Health Warning, Clean Screen, Weather and Time, No Hurt Cam, No Death Animation, Fullbright, Hitboxes, Zoom |
+| Combat | Crystal Optimizer, Anchor Optimizer, Toggle Sprint |
 | Performance | Explosion Optimizer |
+| Chat | Chat (timestamps, stacked repeats, hidden joins and leaves, highlighted mentions) |
+| Utility | Display (borderless fullscreen, background and menu FPS caps, window title), GUI Scales (inventory, hotbar, scoreboard, tab list, titles, boss bar, chat), Sounds |
 
-Highlights:
+New in 0.4.0:
+
+- **Fight modules** fed by one fight log: Target HUD (head, health, armour, pops, distance),
+  Combo, Reach, a Fight Recap after each fight, and kills, K/D and streaks in Session. Hits,
+  reach and kills come from what the vanilla client already sees; nothing is sent.
+- **Low Fire** covers three fires: your screen, fire and soul fire blocks on the ground (works
+  with Sodium), and the flames on burning players and mobs, each with height, opacity and tint.
+- **Crosshair** shapes are pixel masks with an outline that follows any shape, a 15x15 pixel
+  editor, a live preview on sky, grass, stone, netherrack or end stone, and share codes.
+- **Shield** with separate size and position while blocking and while just holding it.
+- **Crystal Visuals** (core and frame colours, spin, bounce, base, aimed-crystal outline) and
+  **Anchor Glow** (anchors near you outlined by charge, never through walls).
+- **GUI Scales**: the inventory at its own GUI scale with exact clicks, and separate scales for
+  the hotbar, scoreboard, tab list, titles, boss bar and chat.
+- **Display**: borderless fullscreen (F11 can use it), FPS caps in the background and in menus.
+- **Block Outline** with a crystal-spot hint, **Low Health Warning**, **Clean Screen**,
+  **Weather and Time** (client-side only), **Sounds** (volumes for explosions, hurt, hits).
+- **Quick setup**: Crystal PvP Pro, Minimal or Recording in one click, from a three-step welcome
+  the first time you join a world, or from Settings any time.
+
+The 0.3.0 highlights still apply:
 
 - **Crystal Optimizer**: the crystal you hit disappears at once (Marlow-style) and the crystal
   you place appears at once as a client-only stand-in that the server's real crystal replaces
-  (Client Side Crystals-style). Options for explosion-based removal, hit sound/particles and a
-  pulse on crystals you placed. No packet is added, changed or dropped.
+  (Client Side Crystals-style). An optional readout compares predicted and confirmed breaks.
+  No packet is added, changed or dropped.
 - **Anchor Optimizer**: the anchor you detonate vanishes immediately and the explosion sound
-  plays right away; the server's own copy of that sound and particle burst is skipped so nothing
-  doubles up. Vanilla already predicts charging, so only the explosion needed help.
-- **Totem Pop Tweaks**: hide the full-screen animation, scale the sound and particles, an
-  optional flash, and the "You popped" / "X popped" chat line with per-player session counts.
-- **Explosion Optimizer**: thin explosion/smoke/crit particles, replace the huge explosion
-  emitter with a single burst, and cap explosion sounds per tick. See `BENCHMARKS.md`.
-- **No Death Animation**, **Hit Color** (colour, strength, flash duration), **Low Fire** (with a
-  live preview), **Low Shield**, **Fullbright**, **Hitboxes** (vanilla F3+B without the debug
-  screen), **Nametags** (health, armour and pops from data the vanilla client already has; scale,
-  background opacity, hide own), **Crosshair** (dynamic gap and hit marker), **Zoom** (scroll to
-  adjust, optional cinematic camera).
+  plays right away; the server's own copy of that sound and particle burst is skipped.
+- **Totem Pops**: hide the full-screen animation, scale the sound and particles, an optional
+  flash, and the "You popped" / "X popped" chat line with per-fight counts.
+- **Explosion Optimizer**: thinner explosion particles, one burst instead of the huge emitter,
+  a cap on explosion sounds per tick. Measured in `BENCHMARKS.md`.
 
-## Settings page
+## The menu
 
-Open it with **Right Shift** (or `.gui` in chat, or Mod Menu → Configure). The page uses Inter,
-the launcher's font, and is laid out at a fixed pixel density, so it looks exactly the same at
-GUI scale 1, 2, 3, 4 and Auto; only Settings → Appearance → Interface size changes its size.
-A sidebar lists the categories with on/off counts and a search box; the main area is a grid of
-mod cards (icon in a tinted square, two-line description, toggle switch). Click a card to slide
-in its settings panel: an About paragraph that says exactly what the module does and does not
-do, then the keybind, "Disable on this server", reset, and every setting grouped under section
-titles, with switches, sliders with a numeric field you can type into, dropdowns, a colour
-picker (swatch, hex, Edit), keybind capture and text fields. Rest the pointer on a setting to
-see its details line. On small windows (under about 920 px wide) the sidebar becomes a tab strip
-and the panel replaces the grid.
+Open it with **Right Shift** (or `.gui` in chat, or Mod Menu, Configure). It is laid out in
+fixed design units with Inter, so it looks the same at GUI scale 1, 2, 3, 4 and Auto; only
+Settings, Appearance, Interface size changes its size. Text is rasterised at the real
+on-screen size and every icon comes from one set (Lucide).
 
-Keyboard: Tab / Shift+Tab move focus, Enter or Space activates, arrows adjust sliders and
-dropdowns or move between cards, Esc closes the popover, then the panel, then the screen,
-`/` or Ctrl+F jumps to search.
+- **Rail** on the left: search, Favorites, Enabled, the six categories, Edit HUD and Settings.
+- **List** (or Grid) of modules: icon, full name, one line of description and a switch. Names
+  are never cut off.
+- **Detail column**: the module's About paragraph, a live preview where it helps (HUD styles,
+  crosshair, fire, shield, crystals), then every setting with switches, sliders you can type
+  into, segmented controls, dropdowns, a colour picker and keybind capture. From 1640 px wide it
+  is always visible; on smaller windows it slides over the list with a back button.
+- **Search** covers module names, descriptions and setting names; picking a setting opens its
+  module and flashes the row. Type anywhere to start searching; Ctrl+F also works.
+- **Keyboard**: arrows move, Space toggles, Enter opens, right-click toggles, Esc backs out.
 
-The **Settings** entry holds:
+**Settings** holds Quick setup, Appearance (accent colour, interface size, font, blur, reduce
+motion), HUD (global scale and the shared style: Card, Minimal, Outlined or Pill, colours,
+label position, brackets), Keybinds (with conflict warnings), Profiles, Server rules with
+wildcard patterns, Export and import, Reset and About.
 
-- **Appearance**: accent colour (the launcher's by default, or your own), interface size
-  75–150%, font (Smooth = Inter, or Vanilla), background blur strength, reduce motion, and
-  smooth corners.
-- **HUD**: the global HUD scale (normalised so the HUD also looks the same at every GUI scale)
-  and the default style every HUD element inherits: Card, Minimal or Outlined, text and value
-  colours, background colour and opacity, corner radius, padding, text shadow and alignment.
-  Any HUD module can switch on "Custom style" to keep its own values; each also has its own
-  label text (for example "FPS" can become "fps" or be hidden).
-- **Keybinds**: every module keybind in one list, with capture buttons and a warning when a key
-  is shared with another module or a vanilla control.
-- **Profiles** with an optional description, **Server rules** with an editor for wildcard
-  patterns (`*.example.net`, `host:port`) and a per-rule module list, **Export and import**
-  (copy the config JSON to the clipboard, paste one back), **Reset** (with a confirmation) and
-  **About**.
-
-The HUD editor (button in the sidebar, or `.hud`) drags, scales, snaps and nudges every HUD
-element; its per-element scale multiplies the global HUD scale.
+The **HUD editor** (Edit HUD, or `.hud`) snaps elements to edges, centre lines and each other
+with guide lines, selects several with Shift-click or a drag box, aligns and distributes,
+nudges by one pixel with the arrows, scales with the scroll wheel, has undo and redo, an
+optional grid and layout presets (Crystal PvP minimal, Crystal PvP full, Streamer, plus your
+own). Clicking an element opens its settings next to the HUD. Positions are stored as an
+anchor plus an offset, so an element near an edge stays the same distance from it at any
+window size or GUI scale.
 
 Chat commands use the `.` prefix and never reach the server: `.toggle <module>`,
-`.bind <module> <key|none>`, `.set <module> <setting> <value>` (also `.set appearance font vanilla`),
-`.reset <module>`, `.config save|load|list [name]`, `.gui`, `.hud`, `.list`, `.help`.
+`.bind <module> <key|none>`, `.set <module> <setting> <value>`, `.reset <module>`,
+`.config save|load|list [name]`, `.gui`, `.hud`, `.list`, `.help`.
 
 ### Screenshots
 
-Taken by the smoke test on the offline test server (1280x720 dev window). The page is the same
-at every GUI scale; the 4x crops show the anti-aliased text.
+Taken by the smoke test on the offline test server. Before and after, HUD category at
+1920x1080, GUI scale 2:
+
+![0.3.0 (before) and 0.4.0 (after)](docs/screenshots/0.4.0/final-before-after-hud.png)
 
 | | |
 | --- | --- |
-| ![Mod grid, GUI scale 1](docs/screenshots/smoke-gui-scale1.png) | ![Mod grid, GUI scale 3](docs/screenshots/smoke-gui-scale3.png) |
-| ![Settings panel, GUI scale 2](docs/screenshots/smoke-panel-scale2.png) | ![Colour picker, GUI scale 3](docs/screenshots/smoke-color-scale3.png) |
-| ![Settings page](docs/screenshots/smoke-settings-scale2.png) | ![HUD editor](docs/screenshots/smoke-editor-scale2.png) |
-| ![HUD, GUI scale 2](docs/screenshots/smoke-hud-scale2.png) | ![HUD, GUI scale Auto](docs/screenshots/smoke-hud-scaleauto.png) |
-| ![Card text at 4x](docs/screenshots/smoke-zoom-card-scale2.png) | ![Crystal placed with instant preview](docs/screenshots/smoke-crystal.png) |
+| ![List view, 1080p](docs/screenshots/0.4.0/final-1080p-hud-list.png) | ![Grid view, 1080p](docs/screenshots/0.4.0/final-1080p-hud-grid.png) |
+| ![Search over settings](docs/screenshots/0.4.0/final-1080p-search.png) | ![Settings](docs/screenshots/0.4.0/final-1080p-settings.png) |
+| ![HUD editor with the settings panel](docs/screenshots/0.4.0/final-1080p-hudeditor-panel.png) | ![Fight: target, combo, reach](docs/screenshots/0.4.0/final-1080p-fight.png) |
+| ![Menu at 1280x720](docs/screenshots/0.4.0/final-720p-list.png) | ![Welcome](docs/screenshots/0.4.0/final-1080p-welcome.png) |
+
+More, step by step, in `docs/screenshots/0.4.0/`.
 
 ## Launcher integration
 
@@ -121,9 +133,17 @@ at every GUI scale; the 4x crops show the anti-aliased text.
 ./gradlew runClient      # dev client with Fabric API, Mod Menu, Sodium, Iris, Lithium, Cloth Config
 ```
 
-Requires JDK 21 or newer. The bundled Inter font (`assets/shard/font`) is © The Inter Project
-Authors under the SIL Open Font License 1.1; the licence ships next to the font files. Versions of Minecraft, Fabric and the companion mods are pinned in
+Requires JDK 21 or newer. Versions of Minecraft, Fabric and the companion mods are pinned in
 `gradle.properties`.
+
+### Credits
+
+- **Inter** 4.1 by Rasmus Andersson and The Inter Project Authors
+  ([rsms.me/inter](https://rsms.me/inter/)), SIL Open Font License 1.1. The fonts and the
+  licence ship in `assets/shard/font`; `tools/fonts/gen_fonts.py` writes the font definitions.
+- **Lucide** icons ([lucide.dev](https://lucide.dev)) 0.460.0, ISC licence
+  (`assets/shard/textures/gui/LICENSE-Lucide.txt`), rendered into atlases by
+  `tools/icons/build_icons.py`.
 
 ### In-game verification
 
@@ -131,16 +151,19 @@ The dev client has a headless smoke test. Start the offline-mode server in `.smo
 (`java -Xmx2G -jar server.jar nogui`; it ops the fixed dev username `ShardSmoke`), then:
 
 ```bash
-./gradlew runClient -PquickPlay=localhost:25599 -PsmokeDir="$PWD/smoke-out"
+./gradlew runClient -PquickPlay=localhost:25599 -PsmokeDir="$PWD/smoke-out" -PwindowSize=1920x1080
 ```
 
-The client skips onboarding, connects, and at GUI scale 1, 2, 3, 4 and Auto writes the HUD, the
-mod grid, an open settings panel, the colour picker, the Settings page and the HUD editor, plus
-4x zoomed crops of text; it records the page layout at each scale (`layoutIdenticalAcrossScales`
-in the summary). Then it gives itself obsidian and crystals, places a crystal (logging the
-instant client-side stand-in), hits it (logging the client-side removal) and writes
-`smoke-crystal.png` plus `smoke-summary.json`. Add `-PsmokeBench`
-to run the `BENCHMARKS.md` scenario instead; results land in `bench.json`.
+The client skips onboarding, connects and screenshots the HUD, the menu (list, grid, search,
+jump to a setting, the HUD category), module panels, the colour picker, Settings and the HUD
+editor at GUI scale 1, 2, 3, 4 and Auto, plus 4x crops of text. It then goes through the
+editor (drag, presets, undo), every step-6 module against vanilla (fire, crosshair, shield,
+crystals, anchors), the inventory at its own scale (the pointer visits all 47 slots),
+borderless fullscreen, a fight against a zombie and the crystal place/hit check. The summary
+(`smoke-summary.json`) records among others `layoutIdenticalAcrossScales`,
+`inventoryScaleSlotMisses`, `borderlessCoversMonitor`, `fightLogKills` and `clippedTexts`
+(every text that had to be shortened with an ellipsis). `-PwindowSize` defaults to 1280x720.
+Add `-PsmokeBench` to run the `BENCHMARKS.md` scenario instead; results land in `bench.json`.
 
 ## Releasing to the launcher
 

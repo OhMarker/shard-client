@@ -7,28 +7,30 @@ import org.lwjgl.glfw.GLFW;
 import java.util.function.Consumer;
 
 /**
- * A single-line text field drawn in the Shard theme (design units, Inter medium 13): cursor,
+ * A single-line text field drawn in the Shard theme (design units, Inter medium 12): cursor,
  * placeholder, paste, home/end, select-all-on-focus for numeric fields.
  */
-final class TextInput {
+public final class TextInput {
     static final int HEIGHT = 32;
-    static final int PAD = 12;
+    static final int PAD = 10;
     private static final Fonts.Weight WEIGHT = Fonts.Weight.MEDIUM;
-    private static final int SIZE = 13;
+    private static final int SIZE = 12;
 
     private String value = "";
     private int cursor;
     private final int maxLength;
     private String placeholder = "";
     private boolean rightAlign;
+    /** Room on the left before the text (the search field draws its icon there). */
+    private int padLeft = PAD;
     private Consumer<String> onChange = v -> {};
     private Runnable onCommit = () -> {};
 
-    TextInput(int maxLength) {
+    public TextInput(int maxLength) {
         this.maxLength = maxLength;
     }
 
-    TextInput placeholder(String text) {
+    public TextInput placeholder(String text) {
         this.placeholder = text;
         return this;
     }
@@ -36,6 +38,11 @@ final class TextInput {
     /** Numbers sit against the right edge (sliders' numeric fields). */
     TextInput rightAlign(boolean value) {
         this.rightAlign = value;
+        return this;
+    }
+
+    TextInput padLeft(int units) {
+        this.padLeft = units;
         return this;
     }
 
@@ -49,11 +56,11 @@ final class TextInput {
         return this;
     }
 
-    String value() {
+    public String value() {
         return value;
     }
 
-    void setValue(String text) {
+    public void setValue(String text) {
         value = text == null ? "" : text.length() > maxLength ? text.substring(0, maxLength) : text;
         cursor = Math.min(cursor, value.length());
     }
@@ -66,24 +73,24 @@ final class TextInput {
         }
     }
 
-    boolean isEmpty() {
+    public boolean isEmpty() {
         return value.isEmpty();
     }
 
-    void cursorToEnd() {
+    public void cursorToEnd() {
         cursor = value.length();
     }
 
-    void render(GuiGraphics g, int x, int y, int w, int h, boolean focused) {
+    public void render(GuiGraphics g, int x, int y, int w, int h, boolean focused) {
         int r = Theme.radiusSmall();
-        Render2D.roundedRect(g, x, y, w, h, r, Theme.control());
+        Render2D.roundedRect(g, x, y, w, h, r, Theme.surfaceRaised());
         Render2D.roundedOutline(g, x, y, w, h, r, focused ? Theme.accentAlpha(0xB0) : Theme.line());
         int lineH = Fonts.lineHeight(SIZE);
         int textY = y + (h - lineH) / 2;
-        int maxW = w - PAD * 2;
+        int maxW = w - padLeft - PAD;
         if (value.isEmpty() && !focused) {
             if (rightAlign) Fonts.drawRight(g, Fonts.clip(placeholder, WEIGHT, SIZE, maxW), WEIGHT, SIZE, x + w - PAD, textY, Theme.subtle());
-            else Fonts.drawClipped(g, placeholder, WEIGHT, SIZE, x + PAD, textY, maxW, Theme.subtle());
+            else Fonts.drawClipped(g, placeholder, WEIGHT, SIZE, x + padLeft, textY, maxW, Theme.subtle());
             return;
         }
         float fullW = Fonts.width(value, WEIGHT, SIZE);
@@ -93,7 +100,7 @@ final class TextInput {
         else {
             // Keep the cursor visible by scrolling the text horizontally.
             int offset = (int) Math.max(0, beforeW - maxW + 2);
-            textX = x + PAD - offset;
+            textX = x + padLeft - offset;
         }
         g.enableScissor(x + 4, y, x + w - 4, y + h);
         Fonts.draw(g, value, WEIGHT, SIZE, textX, textY, Theme.text());
@@ -107,9 +114,9 @@ final class TextInput {
     }
 
     /** Places the cursor at the clicked x position. */
-    void clickAt(int fieldX, int fieldW, double mouseX) {
+    public void clickAt(int fieldX, int fieldW, double mouseX) {
         float fullW = Fonts.width(value, WEIGHT, SIZE);
-        int textX = rightAlign && fullW <= fieldW - PAD * 2 ? Math.round(fieldX + fieldW - PAD - fullW) : fieldX + PAD;
+        int textX = rightAlign && fullW <= fieldW - padLeft - PAD ? Math.round(fieldX + fieldW - PAD - fullW) : fieldX + padLeft;
         int best = value.length();
         for (int i = 0; i <= value.length(); i++) {
             float wi = Fonts.width(value.substring(0, i), WEIGHT, SIZE);
@@ -122,7 +129,7 @@ final class TextInput {
     }
 
     /** Returns true when the key was consumed. Enter fires onCommit; Escape is left to the caller. */
-    boolean keyPressed(int key, int modifiers) {
+    public boolean keyPressed(int key, int modifiers) {
         boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0 || (modifiers & GLFW.GLFW_MOD_SUPER) != 0;
         switch (key) {
             case GLFW.GLFW_KEY_BACKSPACE -> {
@@ -195,7 +202,7 @@ final class TextInput {
         return i;
     }
 
-    boolean charTyped(String ch) {
+    public boolean charTyped(String ch) {
         if (ch == null || ch.isEmpty()) return false;
         char c = ch.charAt(0);
         if (c < 32 || c == 127) return false;

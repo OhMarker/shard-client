@@ -1,68 +1,143 @@
 package gg.shard.client.modules.visual;
 
+import gg.shard.client.gui.Fonts;
+import gg.shard.client.gui.PanelPreview;
 import gg.shard.client.gui.Render2D;
+import gg.shard.client.gui.Theme;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
 import gg.shard.client.module.setting.ColorSetting;
 import gg.shard.client.module.setting.EnumSetting;
 import gg.shard.client.module.setting.IntSetting;
+import gg.shard.client.module.setting.Labeled;
+import gg.shard.client.module.setting.StringSetting;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.Material;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.level.GameType;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
 /**
- * Replaces the vanilla crosshair with a configurable one. Vanilla's own rules still apply: it
- * only shows in first person, never with the GUI hidden, and the debug axes take precedence.
- * The dynamic gap and the hit marker react to the attacks vanilla already performed; they never
- * cause one.
+ * Shard's crosshair: eight shapes including one you draw pixel by pixel, outline colour and
+ * width, colours for aiming at a player or mob and at a crystal, dimming while your hit
+ * recharges, a dynamic gap and a hit marker. Every shape is a pixel mask ({@link CrosshairShape})
+ * so the outline follows it exactly. The settings panel shows it live on sample backgrounds at
+ * real size and zoomed, doubles as the pixel editor, and copies or pastes share codes.
  */
-public final class CrosshairModule extends Module {
-    public enum Style { CROSS, DOT, CROSS_DOT, CIRCLE }
+public final class CrosshairModule extends Module implements PanelPreview {
+    public enum Style implements Labeled {
+        CROSS("Gap plus"), PLUS("Plus"), CROSS_DOT("Plus and dot"), DOT("Dot"), CIRCLE("Circle"), T_SHAPE("T"), X("X"), CUSTOM("Custom");
+
+        private final String label;
+
+        Style(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String label() {
+            return label;
+        }
+
+        CrosshairShape.Kind kind() {
+            return CrosshairShape.Kind.valueOf(name());
+        }
+    }
 
     private static final long GAP_MS = 150;
+    private static final String[] BACKGROUNDS = {"Sky", "Grass", "Stone", "Nether", "End"};
+    private static final Material[] BG_SPRITES = {null, block("grass_block_top"), block("stone"), block("netherrack"), block("end_stone")};
 
-    private final EnumSetting<Style> style = add(new EnumSetting<>("Style", "Shape of the crosshair", Style.CROSS).group("Shape"));
+    private final EnumSetting<Style> style = add(new EnumSetting<>("Style", "Shape of the crosshair; Custom lets you draw it in the preview (right-click erases)", Style.CROSS).group("Shape"));
     private final IntSetting size = add(new IntSetting("Size", "Length of each arm", 5, 1, 12, 1, "px").group("Shape"));
-    private final IntSetting gap = add(new IntSetting("Gap", "Space around the centre", 2, 0, 6, 1, "px").group("Shape"));
-    private final IntSetting thickness = add(new IntSetting("Thickness", "Line width", 1, 1, 3, 1, "px").group("Shape"));
+    private final IntSetting gap = add(new IntSetting("Gap", "Space around the centre", 2, 0, 8, 1, "px").group("Shape"));
+    private final IntSetting thickness = add(new IntSetting("Thickness", "Line width", 1, 1, 4, 1, "px").group("Shape"));
+    private final StringSetting pixels = add(new StringSetting("Pixels", "Your custom crosshair, drawn in the preview", CrosshairShape.encodePixels(defaultCustom()), 64).group("Shape"));
     private final BoolSetting dynamicGap = add(new BoolSetting("Dynamic gap", "Widen the gap for a moment when you attack", true).group("Shape")
             .details("Reacts to attacks you perform; it does not change aim or timing."));
     private final IntSetting gapKick = add(new IntSetting("Gap kick", "How far the gap widens on an attack", 3, 1, 8, 1, "px").group("Shape"));
-    private final ColorSetting color = add(new ColorSetting("Colour", "Crosshair colour", 0xFFFFFFFF).group("Colour"));
-    private final BoolSetting outline = add(new BoolSetting("Outline", "Dark outline for contrast", true).group("Colour"));
+    private final ColorSetting color = add(new ColorSetting("Colour", "Crosshair colour (alpha is opacity)", 0xFFFFFFFF).group("Colour"));
+    private final BoolSetting outline = add(new BoolSetting("Outline", "An outline around the crosshair for contrast", true).group("Colour"));
+    private final ColorSetting outlineColor = add(new ColorSetting("Outline colour", "Colour of the outline", 0xB0000000).group("Colour"));
+    private final IntSetting outlineWidth = add(new IntSetting("Outline width", "Width of the outline", 1, 1, 2, 1, "px").group("Colour"));
     private final BoolSetting highlightTarget = add(new BoolSetting("Highlight target", "Change colour while aiming at a player or mob", true).group("Colour"));
-    private final ColorSetting targetColor = add(new ColorSetting("Target colour", "Colour while aiming at a living target", 0xFFFB7185).group("Colour"));
+    private final ColorSetting targetColor = add(new ColorSetting("Target colour", "Colour while aiming at a player or mob", 0xFFFB7185).group("Colour"));
+    private final BoolSetting highlightCrystal = add(new BoolSetting("Highlight crystals", "Change colour while aiming at an end crystal", true).group("Colour"));
+    private final ColorSetting crystalColor = add(new ColorSetting("Crystal colour", "Colour while aiming at an end crystal", 0xFFC084FC).group("Colour"));
+    private final BoolSetting dimCharging = add(new BoolSetting("Dim while charging", "Half opacity while your next hit is still recharging", false).group("Colour")
+            .details("Reads the same attack strength as vanilla's attack indicator."));
     private final BoolSetting hitMarker = add(new BoolSetting("Hit marker", "Flash an X around the crosshair when you hit a living target", true).group("Hit marker"));
     private final ColorSetting hitMarkerColor = add(new ColorSetting("Marker colour", "Colour of the hit marker", 0xFFFFFFFF, false).group("Hit marker"));
     private final IntSetting hitMarkerMs = add(new IntSetting("Marker time", "How long the marker stays", 250, 100, 600, 50, " ms").group("Hit marker"));
 
     private long attackAt = Long.MIN_VALUE / 2;
     private long hitAt = Long.MIN_VALUE / 2;
+    private int background = 1;
+    private int mouseX;
+    private int mouseY;
+    // Preview hit areas (design units), filled while rendering.
+    private final int[] chips = new int[BACKGROUNDS.length * 4];
+    private final int[] copyBtn = new int[4];
+    private final int[] pasteBtn = new int[4];
+    private final int[] editor = new int[3];
+    // Mask cache.
+    private String maskKey = "";
+    private List<CrosshairShape.Run> mainRuns = List.of();
+    private List<CrosshairShape.Run> outlineRuns = List.of();
 
     public CrosshairModule() {
-        super("Crosshair", "Your own crosshair: shape, size, colour, target highlight and hit marker.", ModuleCategory.VISUALS);
+        super("Crosshair", "Your own crosshair: shapes, a pixel editor, outline, target and crystal colours, hit marker.", ModuleCategory.VISUALS);
         targetColor.visibleWhen(highlightTarget::get);
+        crystalColor.visibleWhen(highlightCrystal::get);
         gapKick.visibleWhen(dynamicGap::get);
+        outlineColor.visibleWhen(outline::get);
+        outlineWidth.visibleWhen(outline::get);
         hitMarkerColor.visibleWhen(hitMarker::get);
         hitMarkerMs.visibleWhen(hitMarker::get);
+        pixels.visibleWhen(() -> false);
+        size.visibleWhen(() -> style.get() != Style.CUSTOM && style.get() != Style.DOT);
+        gap.visibleWhen(() -> style.get() != Style.CUSTOM && style.get() != Style.DOT && style.get() != Style.PLUS);
+        thickness.visibleWhen(() -> style.get() != Style.CUSTOM);
+    }
+
+    private static Material block(String name) {
+        return new Material(TextureAtlas.LOCATION_BLOCKS, Identifier.withDefaultNamespace("block/" + name));
+    }
+
+    private static boolean[] defaultCustom() {
+        boolean[] px = new boolean[CrosshairShape.CUSTOM * CrosshairShape.CUSTOM];
+        int c = CrosshairShape.CUSTOM / 2;
+        for (int d = 2; d <= 5; d++) {
+            px[c * CrosshairShape.CUSTOM + c + d] = true;
+            px[c * CrosshairShape.CUSTOM + c - d] = true;
+            px[(c + d) * CrosshairShape.CUSTOM + c] = true;
+        }
+        px[c * CrosshairShape.CUSTOM + c] = true;
+        return px;
     }
 
     @Override
     public String about() {
         return "Draws a crosshair of your choice in place of vanilla's and keeps vanilla's rules (first person only, hidden with the GUI, debug axes win). "
-                + "The target highlight reads what vanilla already picked under the cursor; the gap kick and hit marker react to attacks you made. Nothing aims or clicks for you.";
+                + "The colours read what vanilla already picked under the cursor and your own attack strength; the gap kick and hit marker react to attacks you made. "
+                + "Nothing aims or clicks for you. Share a crosshair with Copy code and Paste code in the preview.";
     }
 
     @Override
     public String icon() {
-        return "glyph:crosshair";
+        return "crosshair";
     }
 
     @Override
@@ -86,6 +161,23 @@ public final class CrosshairModule extends Module {
         return true;
     }
 
+    // ---- shape -----------------------------------------------------------------------------------
+
+    private void updateMask(int extraGap) {
+        String key = style.get() + ":" + size.get() + ":" + (gap.get() + extraGap) + ":" + thickness.get() + ":" + pixels.get() + ":" + outline.get() + ":" + outlineWidth.get();
+        if (key.equals(maskKey)) return;
+        maskKey = key;
+        CrosshairShape.Mask m = CrosshairShape.mask(style.get().kind(), size.get(), gap.get() + extraGap, thickness.get(), CrosshairShape.decodePixels(pixels.get()));
+        mainRuns = CrosshairShape.runs(m);
+        outlineRuns = outline.get() ? CrosshairShape.runs(CrosshairShape.grow(m, outlineWidth.get())) : List.of();
+    }
+
+    /** Draws the crosshair centred on (cx, cy), {@code px} units per crosshair pixel. */
+    private void drawShape(GuiGraphics g, int cx, int cy, int px, int c) {
+        for (CrosshairShape.Run r : outlineRuns) g.fill(cx + r.x() * px, cy + r.y() * px, cx + (r.x() + r.w()) * px, cy + (r.y() + 1) * px, outlineColor.get());
+        for (CrosshairShape.Run r : mainRuns) g.fill(cx + r.x() * px, cy + r.y() * px, cx + (r.x() + r.w()) * px, cy + (r.y() + 1) * px, c);
+    }
+
     /** Draws the crosshair in the HUD layer; respects vanilla's first-person and spectator rules. */
     public void render(GuiGraphics g) {
         if (!replacesVanilla()) return;
@@ -95,63 +187,213 @@ public final class CrosshairModule extends Module {
         int cx = g.guiWidth() / 2;
         int cy = g.guiHeight() / 2;
         int c = color.get();
-        if (highlightTarget.get() && mc.crosshairPickEntity instanceof LivingEntity) c = targetColor.get();
-        int t = thickness.get();
-        int s = size.get();
-        int gp = gap.get();
+        Entity picked = mc.crosshairPickEntity;
+        if (highlightCrystal.get() && picked instanceof EndCrystal) c = crystalColor.get();
+        else if (highlightTarget.get() && picked instanceof LivingEntity) c = targetColor.get();
+        if (dimCharging.get() && mc.player != null && mc.player.getAttackStrengthScale(0f) < 1f) c = Colors.fade(c, 0.5f);
         long now = System.currentTimeMillis();
-        if (dynamicGap.get()) {
+        int kick = 0;
+        if (dynamicGap.get() && style.get() != Style.CUSTOM) {
             float progress = Math.min(1f, (now - attackAt) / (float) GAP_MS);
-            gp += Math.round(gapKick.get() * (1f - Render2D.easeOut(progress)));
+            kick = Math.round(gapKick.get() * (1f - Render2D.easeOut(progress)));
         }
-        if (outline.get()) draw(g, cx, cy, s + 1, Math.max(0, gp - 1), t + 2, 0xB0000000);
-        draw(g, cx, cy, s, gp, t, c);
-        if (hitMarker.get()) {
-            long age = now - hitAt;
-            if (age >= 0 && age < hitMarkerMs.get()) {
-                float alpha = 1f - age / (float) hitMarkerMs.get();
-                int mc2 = Colors.fade(hitMarkerColor.get(), alpha);
-                int r0 = gp + s + 3;
-                for (int i = 0; i < 5; i++) {
-                    int d = r0 + i;
-                    int half = t / 2;
-                    if (outline.get()) {
-                        int oc = Colors.fade(0xB0000000, alpha);
-                        Render2D.fill(g, cx - d - half - 1, cy - d - half - 1, t + 2, t + 2, oc);
-                        Render2D.fill(g, cx + d - half - 1, cy - d - half - 1, t + 2, t + 2, oc);
-                        Render2D.fill(g, cx - d - half - 1, cy + d - half - 1, t + 2, t + 2, oc);
-                        Render2D.fill(g, cx + d - half - 1, cy + d - half - 1, t + 2, t + 2, oc);
-                    }
-                    Render2D.fill(g, cx - d - half, cy - d - half, t, t, mc2);
-                    Render2D.fill(g, cx + d - half, cy - d - half, t, t, mc2);
-                    Render2D.fill(g, cx - d - half, cy + d - half, t, t, mc2);
-                    Render2D.fill(g, cx + d - half, cy + d - half, t, t, mc2);
+        updateMask(kick);
+        drawShape(g, cx, cy, 1, c);
+        if (hitMarker.get()) drawHitMarker(g, cx, cy, now);
+    }
+
+    private void drawHitMarker(GuiGraphics g, int cx, int cy, long now) {
+        long age = now - hitAt;
+        if (age < 0 || age >= hitMarkerMs.get()) return;
+        float alpha = 1f - age / (float) hitMarkerMs.get();
+        int mc2 = Colors.fade(hitMarkerColor.get(), alpha);
+        int t = Math.max(1, thickness.get());
+        int r0 = gap.get() + size.get() + 3;
+        int half = t / 2;
+        for (int i = 0; i < 5; i++) {
+            int d = r0 + i;
+            if (outline.get()) {
+                int oc = Colors.fade(outlineColor.get(), alpha);
+                for (int[] s : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) Render2D.fill(g, cx + s[0] * d - half - 1, cy + s[1] * d - half - 1, t + 2, t + 2, oc);
+            }
+            for (int[] s : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) Render2D.fill(g, cx + s[0] * d - half, cy + s[1] * d - half, t, t, mc2);
+        }
+    }
+
+    // ---- preview -------------------------------------------------------------------------------
+
+    @Override
+    public void previewMouse(int x, int y) {
+        mouseX = x;
+        mouseY = y;
+    }
+
+    @Override
+    public int renderPreview(GuiGraphics g, int x, int y, int width) {
+        int h = 176;
+        Render2D.roundedRect(g, x, y, width, h, Theme.radius(), 0xFF0B0F18);
+        Render2D.roundedOutline(g, x, y, width, h, Theme.radius(), Theme.line());
+        // Background chips.
+        int cxp = x + 8;
+        for (int i = 0; i < BACKGROUNDS.length; i++) {
+            int w = Fonts.widthInt(BACKGROUNDS[i], Fonts.Weight.MEDIUM, 10) + 10;
+            boolean on = i == background;
+            boolean hover = inside(cxp, y + 8, w, 18);
+            if (on) Render2D.roundedRect(g, cxp, y + 8, w, 18, 4, Theme.control());
+            else if (hover) Render2D.roundedRect(g, cxp, y + 8, w, 18, 4, Theme.surfaceHover());
+            Fonts.draw(g, BACKGROUNDS[i], Fonts.Weight.MEDIUM, 10, cxp + 5, y + 8 + (18 - Fonts.lineHeight(10)) / 2, on ? Theme.text() : Theme.muted());
+            chips[i * 4] = cxp;
+            chips[i * 4 + 1] = y + 8;
+            chips[i * 4 + 2] = w;
+            chips[i * 4 + 3] = 18;
+            cxp += w + 2;
+        }
+        // Copy / paste share codes, bottom right.
+        int bw = 74;
+        smallButton(g, copyBtn, x + width - 8 - bw * 2 - 4, y + h - 26, bw, "Copy code");
+        smallButton(g, pasteBtn, x + width - 8 - bw, y + h - 26, bw, "Paste code");
+
+        int areaY = y + 32;
+        int areaH = h - 32 - 34;
+        int half = (width - 24) / 2;
+        int lx = x + 8;
+        int rx = lx + half + 8;
+        backdrop(g, lx, areaY, half, areaH);
+        backdrop(g, rx, areaY, half, areaH);
+        updateMask(0);
+        // Actual size: one crosshair pixel is one GUI unit, which is one design unit at GUI scale 2.
+        drawShape(g, lx + half / 2, areaY + areaH / 2, 1, color.get());
+        if (style.get() == Style.CUSTOM) {
+            drawEditor(g, rx, areaY, half, areaH);
+            caption(g, "Click to draw", rx, areaY);
+        } else {
+            editor[2] = 0;
+            int zoom = 4;
+            g.enableScissor(rx, areaY, rx + half, areaY + areaH);
+            drawShape(g, rx + half / 2 - zoom / 2, areaY + areaH / 2 - zoom / 2, zoom, color.get());
+            g.disableScissor();
+            caption(g, "Zoomed 4x", rx, areaY);
+        }
+        caption(g, "Actual size", lx, areaY);
+        return h;
+    }
+
+    private static void caption(GuiGraphics g, String text, int x, int y) {
+        int w = Fonts.widthInt(text, Fonts.Weight.MEDIUM, 10) + 8;
+        Render2D.roundedRect(g, x + 3, y + 3, w, Fonts.lineHeight(10) + 2, 3, 0xA0000000);
+        Fonts.draw(g, text, Fonts.Weight.MEDIUM, 10, x + 7, y + 4, 0xFFE5E7EB);
+    }
+
+    private void backdrop(GuiGraphics g, int x, int y, int w, int h) {
+        g.enableScissor(x, y, x + w, y + h);
+        if (background == 0 || BG_SPRITES[background] == null) {
+            Render2D.gradientV(g, x, y, w, h, 0xFF6FA0F0, 0xFFBFD6FF);
+        } else {
+            try {
+                TextureAtlasSprite sprite = Minecraft.getInstance().getAtlasManager().get(BG_SPRITES[background]);
+                int tint = background == 1 ? 0xFF79C05A : 0xFFFFFFFF;
+                for (int ty = y; ty < y + h; ty += 32) for (int tx = x; tx < x + w; tx += 32) g.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, tx, ty, 32, 32, tint);
+            } catch (RuntimeException e) {
+                g.fill(x, y, x + w, y + h, 0xFF404040);
+            }
+        }
+        g.disableScissor();
+        Render2D.roundedOutline(g, x, y, w, h, 4, Theme.line());
+    }
+
+    private void drawEditor(GuiGraphics g, int x, int y, int w, int h) {
+        int n = CrosshairShape.CUSTOM;
+        int cell = Math.max(3, Math.min((w - 8) / n, (h - 8) / n));
+        int gw = cell * n;
+        int gx = x + (w - gw) / 2;
+        int gy = y + (h - gw) / 2;
+        editor[0] = gx;
+        editor[1] = gy;
+        editor[2] = cell;
+        g.fill(gx, gy, gx + gw, gy + gw, 0x66000000);
+        boolean[] px = CrosshairShape.decodePixels(pixels.get());
+        for (int j = 0; j < n; j++) {
+            for (int i = 0; i < n; i++) {
+                if (px[j * n + i]) g.fill(gx + i * cell, gy + j * cell, gx + (i + 1) * cell, gy + (j + 1) * cell, color.get());
+            }
+        }
+        for (int k = 0; k <= n; k++) {
+            int line = k == n / 2 || k == n / 2 + 1 ? 0x55FFFFFF : 0x22FFFFFF;
+            g.fill(gx + k * cell, gy, gx + k * cell + 1, gy + gw, line);
+            g.fill(gx, gy + k * cell, gx + gw, gy + k * cell + 1, line);
+        }
+    }
+
+    private void smallButton(GuiGraphics g, int[] rect, int x, int y, int w, String label) {
+        rect[0] = x;
+        rect[1] = y;
+        rect[2] = w;
+        rect[3] = 18;
+        boolean hover = inside(x, y, w, 18);
+        Render2D.roundedRect(g, x, y, w, 18, 4, hover ? Theme.surfaceHover() : Theme.surfaceRaised());
+        Render2D.roundedOutline(g, x, y, w, 18, 4, Theme.lineStrong());
+        Fonts.drawCentered(g, label, Fonts.Weight.MEDIUM, 10, x + w / 2, y + (18 - Fonts.lineHeight(10)) / 2, Theme.text());
+    }
+
+    private boolean inside(int x, int y, int w, int h) {
+        return mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
+    }
+
+    private static boolean in(int[] r, int mx, int my) {
+        return mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3];
+    }
+
+    @Override
+    public String previewInput(int mx, int my, int button, boolean drag) {
+        if (!drag) {
+            for (int i = 0; i < BACKGROUNDS.length; i++) {
+                if (mx >= chips[i * 4] && mx < chips[i * 4] + chips[i * 4 + 2] && my >= chips[i * 4 + 1] && my < chips[i * 4 + 1] + chips[i * 4 + 3]) {
+                    background = i;
+                    return null;
+                }
+            }
+            if (in(copyBtn, mx, my)) {
+                Minecraft.getInstance().keyboardHandler.setClipboard(CrosshairShape.encode(spec()));
+                return "Crosshair code copied";
+            }
+            if (in(pasteBtn, mx, my)) {
+                CrosshairShape.Spec s = CrosshairShape.decode(Minecraft.getInstance().keyboardHandler.getClipboard());
+                if (s == null) return "The clipboard has no crosshair code";
+                apply(s);
+                return "Crosshair pasted";
+            }
+        }
+        int cell = editor[2];
+        if (cell > 0 && style.get() == Style.CUSTOM) {
+            int i = (mx - editor[0]) / cell;
+            int j = (my - editor[1]) / cell;
+            int n = CrosshairShape.CUSTOM;
+            if (mx >= editor[0] && my >= editor[1] && i < n && j < n) {
+                boolean[] px = CrosshairShape.decodePixels(pixels.get());
+                boolean paint = button != GLFW.GLFW_MOUSE_BUTTON_RIGHT;
+                if (px[j * n + i] != paint) {
+                    px[j * n + i] = paint;
+                    pixels.set(CrosshairShape.encodePixels(px));
                 }
             }
         }
+        return null;
     }
 
-    private void draw(GuiGraphics g, int cx, int cy, int s, int gp, int t, int c) {
-        int half = t / 2;
-        switch (style.get()) {
-            case CROSS -> arms(g, cx, cy, s, gp, t, half, c);
-            case DOT -> Render2D.fill(g, cx - half, cy - half, t, t, c);
-            case CROSS_DOT -> {
-                arms(g, cx, cy, s, gp, t, half, c);
-                Render2D.fill(g, cx - half, cy - half, t, t, c);
-            }
-            case CIRCLE -> {
-                int r = gp + s / 2 + 1;
-                Render2D.roundedOutline(g, cx - r, cy - r, r * 2 + 1, r * 2 + 1, r, c);
-                Render2D.fill(g, cx - half, cy - half, t, t, c);
-            }
-        }
+    private CrosshairShape.Spec spec() {
+        return new CrosshairShape.Spec(style.get().kind(), size.get(), gap.get(), thickness.get(), color.get(), outline.get(),
+                outlineColor.get(), outlineWidth.get(), pixels.get());
     }
 
-    private static void arms(GuiGraphics g, int cx, int cy, int s, int gp, int t, int half, int c) {
-        Render2D.fill(g, cx - half, cy - gp - s, t, s, c);
-        Render2D.fill(g, cx - half, cy + gp + 1, t, s, c);
-        Render2D.fill(g, cx - gp - s, cy - half, s, t, c);
-        Render2D.fill(g, cx + gp + 1, cy - half, s, t, c);
+    private void apply(CrosshairShape.Spec s) {
+        style.set(Style.valueOf(s.kind().name()));
+        size.set(s.size());
+        gap.set(s.gap());
+        thickness.set(s.thickness());
+        color.set(s.color());
+        outline.set(s.outline());
+        outlineColor.set(s.outlineColor());
+        outlineWidth.set(s.outlineWidth());
+        if (s.pixels() != null && !s.pixels().isEmpty()) pixels.set(s.pixels());
     }
 }
