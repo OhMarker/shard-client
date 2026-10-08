@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shard 0.4.0 mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+/* 1 CSS px = 1 design unit; the page is 960x540 units = a 1920x1080 window at 100%. */
+:root{
+  --scrim:rgba(10,11,14,.72); --surface:rgba(17,19,23,.96); --raised:#171A1F; --hover:#1D2026; --active:#22262D;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.14);
+  --text:#ECEEF2; --text2:#A3A9B5; --text3:#6B717D;
+  --accent:#3DD6F5; --accent-m:rgba(61,214,245,.14); --ok:#4ADE80; --warn:#FACC15; --bad:#F87171;
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:#000}
+body{font-family:Inter,system-ui,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}
+.switcher{position:fixed;left:8px;bottom:8px;z-index:9;display:flex;gap:4px;font-size:10px}
+.switcher a{color:var(--text2);background:#000a;padding:3px 8px;border-radius:4px;text-decoration:none}
+.switcher a.on{color:#000;background:var(--accent)}
+.stage{position:relative;width:960px;height:540px;overflow:hidden}
+.world{position:absolute;inset:-40px;background:url(bg.png) center/cover;filter:blur(14px) saturate(.8)}
+.scrim{position:absolute;inset:0;background:var(--scrim)}
+.view{position:absolute;inset:0;display:none}
+.view.on{display:block}
+i[data-lucide], svg.lucide{width:16px;height:16px;stroke-width:1.75}
+.cap{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+.t12{font-size:12px;font-weight:600;line-height:16px}
+.t11{font-size:11px;line-height:15px;color:var(--text2)}
+.t10{font-size:10px;font-weight:500;color:var(--text3)}
+.tog{width:26px;height:14px;border-radius:7px;background:var(--active);position:relative;flex:none}
+.tog::after{content:"";position:absolute;left:2px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--text3)}
+.tog.on{background:var(--accent)}
+.tog.on::after{left:14px;background:#06222A}
+.ic{color:var(--text2);display:flex}
+.on-ic .ic{color:var(--accent)}
+.search{white-space:nowrap;display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:8px;background:var(--raised);border:1px solid var(--line);color:var(--text3);font-size:11px}
+.search kbd{margin-left:auto;font:500 9px Inter;color:var(--text3);border:1px solid var(--line2);border-radius:4px;padding:1px 4px}
+.chip{font-size:10px;font-weight:500;color:var(--text2);padding:3px 8px;border-radius:4px;border:1px solid var(--line)}
+.chip.on{color:var(--text);background:var(--active);border-color:var(--line2)}
+.seg{display:flex;background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:2px;gap:2px}
+.seg span{font-size:10px;font-weight:500;color:var(--text2);padding:3px 8px;border-radius:4px}
+.seg span.on{background:var(--active);color:var(--text)}
+.slider{display:flex;align-items:center;gap:10px}
+.slider .track{flex:1;height:2px;background:var(--active);border-radius:1px;position:relative}
+.slider .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:1px}
+.slider .knob{position:absolute;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--text);margin-left:-5px}
+.slider .val{font-size:10px;font-weight:500;width:40px;text-align:right;padding:3px 6px;border-radius:4px;background:var(--raised);border:1px solid var(--line)}
+.swatch{width:18px;height:18px;border-radius:4px;border:1px solid var(--line2)}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.setrow:last-child{border-bottom:0}
+.setrow .l{display:flex;flex-direction:column;gap:2px;min-width:0}
+
+/* ---------- A: rail + list + detail ---------- */
+#a .rail{position:absolute;left:16px;top:16px;bottom:16px;width:168px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+#a .brand{display:flex;align-items:center;gap:8px;padding:0 6px 14px}
+#a .brand b{font-size:13px;font-weight:600}
+#a .nav{display:flex;align-items:center;gap:10px;height:30px;padding:0 8px;border-radius:8px;font-size:12px;font-weight:500;color:var(--text2)}
+#a .nav.on{background:var(--active);color:var(--text)}
+#a .nav.on .ic{color:var(--accent)}
+#a .nav .n{margin-left:auto;font-size:10px;color:var(--text3)}
+#a .main{position:absolute;left:200px;top:16px;bottom:16px;width:420px;display:flex;flex-direction:column}
+#a .head{display:flex;align-items:flex-end;justify-content:space-between;padding:4px 4px 12px}
+#a h1{font-size:18px;font-weight:600;line-height:22px}
+#a .list{flex:1;display:flex;flex-direction:column;gap:2px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 92%,transparent)}
+#a .row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px}
+#a .row:hover,#a .row.sel{background:var(--raised)}
+#a .row.sel{box-shadow:inset 2px 0 0 var(--accent)}
+#a .row .l{flex:1;min-width:0}
+#a .row .t11{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#a .detail{position:absolute;right:16px;top:16px;bottom:16px;width:308px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)}
+
+/* ---------- B: wide cards ---------- */
+#b .top{position:absolute;left:24px;right:24px;top:18px;display:flex;align-items:center;gap:18px}
+#b .brand{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-right:6px}
+#b .tabs{display:flex;gap:18px;font-size:12px;font-weight:500;color:var(--text2)}
+#b .tabs span{padding:6px 0;border-bottom:2px solid transparent}
+#b .tabs span.on{color:var(--text);border-color:var(--accent)}
+#b .top .search{margin-left:auto;width:220px}
+#b .sub{position:absolute;left:24px;right:24px;top:62px;display:flex;align-items:center;gap:8px}
+#b .grid{position:absolute;left:24px;right:24px;top:96px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+#b .card{background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:84px;position:relative}
+#b .card.on{border-color:rgba(61,214,245,.35)}
+#b .card .h{display:flex;align-items:center;gap:10px}
+#b .card .h .tog{margin-left:auto}
+#b .card .foot{display:flex;gap:6px;margin-top:auto}
+#b .tag{font-size:9px;font-weight:500;color:var(--text3);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+
+/* ---------- C: command window ---------- */
+#c .win{position:absolute;left:50%;top:50%;width:720px;height:440px;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line2);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden}
+#c .bar{display:flex;align-items:center;gap:10px;height:48px;padding:0 16px;border-bottom:1px solid var(--line);font-size:14px;color:var(--text3)}
+#c .bar .q{color:var(--text)}
+#c .bar .caret{width:1px;height:16px;background:var(--accent);margin-left:-8px}
+#c .chips{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line)}
+#c .body{flex:1;display:flex;min-height:0}
+#c .list{width:330px;border-right:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:1px;overflow:hidden}
+#c .grp{padding:8px 8px 4px}
+#c .row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px}
+#c .row.sel{background:var(--active)}
+#c .row .l{flex:1;min-width:0}
+#c .row mark{background:none;color:var(--accent)}
+#c .pane{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px}
+#c .foot{display:flex;gap:16px;height:30px;align-items:center;padding:0 16px;border-top:1px solid var(--line)}
+#c .foot span{font-size:10px;color:var(--text3)}
+#c .foot kbd{font:500 9px Inter;color:var(--text2);border:1px solid var(--line2);border-radius:3px;padding:0 4px;margin-right:4px}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="world"></div><div class="scrim"></div>
+
+  <!-- A -->
+  <section class="view" id="a">
+    <aside class="rail">
+      <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2 19 9 12 22 5 9Z" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 9h14M12 2v20" stroke="var(--accent)" stroke-width="1.2" opacity=".5"/></svg><b>Shard</b><span class="t10" style="margin-left:auto">0.4.0</span></div>
+      <div class="search" style="margin-bottom:10px"><i data-lucide="search"></i>Search<kbd>Ctrl F</kbd></div>
+      <div class="nav"><span class="ic"><i data-lucide="star"></i></span>Favorites</div>
+      <div class="nav"><span class="ic"><i data-lucide="circle-check"></i></span>Enabled</div>
+      <div class="cap" style="padding:12px 8px 6px">Categories</div>
+      <div class="nav on"><span class="ic"><i data-lucide="swords"></i></span>Combat</div>
+      <div class="nav"><span class="ic"><i data-lucide="layout-dashboard"></i></span>HUD</div>
+      <div class="nav"><span class="ic"><i data-lucide="eye"></i></span>Visuals</div>
+      <div class="nav"><span class="ic"><i data-lucide="gauge"></i></span>Performance</div>
+      <div class="nav"><span class="ic"><i data-lucide="message-square"></i></span>Chat</div>
+      <div class="nav"><span class="ic"><i data-lucide="wrench"></i></span>Utility</div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:2px">
+        <div class="nav"><span class="ic"><i data-lucide="move"></i></span>Edit HUD</div>
+        <div class="nav"><span class="ic"><i data-lucide="settings"></i></span>Settings</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="head"><div><h1>Combat</h1><div class="t11">Crystal and anchor tools. The server stays in charge.</div></div>
+        <div class="seg"><span><i data-lucide="layout-grid" style="width:12px;height:12px"></i></span><span class="on"><i data-lucide="list" style="width:12px;height:12px"></i></span></div></div>
+      <div class="list" id="a-list"></div>
+    </main>
+    <aside class="detail">
+      <div style="display:flex;align-items:center;gap:10px"><span class="ic" style="color:var(--accent)"><i data-lucide="gem" style="width:20px;height:20px"></i></span><div style="flex:1"><div style="font-size:15px;font-weight:600">Crystal Optimizer</div><div class="t10">Combat · Ctrl+C toggles</div></div><div class="tog on"></div></div>
+      <div class="t11">Crystals disappear the moment you hit them and appear the moment you place them, without waiting for the server. The server still decides what really happened; if it disagrees, its answer wins.</div>
+      <div>
+        <div class="cap" style="margin-bottom:2px">Prediction</div>
+        <div class="setrow"><div class="l"><span class="t12" style="font-weight:500">Remove when hit</span></div><div class="tog on"></div></div>
+        <div class="setrow"><div class="l"><span class="t12" style="font-weight:500">Show placed instantly</span></div><div class="tog on"></div></div>
+        <div class="setrow"><div class="l"><span class="t12" style="font-weight:500">Ping-aware readout</span><span class="t11">Shows predicted vs confirmed in a corner</span></div><div class="tog"></div></div>
+      </div>
+      <div>
+        <div class="cap" style="margin-bottom:2px">Placed crystal glow</div>
+        <div class="setrow"><span class="t12" style="font-weight:500">Style</span><div class="seg"><span>Off</span><span class="on">Outline</span><span>Fill</span></div></div>
+        <div class="setrow"><span class="t12" style="font-weight:500">Colour</span><div style="display:flex;gap:6px;align-items:center"><span class="t10">#3DD6F5</span><div class="swatch" style="background:var(--accent)"></div></div></div>
+        <div class="setrow" style="display:block"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="t12" style="font-weight:500">Glow strength</span></div><div class="slider"><div class="track"><div class="fill" style="width:60%"></div><div class="knob" style="left:60%"></div></div><span class="val">60%</span></div></div>
+      </div>
+      <div style="margin-top:auto;display:flex;justify-content:space-between" class="t10"><span>Reset module</span><span>Disable on this server</span></div>
+    </aside>
+  </section>
+
+  <!-- B -->
+  <section class="view" id="b">
+    <div class="top">
+      <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2 19 9 12 22 5 9Z" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/></svg>Shard</div>
+      <div class="tabs"><span class="on">Combat</span><span>HUD</span><span>Visuals</span><span>Performance</span><span>Chat</span><span>Utility</span></div>
+      <div class="search"><i data-lucide="search"></i>Search mods and settings<kbd>Ctrl F</kbd></div>
+      <span class="ic"><i data-lucide="settings"></i></span>
+    </div>
+    <div class="sub"><span class="chip on">All</span><span class="chip">Enabled</span><span class="chip">Favorites</span><span style="margin-left:auto" class="seg"><span class="on"><i data-lucide="layout-grid" style="width:12px;height:12px"></i></span><span><i data-lucide="list" style="width:12px;height:12px"></i></span></span><span class="chip"><i data-lucide="move" style="width:11px;height:11px;vertical-align:-2px"></i> Edit HUD</span></div>
+    <div class="grid" id="b-grid"></div>
+  </section>
+
+  <!-- C -->
+  <section class="view" id="c">
+    <div class="win">
+      <div class="bar"><i data-lucide="search" style="width:18px;height:18px"></i><span class="q">crys</span><span class="caret"></span><span style="margin-left:auto" class="t10">Shard 0.4.0</span></div>
+      <div class="chips"><span class="chip">All</span><span class="chip on">Combat</span><span class="chip">HUD</span><span class="chip">Visuals</span><span class="chip">Performance</span><span class="chip">Chat</span><span class="chip">Utility</span><span class="chip" style="margin-left:auto">Enabled</span><span class="chip">Favorites</span></div>
+      <div class="body">
+        <div class="list" id="c-list"></div>
+        <div class="pane">
+          <div style="display:flex;align-items:center;gap:10px"><span class="ic" style="color:var(--accent)"><i data-lucide="gem" style="width:20px;height:20px"></i></span><div style="flex:1"><div style="font-size:15px;font-weight:600">Crystal Visuals</div><div class="t10">Visuals</div></div><div class="tog on"></div></div>
+          <div style="height:96px;border-radius:8px;background:radial-gradient(circle at 50% 60%,#2a2140,#0d0e12);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">
+            <svg width="54" height="54" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" fill="none" stroke="#F472B6" stroke-width="1.2"/><rect x="8.5" y="8.5" width="7" height="7" transform="rotate(20 12 12)" fill="#F472B6" opacity=".55"/></svg>
+          </div>
+          <div>
+            <div class="setrow"><span class="t12" style="font-weight:500">Core colour</span><div class="swatch" style="background:#F472B6"></div></div>
+            <div class="setrow"><span class="t12" style="font-weight:500">Frame colour</span><div class="swatch" style="background:#E9D5FF"></div></div>
+            <div class="setrow" style="display:block"><div class="t12" style="font-weight:500;margin-bottom:8px">Scale</div><div class="slider"><div class="track"><div class="fill" style="width:40%"></div><div class="knob" style="left:40%"></div></div><span class="val">0.70</span></div></div>
+            <div class="setrow"><span class="t12" style="font-weight:500">Bounce</span><div class="tog"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span><kbd>↑↓</kbd>Move</span><span><kbd>Space</kbd>Toggle</span><span><kbd>Enter</kbd>Settings</span><span><kbd>Esc</kbd>Close</span><span style="margin-left:auto"><kbd>Tab</kbd>Edit HUD</span></div>
+    </div>
+  </section>
+</div>
+
+<div class="switcher"><a href="?d=a" id="sa">A · Rail + list + detail</a><a href="?d=b" id="sb">B · Wide cards</a><a href="?d=c" id="sc">C · Command window</a></div>
+
+<script>
+const combat=[
+ ["gem","Crystal Optimizer","Crystals vanish when hit and appear when placed, without waiting for the server.",1],
+ ["anchor","Anchor Optimizer","Anchors blow and charge instantly; the server's answer always wins.",1],
+ ["heart-crack","Totem Pops","Pop counter on nametags, chat messages, pop sound and animation size.",1],
+ ["shield-alert","Totem Warning","Flash and sound when you are down to your last totems.",0],
+ ["crosshair","Target HUD","Health, armour, pops and distance of the player you are fighting.",1],
+ ["ruler","Reach Display","Distance of your last hit, worked out from positions you already see.",0],
+ ["flame","Combo Counter","Hits in a row; resets when you get hit.",0],
+ ["scroll-text","Fight Recap","After a kill or death: damage, pops, crystals and fight length.",0],
+ ["footprints","Toggle Sprint","Keeps sprint held while the module is on.",1],
+];
+const el=(h)=>{const t=document.createElement('template');t.innerHTML=h.trim();return t.content.firstChild};
+const a=document.getElementById('a-list');
+combat.forEach(([ic,n,d,on],i)=>a.append(el(`<div class="row ${i==0?'sel':''} ${on?'on-ic':''}"><span class="ic"><i data-lucide="${ic}"></i></span><div class="l"><div class="t12">${n}</div><div class="t11">${d}</div></div><div class="tog ${on?'on':''}"></div></div>`)));
+const b=document.getElementById('b-grid');
+const tags={0:"Server-safe",1:"Predicts",2:"Nametags"};
+combat.forEach(([ic,n,d,on],i)=>b.append(el(`<div class="card ${on?'on on-ic':''}"><div class="h"><span class="ic"><i data-lucide="${ic}"></i></span><span class="t12">${n}</span><div class="tog ${on?'on':''}"></div></div><div class="t11">${d}</div></div>`)));
+const c=document.getElementById('c-list');
+const res=[["Modules",[["gem","<mark>Crys</mark>tal Optimizer","Combat",1],["gem","<mark>Crys</mark>tal Visuals","Visuals",1],["package","Item Counter","HUD · counts end <mark>crys</mark>tals",1]]],["Settings",[["palette","Glow colour","<mark>Crys</mark>tal Optimizer",0],["sparkles","Explosion particles","<mark>Crys</mark>tal Visuals",0],["volume-2","<mark>Crys</mark>tal explode volume","Sounds",0]]]];
+res.forEach(([g,rows])=>{c.append(el(`<div class="cap grp">${g}</div>`));rows.forEach(([ic,n,s,on],i)=>c.append(el(`<div class="row ${g=='Modules'&&i==1?'sel':''} ${on?'on-ic':''}"><span class="ic"><i data-lucide="${ic}"></i></span><div class="l"><div class="t12" style="font-weight:500">${n}</div><div class="t10">${s}</div></div>${g=='Modules'?`<div class="tog ${on?'on':''}"></div>`:'<i data-lucide="chevron-right" style="color:var(--text3);width:14px;height:14px"></i>'}</div>`)))});
+const d=new URLSearchParams(location.search).get('d')||'a';
+document.getElementById(d).classList.add('on');document.getElementById('s'+d).classList.add('on');
+lucide.createIcons();
+const fit=()=>document.querySelector('.stage').style.zoom=Math.min(innerWidth/960,innerHeight/540);
+fit();addEventListener('resize',fit);
+</script>
+</body>
+</html>
