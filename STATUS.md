@@ -1,5 +1,12 @@
 # Status (handoff for a new session)
 
+## 0.6.0: Shard online (2026-10-08, released)
+- https://github.com/OhMarker/shard-client/releases/tag/v0.6.0, meta `latest` 0.6.0. Everyone's
+  capes and tokens for play via the Shard API (../shard-api, API.md); address from meta
+  services.json. 96 JUnit tests; full smoke at 1080p passes; dev runs use `-PapiBase=http://127.0.0.1:8787`
+  against `npx wrangler dev --local --port 8787 --var DEV_AUTH:1` in shard-api (seed with
+  `node test/seed-smoke.mjs`). Works with Shard Launcher 0.3.0 (shop, friends, admin).
+
 ## 0.5.0: the launcher cape in-game (2026-10-08)
 - The Cosmetics module (Visuals, on by default) draws the cape equipped in Shard Launcher on your
   own player, mipmapped and smooth (DECISIONS.md "0.5.0"). 91 JUnit tests pass; the full smoke test
