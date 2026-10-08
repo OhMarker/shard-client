@@ -83,7 +83,7 @@ gh repo create OhMarker/shard-client --public --source=. --remote=origin --push 
 ```
 
 ```bash
-gh release create v0.2.0 build/libs/shard-0.2.0.jar build/libs/shard-0.2.0.jar.sha512 --title "Shard Client 0.2.0" --notes "Lunar-style settings page, Crystal and Anchor Optimizer, Explosion Optimizer, Totem Pop Tweaks, No Death Animation, Hit Color, Low Fire, Low Shield, Fullbright, Hitboxes, Nametags, Crosshair, per-server rules and conflict detection for installed mods. Minecraft 1.21.11, Fabric Loader 0.19+, Fabric API. Shard Launcher installs it automatically."
+gh release create v0.2.0 build/libs/shard-0.2.0.jar build/libs/shard-0.2.0.jar.sha512 --title "Shard Client 0.2.0" --notes "Settings page, Crystal and Anchor Optimizer, Explosion Optimizer, Totem Pop Tweaks, No Death Animation, Hit Color, Low Fire, Low Shield, Fullbright, Hitboxes, Nametags, Crosshair, per-server rules and conflict detection for installed mods. Minecraft 1.21.11, Fabric Loader 0.19+, Fabric API. Shard Launcher installs it automatically."
 ```
 
 ```bash

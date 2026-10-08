@@ -58,7 +58,7 @@ asked for.
 
 ## 0.2.0 (2026-10-07)
 
-- Lunar-style settings page: sidebar, mod cards with toggle switches, sliding settings panel,
+- Settings page: sidebar, mod cards with toggle switches, sliding settings panel,
   dropdowns, colour picker, keybind capture, keyboard navigation.
 - Crystal Optimizer and Anchor Optimizer: instant client-side feedback, server stays
   authoritative.

@@ -2,7 +2,7 @@
 
 ## Foundations (0.1.0)
 
-- **Legit only.** The first draft of the product brief listed hacked-client modules; the owner rejected them. Shard is a Lunar/Badlion-style client: HUD, visuals, vanilla-legal input helpers, performance. The fair-play rule in README.md is the acceptance test for every new module.
+- **Legit only.** The first draft of the product brief listed hacked-client modules; the owner rejected them. Shard is a legit PvP client: HUD, visuals, vanilla-legal input helpers, performance. The fair-play rule in README.md is the acceptance test for every new module.
 - **Mojang official mappings**, not Yarn: `ResourceLocation` is `Identifier` in 1.21.11 and the GUI stack uses `Matrix3x2fStack`; signatures were read from the mapped jar with `javap` before writing code, which is why the first compile passed.
 - **Pure-Java core.** `Module`, settings, `ConfigManager`, `LauncherInfo`, `Keys`, `Colors`, `ClickTracker`, `ServerBlacklist`, `CrystalPredictor` and `AnchorPredictor` have no Minecraft imports so they run under plain JUnit. Minecraft-facing work lives in `HudModule`, screens, modules and mixins.
 - **Settings drive everything.** Adding a `Setting` field to a module yields the settings-panel row, config persistence and the `.set` chat command with no extra code. `Setting.group("…")` adds a heading above a run of settings.

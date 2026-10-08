@@ -1,7 +1,7 @@
 # Shard Client
 
 **Sharpen your crystal PvP.** A legit, server-safe Fabric client for Minecraft 1.21.11: a
-Lunar-style settings page, HUD and visual modules tuned for crystal fights, client-side
+clean settings menu, HUD and visual modules tuned for crystal fights, client-side
 prediction for crystals and anchors that keeps the server authoritative, and performance tweaks
 that are measured rather than assumed. It is the client half of Shard; the launcher lives at
 [OhMarker/shard-launcher](https://github.com/OhMarker/shard-launcher) and defines the data
