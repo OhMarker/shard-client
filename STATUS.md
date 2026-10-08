@@ -1,6 +1,11 @@
 # Status (handoff for a new session)
 
-## 0.4.0: built and verified (branch `v0.4.0`, not merged, not released)
+## 0.4.0: published 2026-10-08
+- Merged into `main` (0b6cd41) and pushed; release https://github.com/OhMarker/shard-client/releases/tag/v0.4.0
+  (the downloaded jar's sha512 matches the one below); ../meta pushed with `latest` 0.4.0, and the live
+  raw manifest reports it. Every Shard Launcher installs 0.4.0 on its next launch.
+
+### How 0.4.0 was built and verified
 Last updated 2026-10-08. All eight steps of `docs/PROMPT-ui-overhaul-0.4.0.md` are done; the
 owner approved steps 1-7. What changed is in CHANGELOG.md, the reasons in DECISIONS.md ("0.4.0",
 including "Step 8: final verification").
@@ -24,7 +29,7 @@ including "Step 8: final verification").
   opacity, alt-tab speed in borderless is not automated, a wide HUD editor toolbar can cover
   top-left elements, chat on a 720p window can reach the kit counter.
 
-### Publishing 0.4.0 (only after the owner says yes)
+### How 0.4.0 was published (the same steps work for later versions)
 1. Merge `v0.4.0` into `main` (`git checkout main && git merge --no-ff v0.4.0`) and push main.
 2. Release (Claude's sandbox may not create releases; if refused, the owner runs it from a
    Desktop .cmd):
