@@ -1,5 +1,14 @@
 # Status (handoff for a new session)
 
+## 0.4.0 in progress (branch `v0.4.0`)
+Work follows `docs/PROMPT-ui-overhaul-0.4.0.md` step by step, stopping for the owner at each ★.
+- Step 1 done: `docs/DESIGN.md`, mockups in `docs/design/` (owner picked **A: rail + list + detail**).
+- Step 2 done: sharp text (linear-filtered Shard font atlases, per-density rasters) and the Lucide
+  icon atlas; proof in `docs/screenshots/0.4.0/`. Waiting for the owner's OK on step 2.
+- Next: step 3, rebuild `ClickGuiScreen` as direction A (rail, list/grid, detail panel, search
+  over settings, keyboard), then steps 4-8.
+- The 0.3.0 notes below still describe the released build.
+
 Last updated 2026-10-07 (0.3.0).
 
 - Fabric mod for Minecraft 1.21.11 (Loader 0.19.5, Fabric API 0.141.6, Mojang official mappings,
