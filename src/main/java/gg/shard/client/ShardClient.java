@@ -33,7 +33,6 @@ import gg.shard.client.modules.visual.HitColorModule;
 import gg.shard.client.modules.visual.HitboxModule;
 import gg.shard.client.modules.visual.LowFireModule;
 import gg.shard.client.modules.visual.LowShieldModule;
-import gg.shard.client.modules.visual.NametagsModule;
 import gg.shard.client.modules.visual.NoHurtCamModule;
 import gg.shard.client.modules.visual.TotemPopModule;
 import gg.shard.client.modules.visual.ZoomModule;
@@ -127,7 +126,6 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new ItemCounterModule());
         m.register(new ServerAddressModule());
         m.register(new SessionStatsModule());
-        m.register(new gg.shard.client.modules.hud.TargetHudModule());
         m.register(new gg.shard.client.modules.hud.ComboModule());
         m.register(new gg.shard.client.modules.hud.ReachModule());
         m.register(new gg.shard.client.modules.hud.FightRecapModule());
@@ -158,7 +156,6 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new gg.shard.client.modules.chat.ChatModule());
         m.register(new FullbrightModule());
         m.register(new HitboxModule());
-        m.register(new NametagsModule());
         m.register(new gg.shard.client.modules.visual.CosmeticsModule());
         m.register(new CrosshairModule());
         m.register(new ZoomModule());

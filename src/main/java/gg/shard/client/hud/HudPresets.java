@@ -54,7 +54,6 @@ public final class HudPresets {
                 m.put("armor-status", at(CENTER, END, 180, 4));
                 m.put("item-counter", at(CENTER, END, 0, 52));
                 m.put("hit-delay", at(CENTER, CENTER, 0, 12));
-                m.put("target-hud", at(CENTER, CENTER, 90, 30));
                 m.put("cooldowns", at(CENTER, END, 0, 78));
             }
             case BARE -> {

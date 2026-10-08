@@ -781,8 +781,6 @@ public final class SmokeTest {
                 mc.setScreen(null);
                 gg.shard.client.gui.QuickSetup.apply(gg.shard.client.gui.QuickSetup.PRO);
                 for (String k : new String[]{"combo", "reach", "fight-recap", "compass", "speed", "tps", "chat"}) module(k).setEnabled(true);
-                setSetting("target-hud", "players-only", "false");
-                setSetting("target-hud", "show-who-you-aim-at", "false");
                 cmd(mc, "difficulty easy");
                 cmd(mc, "summon minecraft:zombie %d %d %d {NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"shardsmoke\"],ArmorItems:[{id:\"minecraft:diamond_boots\",count:1},{id:\"minecraft:diamond_leggings\",count:1},{id:\"minecraft:diamond_chestplate\",count:1},{id:\"minecraft:diamond_helmet\",count:1}]}",
                         zpos.getX(), zpos.getY(), zpos.getZ());
@@ -825,8 +823,6 @@ public final class SmokeTest {
             case 130 -> {
                 mc.setScreen(null);
                 for (String k : new String[]{"combo", "reach", "fight-recap", "compass", "speed", "tps", "chat"}) module(k).setEnabled(false);
-                setSetting("target-hud", "players-only", "true");
-                setSetting("target-hud", "show-who-you-aim-at", "true");
                 gg.shard.client.hud.HudPresets.restore(ShardClient.hud(), layoutBefore7);
                 cmd(mc, "difficulty peaceful");
                 p.getInventory().setSelectedSlot(0);

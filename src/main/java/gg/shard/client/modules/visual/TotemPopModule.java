@@ -88,7 +88,7 @@ public final class TotemPopModule extends Module {
         return isEnabled() ? particles.get() : 100;
     }
 
-    /** Pops seen for a player this session (used by the nametag module). */
+    /** Pops seen for a player this session (the chat line count). */
     public int popsFor(UUID player) {
         return popsByPlayer.getOrDefault(player, 0);
     }
