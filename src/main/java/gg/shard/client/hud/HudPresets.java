@@ -20,7 +20,8 @@ import static gg.shard.client.hud.HudGeometry.START;
  * {@code gui.hudPresets}. A layout snapshot (the same shape) also backs the editor's undo.
  *
  * <p>Built-in positions are tuned for GUI scale 2 at 1080p: the kit row sits above the hearts,
- * totems left of the offhand slot and armour right of the hotbar, info top-left, effects top-right.
+ * totems left of the offhand slot and armour right of the hotbar, info top-left, effects top-right,
+ * keystrokes on the left edge just below the middle (the bottom-left corner is vanilla's chat).
  */
 public final class HudPresets {
     private HudPresets() {}
@@ -65,7 +66,7 @@ public final class HudPresets {
                 m.putAll(builtIn(MINIMAL));
                 m.put("cps", at(START, START, 4, 36));
                 m.put("coordinates", at(START, START, 4, 52));
-                m.put("keystrokes", at(START, END, 4, 4));
+                m.put("keystrokes", at(START, CENTER, 4, 24));
                 m.put("potion-effects", at(END, START, 4, 4));
                 m.put("session-stats", at(END, CENTER, 4, 0));
                 m.put("clock", at(END, END, 4, 4));
@@ -74,7 +75,7 @@ public final class HudPresets {
                 // No coordinates or server address on stream.
                 m.putAll(builtIn(MINIMAL));
                 m.put("cps", at(START, START, 4, 36));
-                m.put("keystrokes", at(START, END, 4, 4));
+                m.put("keystrokes", at(START, CENTER, 4, 24));
                 m.put("potion-effects", at(END, START, 4, 4));
             }
             default -> {

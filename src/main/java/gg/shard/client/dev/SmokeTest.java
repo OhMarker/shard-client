@@ -274,7 +274,7 @@ public final class SmokeTest {
         }
     }
 
-    private static final int MENU_TICKS = 100;
+    private static final int MENU_TICKS = 125;
 
     /** The 0.4.0 menu: list view, grid view, search over settings, and jumping to a setting. */
     private static void menuBlock(Minecraft mc, int local) {
@@ -285,7 +285,12 @@ public final class SmokeTest {
                 gui(mc).setGridView(false);
                 openPanel(mc, "crystal-optimizer");
             }
-            case 2, 27, 47, 67 -> parkCursor(mc);
+            case 2 -> {
+                // On windows under 1640 px the detail column covers the list; show the list itself.
+                gui(mc).showList();
+                parkCursor(mc);
+            }
+            case 27, 47, 67 -> parkCursor(mc);
             case 20 -> shot(mc, "smoke-menu-list.png", null);
             case 25 -> gui(mc).setGridView(true);
             case 40 -> shot(mc, "smoke-menu-grid.png", null);
@@ -297,9 +302,19 @@ public final class SmokeTest {
             case 65 -> gui(mc).openSearchResult(0);
             case 80 -> shot(mc, "smoke-menu-jump.png", null);
             case 85 -> {
+                // The view of the owner's 0.3.0 feedback screenshot: the HUD category.
                 gui(mc).setSearch("");
-                mc.setScreen(null);
+                gui(mc).showCategory(gg.shard.client.module.ModuleCategory.HUD);
+                gui(mc).setGridView(true);
             }
+            case 87 -> {
+                gui(mc).showList();
+                parkCursor(mc);
+            }
+            case 100 -> shot(mc, "smoke-menu-hud-grid.png", null);
+            case 102 -> gui(mc).setGridView(false);
+            case 115 -> shot(mc, "smoke-menu-hud-list.png", null);
+            case 120 -> mc.setScreen(null);
             default -> {
             }
         }
@@ -628,8 +643,14 @@ public final class SmokeTest {
                 var slot = slots.get(slotIndex);
                 double f = gg.shard.client.gui.ScaledScreen.factorOf(screen);
                 int gs = mc.getWindow().getGuiScale();
-                double px = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$leftPos() + slot.x + 8, f, gs);
-                double py = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$topPos() + slot.y + 8, f, gs);
+                // Mouse events arrive in window coordinates, which equal the framebuffer's only when
+                // the window fits the monitor; convert the way vanilla's mouse handler does.
+                var win = mc.getWindow();
+                double sx = win.getScreenWidth() / (double) win.getWidth();
+                double sy = win.getScreenHeight() / (double) win.getHeight();
+                if (slotIndex == 0) ShardClient.LOGGER.info("Smoke: window {}x{}, framebuffer {}x{}", win.getScreenWidth(), win.getScreenHeight(), win.getWidth(), win.getHeight());
+                double px = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$leftPos() + slot.x + 8, f, gs) * sx;
+                double py = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$topPos() + slot.y + 8, f, gs) * sy;
                 ((gg.shard.client.mixin.MouseHandlerInvoker) mc.mouseHandler).shard$onMove(mc.getWindow().handle(), px, py);
             } else if (step % 2 == 1 && slotIndex < slots.size()) {
                 var hovered = acc.shard$hoveredSlot();
@@ -838,6 +859,9 @@ public final class SmokeTest {
     /** Opening a screen recentres the cursor; move it into the page margin so no hover state shows. */
     private static void parkCursor(Minecraft mc) {
         org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().handle(), 4, 4);
+        // The unfocused dev window gets no move event for that, so tell the mouse handler directly;
+        // otherwise the pointer stays where opening a screen centred it and hovers leak into shots.
+        ((gg.shard.client.mixin.MouseHandlerInvoker) mc.mouseHandler).shard$onMove(mc.getWindow().handle(), 4, 4);
     }
 
     // ---- GUI steps -----------------------------------------------------------------------------
@@ -1026,6 +1050,9 @@ public final class SmokeTest {
             }
         }
         SUMMARY.addProperty("layoutIdenticalAcrossScales", identical);
+        var clipped = new com.google.gson.JsonArray();
+        gg.shard.client.gui.Fonts.CLIPPED.stream().sorted().forEach(clipped::add);
+        SUMMARY.add("clippedTexts", clipped);
         SUMMARY.addProperty("configSchemaLoaded", ShardClient.config().loadedVersion());
         try {
             Files.writeString(out.resolve("smoke-summary.json"), new GsonBuilder().setPrettyPrinting().create().toJson(SUMMARY), StandardCharsets.UTF_8);

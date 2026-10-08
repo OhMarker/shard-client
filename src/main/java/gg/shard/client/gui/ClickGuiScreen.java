@@ -313,7 +313,17 @@ public final class ClickGuiScreen extends DesignScreen {
     public void setSearch(String query) {
         search.setValue(query);
         search.cursorToEnd();
-        gridScroll = 0;
+        searchEdited();
+    }
+
+    /** Shows one category, as a click on it in the rail would (smoke test). */
+    public void showCategory(ModuleCategory c) {
+        selectCategory(c);
+    }
+
+    /** Below the wide layout, slides the detail column away so the list shows (smoke test). */
+    public void showList() {
+        if (!wide) closePanel();
     }
 
     /** Opens the n-th setting found by the current search (smoke test). */
@@ -622,21 +632,37 @@ public final class ClickGuiScreen extends DesignScreen {
         int tabH = 26;
         int tx = x + 10;
         List<ModuleCategory> cats = categories();
-        int hudW = Fonts.widthInt("Edit HUD", Fonts.Weight.MEDIUM, DESC) + 20;
-        int available = w - 20 - hudW - 8;
-        int needed = Fonts.widthInt("Settings", Fonts.Weight.MEDIUM, DESC) + 20;
-        for (ModuleCategory c : cats) needed += Fonts.widthInt(c.displayName(), Fonts.Weight.MEDIUM, DESC) + 20;
-        boolean compact = needed > available;
+        // Narrower and narrower until everything fits: full names; short names and an icon-only
+        // Edit HUD button; icon-only category tabs. Nothing is ever cut off or overlapped.
+        int fullHudW = Fonts.widthInt("Edit HUD", Fonts.Weight.MEDIUM, LABEL) + 24;
+        int iconHudW = tabH + 6;
+        int full = tabsWidth(cats, 0);
+        int shortNames = tabsWidth(cats, 1);
+        int level = full <= w - 28 - fullHudW ? 0 : shortNames <= w - 28 - iconHudW ? 1 : 2;
+        int hudW = level == 0 ? fullHudW : iconHudW;
         for (ModuleCategory c : cats) {
-            String label = compact ? compactName(c) : c.displayName();
-            tx += renderTab(g, "cat:" + c.name(), label, search.isEmpty() && !settingsPage && filter == Filter.CATEGORY && c == category, tx, tabY, tabH,
+            boolean sel = search.isEmpty() && !settingsPage && filter == Filter.CATEGORY && c == category;
+            tx += renderTab(g, "cat:" + c.name(), tabLabel(c, level), level == 2 ? Icons.categoryIcon(c) : null, sel, tx, tabY, tabH,
                     () -> selectCategory(c));
         }
-        renderTab(g, "cat:settings", compact ? "More" : "Settings", settingsPage, tx, tabY, tabH, this::selectSettings);
+        renderTab(g, "cat:settings", level == 0 ? "Settings" : "More", null, settingsPage, tx, tabY, tabH, this::selectSettings);
         boolean canEdit = minecraft.player != null;
-        button(g, "nav:hud-editor", x + w - 10 - hudW, tabY, hudW, tabH, "Edit HUD", false, canEdit, b -> {
+        int hudX = x + w - 10 - hudW;
+        button(g, "nav:hud-editor", hudX, tabY, hudW, tabH, level == 0 ? "Edit HUD" : "", false, canEdit, b -> {
             if (canEdit) minecraft.setScreen(new HudEditorScreen(this, ShardClient.hud()));
         });
+        if (level > 0) Icons.draw(g, "edit-hud", hudX + (hudW - 14) / 2, tabY + (tabH - 14) / 2, 14, canEdit ? Theme.text() : Theme.subtle());
+    }
+
+    /** Width of the category tabs plus Settings at a compaction level (see {@link #renderTopBar}). */
+    private int tabsWidth(List<ModuleCategory> cats, int level) {
+        int sum = Fonts.widthInt(level == 0 ? "Settings" : "More", Fonts.Weight.MEDIUM, DESC) + 24;
+        for (ModuleCategory c : cats) sum += level == 2 ? 36 : Fonts.widthInt(tabLabel(c, level), Fonts.Weight.MEDIUM, DESC) + 24;
+        return sum;
+    }
+
+    private static String tabLabel(ModuleCategory c, int level) {
+        return level == 0 ? c.displayName() : compactName(c);
     }
 
     private static String compactName(ModuleCategory c) {
@@ -646,8 +672,9 @@ public final class ClickGuiScreen extends DesignScreen {
         };
     }
 
-    private int renderTab(GuiGraphics g, String key, String label, boolean selected, int x, int y, int h, Runnable onSelect) {
-        int w = Fonts.widthInt(label, Fonts.Weight.MEDIUM, DESC) + 20;
+    /** A tab in the narrow top bar; with an icon it shows only the icon (the label is still its name for focus). */
+    private int renderTab(GuiGraphics g, String key, String label, String icon, boolean selected, int x, int y, int h, Runnable onSelect) {
+        int w = icon != null ? 32 : Fonts.widthInt(label, Fonts.Weight.MEDIUM, DESC) + 20;
         Hit probe = new Hit(key, x, y, w, h, currentClip, true, b -> onSelect.run());
         hits.add(probe);
         boolean hover = hoverable(probe);
@@ -655,7 +682,8 @@ public final class ClickGuiScreen extends DesignScreen {
         int fill = Colors.mix(hover ? Theme.surfaceHover() : 0x00000000, Theme.control(), sel);
         if (Colors.alpha(fill) > 4) Render2D.roundedRect(g, x, y, w, h, Theme.radiusSmall(), fill);
         if (focused(key)) Render2D.roundedOutline(g, x, y, w, h, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
-        Fonts.draw(g, label, Fonts.Weight.MEDIUM, DESC, x + 10, y + (h - Fonts.lineHeight(DESC)) / 2, selected ? Theme.text() : Theme.muted());
+        if (icon != null) Icons.draw(g, icon, x + (w - 16) / 2, y + (h - 16) / 2, 16, selected ? Theme.accent() : Theme.muted());
+        else Fonts.draw(g, label, Fonts.Weight.MEDIUM, DESC, x + 10, y + (h - Fonts.lineHeight(DESC)) / 2, selected ? Theme.text() : Theme.muted());
         return w + 4;
     }
 
@@ -705,6 +733,21 @@ public final class ClickGuiScreen extends DesignScreen {
         clearSearch();
         if (!wide) closePanel();
         focusKey = "cat:settings";
+    }
+
+    /**
+     * After the query changes: results start at the top, and they must be visible, so a query
+     * leaves the Settings page and, below the wide layout, slides the detail column away (it
+     * would cover the results). The search field keeps focus.
+     */
+    private void searchEdited() {
+        gridScroll = 0;
+        if (embedded || search.isEmpty()) return;
+        settingsPage = false;
+        if (!wide && panelTarget > 0f) {
+            panelTarget = 0f;
+            popover = null;
+        }
     }
 
     private void clearSearch() {
@@ -1517,9 +1560,13 @@ public final class ClickGuiScreen extends DesignScreen {
         }
         int rows = (QuickSetup.choices().size() + cols - 1) / cols;
         y = rowY + rows * (BUTTON_H + 8);
-        Fonts.drawClipped(g, "Pro turns on the fight modules and the minimal HUD; Minimal keeps things vanilla; Recording is clean for videos.",
-                Fonts.Weight.REGULAR, HINT, x, y, w, Theme.subtle());
-        return y + Fonts.lineHeight(HINT);
+        // What each setup does is worth reading, so it wraps instead of being cut off.
+        for (String line : Fonts.wrap("Pro turns on the fight modules and the minimal HUD; Minimal keeps things vanilla; Recording is clean for videos.",
+                Fonts.Weight.REGULAR, HINT, w)) {
+            Fonts.draw(g, line, Fonts.Weight.REGULAR, HINT, x, y, Theme.muted());
+            y += Fonts.lineHeight(HINT);
+        }
+        return y;
     }
 
     private int renderKeybindsBody(int x, int y, int w) {
@@ -1970,7 +2017,7 @@ public final class ClickGuiScreen extends DesignScreen {
                 return true;
             }
             if (activeInput.keyPressed(key, mods)) {
-                if (activeInput == search) gridScroll = 0;
+                if (activeInput == search) searchEdited();
                 return true;
             }
             return true;
@@ -2133,14 +2180,14 @@ public final class ClickGuiScreen extends DesignScreen {
         }
         if (listeningKey != null || listeningModule != null) return true;
         if (activeInput != null) {
-            if (activeInput.charTyped(ch) && activeInput == search) gridScroll = 0;
+            if (activeInput.charTyped(ch) && activeInput == search) searchEdited();
             return true;
         }
         // Type anywhere to search.
         if (!embedded && !ch.isEmpty() && Character.isLetterOrDigit(ch.codePointAt(0))) {
             focusInput(search, KEY_SEARCH, null);
             search.cursorToEnd();
-            if (search.charTyped(ch)) gridScroll = 0;
+            if (search.charTyped(ch)) searchEdited();
             return true;
         }
         return super.charTyped(event);

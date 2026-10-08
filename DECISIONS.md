@@ -130,6 +130,47 @@
 - **Considered and not built:** Auto GG (it would send chat on its own; the fair-play rule says no extra packets), Freelook (banned on many servers and needs camera rotation decoupled from the player's; better as an explicit per-server feature later), copy-a-chat-message (needs click handling in vanilla's chat screen), screenshot-to-clipboard (Minecraft runs AWT headless, so an image clipboard needs native code), Motion Blur (a shader pass; worth it only with a measured cost), custom hand position and swing speed, waypoints, hotbar slot numbers, per-server HUD layouts, scoreboard and tab list restyles beyond their scale. Nausea and portal wobble are vanilla's Distortion Effects slider; static FOV is vanilla's FOV Effects slider; exclusive fullscreen resolution is vanilla's Video Settings.
 - **Performance, measured.** The benchmark now runs with a busy HUD and times Shard's HUD layer per frame and per element (BENCHMARKS.md, 0.4.0). The background box of every element was seven draw calls; small rounded boxes are now one cached texture per size (least recently used sizes released), which took the busy HUD from 0.31 ms to 0.18 ms per frame. Text is drawn as plain left-to-right sequences (no per-draw bidirectional reordering) with widths cached, and `ModuleManager.get` is cached by class because mixins call it many times per frame.
 
+### Step 8: final verification
+
+- **Three window sizes.** The smoke test ran at 1280x720, 1920x1080 and 2560x1440 (this
+  machine's monitor is 1920x1080, so Windows keeps the 1440 window 2560 wide but only 1061
+  tall; widths are tested for real, heights only up to 1061). Every PNG was looked at.
+- **Cut-off text is now measured.** `Fonts.clip` records every text it had to shorten while the
+  smoke test runs, and the summary lists them (`clippedTexts`). No module name appears at any
+  size; what is shortened is one-line descriptions in list rows and cards (the full text is in
+  the detail column), placeholders and long hints.
+- **Fixed in step 8:**
+  - Below 1640 px, typing a search while a module was open left the results hidden behind the
+    detail column. A query now slides the detail column away and leaves the Settings page; the
+    search field keeps focus (`searchEdited`).
+  - The page width came from vanilla's GUI width, which is rounded up (2560 px at GUI scale 3 is
+    854 GUI units), so the page was one design unit wider at some scales and
+    `layoutIdenticalAcrossScales` failed at 2560 wide. The design size now comes from the
+    window's physical pixels (`Scale.designSize(gui, page, physical, guiScale)`, tested), which
+    are the same at every scale and never exceed the GUI size.
+  - The compact top bar (small windows or a large interface size) cut "Edit HUD" to "Edit H…"
+    and let the last tabs run under it (the button was measured at the description size and
+    drawn at the label size). It now steps down: full names; short names with an icon-only
+    Edit HUD button; icon-only category tabs.
+  - The HUD editor toolbar slid under the settings side panel at 720p, hiding Done. When one
+    bar does not fit beside the panel, the toolbar wraps onto a second bar.
+  - The "Crystal PvP full" and "Streamer" presets put Keystrokes in the bottom-left corner,
+    which is vanilla's chat; it now sits on the left edge just below the middle.
+  - The welcome screen cut the Quick setup descriptions with "…"; they wrap to two lines.
+  - The Settings page's line explaining the three setups was cut at 720p; it wraps now and uses
+    the secondary text colour (the tertiary one is for things you need not read).
+  - Smoke harness: `parkCursor` moved the OS cursor, but the unfocused dev window never
+    reports that move, so hover tooltips leaked into screenshots; it now also tells the mouse
+    handler. The inventory check converts slot positions with the window size (what mouse
+    events use) instead of the framebuffer size; they differ when the window is bigger than
+    the monitor, which made all 47 slots "miss" at 2560 wide. The menu pass also shoots the
+    HUD category in grid and list view (the owner's 0.3.0 feedback view) and, below 1640 px,
+    closes the detail column so the list itself is checked.
+- **Left as is:** on a 1280x720 window chat (vanilla's fixed width) can reach the kit counter
+  above the hearts while chat lines are showing; the known limits above (fire tints multiply,
+  no shield opacity, alt-tab not automated, a wide toolbar can cover top-left elements) still
+  apply.
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.

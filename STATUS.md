@@ -1,34 +1,45 @@
 # Status (handoff for a new session)
 
-## 0.4.0 in progress (branch `v0.4.0`)
-Work follows `docs/PROMPT-ui-overhaul-0.4.0.md` step by step, stopping for the owner at each ★.
-- Step 1 done: `docs/DESIGN.md`, mockups in `docs/design/` (owner picked **A: rail + list + detail**).
-- Step 2 done: sharp text (linear-filtered Shard font atlases, per-density rasters) and the Lucide
-  icon atlas; proof in `docs/screenshots/0.4.0/`. Owner approved.
-- Step 3 done: new menu (rail + list/grid + detail column, search over settings, favorites,
-  keyboard, segmented controls). Run the smoke test with `-PwindowSize=1920x1080` too; the wide
-  layout only appears from 1640 px. Owner approved.
-- Step 4 done: HUD editor (snapping + guides, multi-select, align/distribute, 1 px nudge, undo/redo,
-  grid, settings side panel) and layout presets; HUD positions are now anchor + offset.
-  Screenshots `docs/screenshots/0.4.0/step4-*`. Owner approved.
-- Step 5 done: module audit (table in DECISIONS.md), renames with `legacyKey()`, upgrades to FPS,
-  Ping, Keystrokes, Armor, Totem Counter, Item Counter, Effects, Attack Cooldown, Totem Pops,
-  Nametags and the Crystal Optimizer readout. Owner approved.
-- Step 6 done (owner's must-have list): Low Fire (screen, ground fire blocks via Fabric model
-  wrapping, burning entities), Crosshair (pixel-mask shapes, preview, editor, share codes),
-  Shield (blocking/holding sets), Anchor Glow, Crystal Visuals (colours, spin, bounce, base),
-  GUI Scales (inventory scale with 0 slot misses, HUD part scales), Display (borderless, FPS
-  caps, title), HUD styles (Pill, label position, brackets, previews, use-for-all). Screenshots
-  `docs/screenshots/0.4.0/step6*`. Owner approved.
-- Known limits recorded in DECISIONS.md: fire tints multiply (no greyscale sprite), no shield
-  opacity, alt-tab speed not automated.
-- Step 7 done: fight log (target, combo, reach, recap, kills/K/D), Cooldowns, Compass, Speed, TPS,
-  Low Health, Sounds, Block Outline with crystal-spot hint, Clean Screen, Weather and Time, Chat,
-  Quick setup (Pro / Minimal / Recording) and a first-run welcome. HUD layer 0.31 -> 0.18 ms per
-  frame with a busy HUD (BENCHMARKS.md). Waiting for the owner's OK on step 7.
-- Next: step 8 (full verification across resolutions and GUI scales, docs, version bump 0.4.0,
-  build the jar; ask the owner before any GitHub release or meta push).
-- The 0.3.0 notes below still describe the released build.
+## 0.4.0: built and verified (branch `v0.4.0`, not merged, not released)
+Last updated 2026-10-08. All eight steps of `docs/PROMPT-ui-overhaul-0.4.0.md` are done; the
+owner approved steps 1-7. What changed is in CHANGELOG.md, the reasons in DECISIONS.md ("0.4.0",
+including "Step 8: final verification").
+- **Jar:** build/libs/shard-0.4.0.jar (fabric.mod.json says 0.4.0), sha512
+  c4058524568ff2fc266af76282f10b16dcb4a5e3313513681cc24fafc47cba8bd80599f4bf6abd3ca00825f75e4f159c11eea752e2276664e2e82135d6dab1b3
+  (also in build/libs/shard-0.4.0.jar.sha512). Note: build/libs/shard-0.3.0.jar was rebuilt
+  from later code during step 7 and is NOT the published 0.3.0; the GitHub release is.
+- **Tests:** `./gradlew build` passes, 86 JUnit tests, 0 failures.
+- **Smoke test** at 1280x720, 1920x1080 and 2560x1440 (this monitor is 1920x1080, so the
+  1440 window is 2560x1061): `layoutIdenticalAcrossScales: true`, `inventoryScaleSlotMisses: 0`
+  (47 slots), `borderlessCoversMonitor: true`, `borderlessRestoresWindow: true`,
+  `fightLogKills: 1`, HUD editor undo and the crystal place/hit check pass at all three sizes.
+  The new `clippedTexts` list contains no module name at any size, only one-line descriptions,
+  placeholders and long hints. All 216 PNGs were looked at; 4x crops are smooth. Summaries in
+  docs/smoke-summary-0.4.0-{720,1080,1440}.json.
+- **Benchmark:** HUD layer 0.18-0.19 ms per frame with the busy HUD, frame rates at the cap,
+  1% lows 99 fps (BENCHMARKS.md, "0.4.0 final check").
+- **Screenshots:** docs/screenshots/0.4.0/final-* (before/after of the owner's 0.3.0 view:
+  final-before-after-hud.png).
+- **Known limits (recorded, not fixed):** fire tints multiply instead of recolouring, no shield
+  opacity, alt-tab speed in borderless is not automated, a wide HUD editor toolbar can cover
+  top-left elements, chat on a 720p window can reach the kit counter.
+
+### Publishing 0.4.0 (only after the owner says yes)
+1. Merge `v0.4.0` into `main` (`git checkout main && git merge --no-ff v0.4.0`) and push main.
+2. Release (Claude's sandbox may not create releases; if refused, the owner runs it from a
+   Desktop .cmd):
+
+```bash
+gh release create v0.4.0 build/libs/shard-0.4.0.jar build/libs/shard-0.4.0.jar.sha512 --repo OhMarker/shard-client --title "Shard Client 0.4.0" --notes-file docs/release-notes-0.4.0.md
+```
+
+3. In ../meta, add the 0.4.0 build to shard-manifest.json (url
+   `https://github.com/OhMarker/shard-client/releases/download/v0.4.0/shard-0.4.0.jar`, the
+   sha512 above, `"minecraft": ["1.21.11"]`, `"fabricLoader": ">=0.19.0"`, the changelog,
+   `releasedAt`), set `latest` to 0.4.0, commit and push. Check the downloaded jar's sha512
+   matches before pushing meta.
+
+## 0.3.0 (released)
 
 Last updated 2026-10-07 (0.3.0).
 

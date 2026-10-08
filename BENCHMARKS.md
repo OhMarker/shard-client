@@ -153,3 +153,31 @@ correct). Final run, Explosion Optimizer on vs off:
 Raw: `docs/bench-0.4.0.json`. Most expensive elements after the change (per frame): Item
 Counter about 28 us (eight item renders), Session about 24 us (five lines), FPS with its graph
 about 23 us (one fill per bar), Compass about 19 us.
+
+## 0.4.0 final check (2026-10-08, after the step 8 fixes, version 0.4.0)
+
+Same scenario and busy HUD as above, run on the built 0.4.0 code after the step 8 fixes (menu,
+HUD editor toolbar, presets, design-size rounding). None of them touch the HUD layer's drawing,
+and the numbers confirm it: the HUD layer is still about 0.18 ms per frame, frame rates sit at
+the 120 fps cap as before and the 1% lows are within noise of the earlier 0.4.0 run (slightly
+higher). Raw: `docs/bench-0.4.0-final.json`.
+
+| Explosion Optimizer | Runs | Avg fps | 1% low fps | Worst frame | HUD avg | HUD p99 |
+| --- | --- | --- | --- | --- | --- | --- |
+| on | 6 | 117.88 | 98.99 | 11.74 ms | 0.183 ms | 0.339 ms |
+| off | 6 | 118.09 | 99.07 | 12.13 ms | 0.189 ms | 0.335 ms |
+
+| Run | Optimizer | Frames | Avg fps | 1% low fps | Worst ms | HUD avg ms | HUD p99 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | off | 353 | 118.18 | 96.86 | 11.66 | 0.205 | 0.349 |
+| 2 | on | 353 | 117.86 | 97.2 | 10.99 | 0.2 | 0.32 |
+| 3 | off | 354 | 118.32 | 99.5 | 14.38 | 0.192 | 0.308 |
+| 4 | on | 353 | 117.92 | 101.75 | 11.69 | 0.202 | 0.477 |
+| 5 | off | 353 | 118.15 | 100.74 | 10.24 | 0.188 | 0.338 |
+| 6 | on | 353 | 118.07 | 98.26 | 16.05 | 0.189 | 0.34 |
+| 7 | off | 353 | 118.02 | 99.95 | 10.4 | 0.191 | 0.31 |
+| 8 | on | 353 | 117.95 | 97.73 | 10.33 | 0.178 | 0.334 |
+| 9 | off | 353 | 118.05 | 98.21 | 11.36 | 0.187 | 0.321 |
+| 10 | on | 353 | 117.82 | 99.12 | 10.72 | 0.164 | 0.282 |
+| 11 | off | 352 | 117.84 | 99.16 | 14.71 | 0.171 | 0.387 |
+| 12 | on | 352 | 117.68 | 99.9 | 10.63 | 0.165 | 0.283 |

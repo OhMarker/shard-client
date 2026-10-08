@@ -37,6 +37,17 @@ public final class Scale {
         return Math.max(1, (int) Math.floor(guiSize / pageScale + 1e-6));
     }
 
+    /**
+     * Size of the window in design units, from its physical pixels. Vanilla rounds the GUI size
+     * up (2560 px at GUI scale 3 is 854 GUI units, 1281 design units), so the GUI size alone
+     * makes the page a unit wider at some scales; the physical size is the same at every scale,
+     * and it never exceeds the GUI size, so the page still fits.
+     */
+    public static int designSize(int guiSize, double pageScale, int physicalSize, int guiScale) {
+        int fromPixels = Math.max(1, (int) Math.floor(physicalSize / pixelsPerUnit(pageScale, guiScale) + 1e-6));
+        return Math.min(designSize(guiSize, pageScale), fromPixels);
+    }
+
     /** Mouse or scroll coordinate from GUI units to design units. */
     public static double toDesign(double guiCoordinate, double pageScale) {
         return guiCoordinate / pageScale;

@@ -266,8 +266,44 @@ public final class HudEditorScreen extends DesignScreen {
             barW = 16;
             for (Item it : items) barW += itemWidth(it) + 2;
         }
-        int bx = Math.max(8, (right - barW) / 2);
+        // Still too wide beside the side panel: wrap onto further bars so every button stays visible.
+        List<List<Item>> rows = new ArrayList<>();
+        List<Item> row = new ArrayList<>();
+        int rowW = 16;
+        for (Item it : items) {
+            int w = itemWidth(it) + 2;
+            if (!row.isEmpty() && rowW + w > right - 16) {
+                rows.add(row);
+                row = new ArrayList<>();
+                rowW = 16;
+            }
+            if (row.isEmpty() && "sep".equals(it.kind())) continue;
+            row.add(it);
+            rowW += w;
+        }
+        if (!row.isEmpty()) rows.add(row);
         int by = 10;
+        for (List<Item> r : rows) {
+            renderToolbarRow(g, r, sel, right, by);
+            by += BAR_H + 6;
+        }
+        by -= BAR_H + 6;
+
+        String hint = selection.isEmpty()
+                ? "Drag to move  ·  Shift-click or drag a box to select several  ·  Scroll to scale  ·  Click to edit settings"
+                : "Arrows nudge 1 px (Shift: 10)  ·  Ctrl Z / Ctrl Y  ·  G grid  ·  Alt drags freely  ·  Delete hides";
+        int hy = by + BAR_H + 6;
+        int hw = Fonts.widthInt(hint, Fonts.Weight.REGULAR, 11);
+        if (hw + 16 <= right - 16 && !presetsOpen && !compactBar) {
+            Render2D.roundedRect(g, (right - hw) / 2 - 8, hy, hw + 16, Fonts.lineHeight(11) + 6, Theme.radiusSmall(), Colors.withAlpha(Theme.surface(), 0xC8));
+            Fonts.draw(g, hint, Fonts.Weight.REGULAR, 11, (right - hw) / 2, hy + 3, Theme.muted());
+        }
+    }
+
+    private void renderToolbarRow(GuiGraphics g, List<Item> items, List<HudModule> sel, int right, int by) {
+        int barW = 16;
+        for (Item it : items) barW += itemWidth(it) + 2;
+        int bx = Math.max(8, (right - barW) / 2);
         Render2D.shadow(g, bx, by, barW, BAR_H, Theme.radiusLarge(), 0.5);
         Render2D.panel(g, bx, by, barW, BAR_H, Theme.radiusLarge(), Theme.surface(), Theme.lineStrong());
         hits.add(new Hit("bar", bx, by, barW, BAR_H, () -> {}));
@@ -296,16 +332,6 @@ public final class HudEditorScreen extends DesignScreen {
                 default -> iconButton(g, it.key(), it.label(), cx, cy, it.enabled(), it.on(), it.action());
             }
             cx += w + 2;
-        }
-
-        String hint = selection.isEmpty()
-                ? "Drag to move  ·  Shift-click or drag a box to select several  ·  Scroll to scale  ·  Click to edit settings"
-                : "Arrows nudge 1 px (Shift: 10)  ·  Ctrl Z / Ctrl Y  ·  G grid  ·  Alt drags freely  ·  Delete hides";
-        int hy = by + BAR_H + 6;
-        int hw = Fonts.widthInt(hint, Fonts.Weight.REGULAR, 11);
-        if (hw + 16 <= right - 16 && !presetsOpen && !compactBar) {
-            Render2D.roundedRect(g, (right - hw) / 2 - 8, hy, hw + 16, Fonts.lineHeight(11) + 6, Theme.radiusSmall(), Colors.withAlpha(Theme.surface(), 0xC8));
-            Fonts.draw(g, hint, Fonts.Weight.REGULAR, 11, (right - hw) / 2, hy + 3, Theme.muted());
         }
     }
 

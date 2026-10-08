@@ -71,7 +71,7 @@ public final class WelcomeScreen extends DesignScreen {
         my = (int) toDesign(mouseY);
         pushDesign(g);
         int w = Math.min(520, designW - 32);
-        int h = 300;
+        int h = Math.min(330, designH - 16);
         int x = (designW - w) / 2;
         int y = (designH - h) / 2;
         Render2D.shadow(g, x, y, w, h, Theme.radiusLarge(), 0.6);
@@ -90,11 +90,17 @@ public final class WelcomeScreen extends DesignScreen {
                 int cy = by;
                 for (QuickSetup.Choice c : QuickSetup.choices()) {
                     boolean sel = c.name().equals(chosen);
-                    option(g, x + 20, cy, w - 40, 50, sel, () -> chosen = sel ? null : c.name());
-                    Icons.draw(g, c.icon(), x + 32, cy + 17, 16, sel ? Theme.accent() : Theme.muted());
+                    option(g, x + 20, cy, w - 40, 60, sel, () -> chosen = sel ? null : c.name());
+                    Icons.draw(g, c.icon(), x + 32, cy + 22, 16, sel ? Theme.accent() : Theme.muted());
                     Fonts.draw(g, c.name(), Fonts.Weight.SEMIBOLD, 12, x + 58, cy + 8, Theme.text());
-                    Fonts.drawClipped(g, c.description(), Fonts.Weight.REGULAR, 10, x + 58, cy + 26, w - 100, Theme.muted());
-                    cy += 56;
+                    // The description is the only place a new player reads what a setup does: wrap it.
+                    int textW = w - 40 - 38 - 14;
+                    List<String> lines = Fonts.wrap(c.description(), Fonts.Weight.REGULAR, 10, textW);
+                    for (int i = 0; i < Math.min(2, lines.size()); i++) {
+                        String line = i == 1 && lines.size() > 2 ? Fonts.clip(String.join(" ", lines.subList(1, lines.size())), Fonts.Weight.REGULAR, 10, textW) : lines.get(i);
+                        Fonts.draw(g, line, Fonts.Weight.REGULAR, 10, x + 58, cy + 25 + i * Fonts.lineHeight(10), Theme.muted());
+                    }
+                    cy += 66;
                 }
             }
             case 1 -> {

@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Shard's UI typography. Inter (OFL-1.1, {@code assets/shard/font/}) is exposed as one
@@ -57,6 +59,9 @@ public final class Fonts {
     static final double DESCENT = 0.2412;
     private static final double LINE = 1.25;
     private static final String ELLIPSIS = "…";
+    /** Every text {@link #clip} had to shorten, recorded only while the dev smoke test runs. */
+    public static final Set<String> CLIPPED = ConcurrentHashMap.newKeySet();
+    private static final boolean RECORD_CLIPS = System.getProperty("shard.smoke.dir") != null;
 
     private static final Map<Integer, Style> STYLES = new HashMap<>();
     /** Measured widths per style; text is drawn every frame, so measuring it again is the HUD's main cost. */
@@ -201,6 +206,7 @@ public final class Fonts {
     public static String clip(String text, Weight weight, int size, int maxWidth) {
         if (text == null) return "";
         if (width(text, weight, size) <= maxWidth) return text;
+        if (RECORD_CLIPS) CLIPPED.add(text);
         int room = (int) Math.max(0, maxWidth - width(ELLIPSIS, weight, size));
         String head;
         if (!smooth) head = font().plainSubstrByWidth(text, room / vanillaScale(size));

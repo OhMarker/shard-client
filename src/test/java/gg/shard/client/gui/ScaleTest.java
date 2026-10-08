@@ -39,6 +39,20 @@ class ScaleTest {
     }
 
     @Test
+    void designSizeFromPixelsIsExactlyTheSameAtEveryGuiScale() {
+        int[][] windows = {{1280, 720}, {1920, 1080}, {2560, 1440}, {2560, 1061}, {1366, 768}};
+        for (int[] w : windows) {
+            for (int guiScale = 1; guiScale <= 4; guiScale++) {
+                double page = Scale.pageScale(guiScale, 1.0);
+                int guiW = (int) Math.ceil(w[0] / (double) guiScale);
+                int guiH = (int) Math.ceil(w[1] / (double) guiScale);
+                assertEquals(w[0] / 2, Scale.designSize(guiW, page, w[0], guiScale), "width " + w[0] + " at scale " + guiScale);
+                assertEquals(w[1] / 2, Scale.designSize(guiH, page, w[1], guiScale), "height " + w[1] + " at scale " + guiScale);
+            }
+        }
+    }
+
+    @Test
     void mouseMapsIntoDesignUnits() {
         double page = Scale.pageScale(4, 1.0);
         assertEquals(200.0, Scale.toDesign(100.0, page), 1e-9);
