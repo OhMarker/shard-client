@@ -109,7 +109,10 @@ public final class CosmeticsModule extends Module {
         ClientAsset.Texture texture = null;
         if (local) {
             if (showCape.get()) {
-                texture = library.ready(localCapeId);
+                // The launcher's choice shows straight away; once signed in it must also be owned
+                // (bought or given), so nobody wears a cape they did not pay for, even on their screen.
+                ShardApi.Me me = api.me();
+                if (localCapeId != null && (me == null || me.owned().contains(localCapeId))) texture = library.ready(localCapeId);
                 if (texture == null) texture = library.texture(worn.get(uuid));
             }
         } else if (showOthers.get()) {
