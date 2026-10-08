@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+- Fixed signing in to Shard: Mojang blocks the Shard server's checks, so the game now proves your
+  account with the key Mojang gives every account for chat signing. Tokens and capes work again.
+
 ## 0.6.0
 
 - **Everyone's capes:** every Shard player now sees the capes other Shard players equipped.

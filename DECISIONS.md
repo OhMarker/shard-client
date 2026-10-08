@@ -200,9 +200,12 @@
   needs a shared, trusted record, so there is now a small API (`shard-api`, a Cloudflare Worker
   with a D1 database; contract in its API.md). The address is read from meta's `services.json`, so
   it can move without a client release.
-- **Identity without passwords.** The client proves who it is exactly like joining an online-mode
-  server: `sessionService().joinServer(profile, accessToken, serverId)` with a one-time `serverId`
-  from the API, which then asks Mojang `hasJoined`. The access token only goes to Mojang.
+- **Identity without passwords.** First built as Mojang's server-join check (`joinServer` +
+  `hasJoined`), but Mojang answers 403 to every request from Cloudflare (hasJoined, profiles,
+  public keys), so the API could never confirm anyone. 0.6.1 signs the API's one-time challenge
+  with the account's Mojang-signed chat key (`ProfileKeyPairManager`) instead; the API checks
+  Mojang's signature with Mojang's published keys and never contacts Mojang. The access token only
+  goes to Mojang.
 - **Tokens for active play only.** A heartbeat every two minutes while in a world; it is "active"
   when the player turned or moved in the last five minutes. The API credits at most 150 s per
   heartbeat, never more than wall-clock time, 10 tokens per 10 minutes (API.md).

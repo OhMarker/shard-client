@@ -7,6 +7,8 @@ import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
+import net.minecraft.world.entity.player.ProfileKeyPair;
+import net.minecraft.world.entity.player.ProfilePublicKey;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,6 +19,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.security.GeneralSecurityException;
+import java.security.Signature;
+import java.util.Base64;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,9 +34,9 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
- * The game's side of the Shard API (API.md in shard-api): signing in with Mojang's server-join
- * check, the play-time heartbeat, and looking up who wears which cape. The access token only ever
- * goes to Mojang. The API address is read from the meta repository (services.json), so it can move
+ * The game's side of the Shard API (API.md in shard-api): signing in with the account's
+ * Mojang-signed key, the play-time heartbeat, and looking up who wears which cape. The access token
+ * only ever goes to Mojang. The API address is read from the meta repository (services.json), so it can move
  * without a client update. Every call runs on one background thread.
  */
 public final class ShardApi {
@@ -77,12 +82,7 @@ public final class ShardApi {
             if (devApi() != null) {
                 verify.addProperty("devUuid", user.getProfileId().toString());
             } else {
-                try {
-                    // Exactly what vanilla does when joining an online-mode server.
-                    Minecraft.getInstance().services().sessionService().joinServer(user.getProfileId(), user.getAccessToken(), serverId);
-                } catch (Exception e) {
-                    throw new IllegalStateException("Mojang refused the sign-in (" + e.getMessage() + ")", e);
-                }
+                verify.add("proof", proof(user.getProfileId(), serverId));
             }
             JsonObject result = post("/v1/auth/verify", verify, false);
             session = result.get("session").getAsString();
@@ -118,6 +118,31 @@ public final class ShardApi {
             }
             return out;
         }, worker);
+    }
+
+    /**
+     * Proof of account: the key pair Mojang signs for chat (the game keeps it anyway) signs the
+     * API's one-time challenge, and the API checks Mojang's signature itself. Mojang refuses
+     * requests from Cloudflare, so the API cannot simply ask Mojang (API.md "Identity").
+     */
+    private static JsonObject proof(UUID uuid, String serverId) {
+        ProfileKeyPair keys = Minecraft.getInstance().getProfileKeyPairManager().prepareKeyPair().join()
+                .orElseThrow(() -> new IllegalStateException("this account has no Mojang chat key (multiplayer may be off in its privacy settings)"));
+        ProfilePublicKey.Data data = keys.publicKey().data();
+        try {
+            Signature signer = Signature.getInstance("SHA256withRSA");
+            signer.initSign(keys.privateKey());
+            signer.update(("shard-auth:" + serverId).getBytes(StandardCharsets.UTF_8));
+            JsonObject proof = new JsonObject();
+            proof.addProperty("uuid", uuid.toString().replace("-", ""));
+            proof.addProperty("publicKey", Base64.getEncoder().encodeToString(data.key().getEncoded()));
+            proof.addProperty("keySignature", Base64.getEncoder().encodeToString(data.keySignature()));
+            proof.addProperty("expiresAt", data.expiresAt().toEpochMilli());
+            proof.addProperty("signature", Base64.getEncoder().encodeToString(signer.sign()));
+            return proof;
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("could not sign the Shard challenge", e);
+        }
     }
 
     static Me parseMe(JsonObject o) {
