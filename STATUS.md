@@ -7,8 +7,12 @@ Work follows `docs/PROMPT-ui-overhaul-0.4.0.md` step by step, stopping for the o
   icon atlas; proof in `docs/screenshots/0.4.0/`. Owner approved.
 - Step 3 done: new menu (rail + list/grid + detail column, search over settings, favorites,
   keyboard, segmented controls). Run the smoke test with `-PwindowSize=1920x1080` too; the wide
-  layout only appears from 1640 px. Waiting for the owner's OK on step 3.
-- Next: step 4 (HUD editor + presets), then steps 5-8.
+  layout only appears from 1640 px. Owner approved.
+- Step 4 done: HUD editor (snapping + guides, multi-select, align/distribute, 1 px nudge, undo/redo,
+  grid, settings side panel) and layout presets; HUD positions are now anchor + offset.
+  Screenshots `docs/screenshots/0.4.0/step4-*`. Waiting for the owner's OK on step 4.
+- Next: step 5 (module audit + upgrades; keep module keys stable when renaming, `Module.key()`
+  is derived from the name), then steps 6-8.
 - The 0.3.0 notes below still describe the released build.
 
 Last updated 2026-10-07 (0.3.0).

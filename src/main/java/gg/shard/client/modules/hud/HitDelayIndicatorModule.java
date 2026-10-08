@@ -45,8 +45,8 @@ public final class HitDelayIndicatorModule extends HudModule {
         if (center.get()) {
             // Undo the manager's translation and scale so the bar always hugs the crosshair.
             double s = HudManager.hudScale() * scale();
-            int cx = (int) Math.round((g.guiWidth() / 2.0 - pixelX(g.guiWidth())) / s);
-            int cy = (int) Math.round((g.guiHeight() / 2.0 - pixelY(g.guiHeight())) / s) + 12;
+            int cx = (int) Math.round((g.guiWidth() / 2.0 - posX(g.guiWidth())) / s);
+            int cy = (int) Math.round((g.guiHeight() / 2.0 - posY(g.guiHeight())) / s) + 12;
             if (!(ready && hideWhenReady.get())) Render2D.bar(g, cx - w / 2, cy, w, h, strength, color);
             size(w, h);
             return;

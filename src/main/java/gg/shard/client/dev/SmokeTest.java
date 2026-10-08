@@ -159,6 +159,11 @@ public final class SmokeTest {
             return;
         }
         after -= MENU_TICKS;
+        if (after < EDITOR_TICKS) {
+            editorBlock(mc, after);
+            return;
+        }
+        after -= EDITOR_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -243,6 +248,65 @@ public final class SmokeTest {
                 gui(mc).setSearch("");
                 mc.setScreen(null);
             }
+            default -> {
+            }
+        }
+    }
+
+    private static final int EDITOR_TICKS = 150;
+    private static java.util.Map<String, gg.shard.client.hud.HudPresets.Entry> layoutBefore;
+
+    private static gg.shard.client.hud.HudModule hudModule(String key) {
+        for (var m : ShardClient.hud().hudModules()) if (m.key().equals(key)) return m;
+        throw new IllegalStateException("no HUD module " + key);
+    }
+
+    private static HudEditorScreen editor(Minecraft mc) {
+        return mc.screen instanceof HudEditorScreen e ? e : null;
+    }
+
+    /** The 0.4.0 HUD editor: presets, the presets menu, snap guides, the side panel, undo, then the live HUD. */
+    private static void editorBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                layoutBefore = gg.shard.client.hud.HudPresets.snapshot(ShardClient.hud());
+                mc.setScreen(new HudEditorScreen(null, ShardClient.hud()));
+            }
+            case 2, 27, 47, 67, 87 -> parkCursor(mc);
+            case 5 -> editor(mc).applyPreset(gg.shard.client.hud.HudPresets.MINIMAL);
+            case 20 -> shot(mc, "smoke-hudeditor-preset.png", null);
+            case 25 -> editor(mc).setPresetsOpen(true);
+            case 40 -> {
+                shot(mc, "smoke-hudeditor-presets-menu.png", null);
+            }
+            case 45 -> {
+                editor(mc).setPresetsOpen(false);
+                editor(mc).select(hudModule("item-counter"));
+                editor(mc).previewDrag(1.5, -0.5);
+            }
+            case 60 -> shot(mc, "smoke-hudeditor-drag.png", null);
+            case 65 -> {
+                editor(mc).endPreviewDrag();
+                editor(mc).select(hudModule("fps"), hudModule("ping"));
+                editor(mc).openPanel(hudModule("fps"));
+            }
+            case 85 -> shot(mc, "smoke-hudeditor-panel.png", null);
+            case 90 -> {
+                var counter = hudModule("item-counter");
+                double before = counter.posX(mc.getWindow().getGuiScaledWidth());
+                editor(mc).undo(); // the preview drag
+                editor(mc).undo(); // the preset
+                double after = counter.posX(mc.getWindow().getGuiScaledWidth());
+                ShardClient.LOGGER.info("Smoke: HUD editor undo moved Item Counter from {} to {}", before, after);
+                SUMMARY.addProperty("hudEditorUndoWorks", Math.abs(before - after) > 0.01);
+                mc.setScreen(null);
+                gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.MINIMAL);
+            }
+            case 110 -> shot(mc, "smoke-hud-preset-minimal.png", null);
+            case 115 -> gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.FULL);
+            case 135 -> shot(mc, "smoke-hud-preset-full.png", null);
+            case 140 -> gg.shard.client.hud.HudPresets.restore(ShardClient.hud(), layoutBefore);
             default -> {
             }
         }

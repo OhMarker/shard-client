@@ -185,9 +185,42 @@ public final class ClickGuiScreen extends DesignScreen {
     private int panelW;
     private int panelH;
 
+    /** Drawn inside another screen (the HUD editor): only the detail column, no page around it. */
+    private boolean embedded;
+    private Runnable embeddedClose = () -> {};
+
     public ClickGuiScreen(Screen parent) {
         super(Component.literal("Shard"));
         this.parent = parent;
+    }
+
+    /**
+     * The detail column on its own, for the HUD editor's side panel. The host calls
+     * {@code init}, {@code render} and forwards input while {@link #wantsInput} or
+     * {@link #capturesKeys} says so; closing the column calls {@code onClose}.
+     */
+    public static ClickGuiScreen embedded(Runnable onClose) {
+        ClickGuiScreen s = new ClickGuiScreen(null);
+        s.embedded = true;
+        s.embeddedClose = onClose;
+        s.manageBlur = false;
+        return s;
+    }
+
+    /** Whether a click at this GUI position belongs to the embedded column (or its popover). */
+    public boolean wantsInput(double guiX, double guiY) {
+        if (popover != null || sliding != null || listeningKey != null || listeningModule != null) return true;
+        return panelModule != null && Render2D.hovered(toDesign(guiX), toDesign(guiY), panelX, panelY, panelW, panelH);
+    }
+
+    /** Whether key presses should go to the embedded column (typing, a popover, a key capture). */
+    public boolean capturesKeys() {
+        return popover != null || activeInput != null || listeningKey != null || listeningModule != null;
+    }
+
+    /** Left edge of the embedded column in GUI units, so the host can keep its chrome clear of it. */
+    public int panelLeftGui() {
+        return (int) Math.floor(Scale.toGui(panelX, pageScale));
     }
 
     // ---- lifecycle -----------------------------------------------------------------------------
@@ -226,6 +259,11 @@ public final class ClickGuiScreen extends DesignScreen {
     @Override
     public void onClose() {
         blurInput();
+        if (embedded) {
+            popover = null;
+            embeddedClose.run();
+            return;
+        }
         var gui = ShardClient.config().gui();
         String saved = settingsPage ? "settings" : switch (filter) {
             case FAVORITES -> "favorites";
@@ -389,19 +427,33 @@ public final class ClickGuiScreen extends DesignScreen {
         pose.translate(designW / 2f * (1 - s), designH / 2f * (1 - s));
         pose.scale(s, s);
 
-        layout();
-        ensureSelection();
-        panelAnim = wide ? panelTarget : Render2D.step(panelAnim, panelTarget, dt, PANEL_MS);
-        if (!wide && panelTarget == 0f && panelAnim == 0f) panelModule = null;
-        layoutPanel();
+        if (embedded) {
+            narrow = false;
+            wide = true;
+            settingsPage = false;
+            panelReplacesGrid = false;
+            panelTarget = panelAnim = panelModule == null ? 0f : 1f;
+            layoutPanel();
+            contentX = panelX;
+            contentY = panelY;
+            contentW = panelW;
+            contentH = panelH;
+            if (panelModule != null) renderPanel(g);
+        } else {
+            layout();
+            ensureSelection();
+            panelAnim = wide ? panelTarget : Render2D.step(panelAnim, panelTarget, dt, PANEL_MS);
+            if (!wide && panelTarget == 0f && panelAnim == 0f) panelModule = null;
+            layoutPanel();
 
-        if (narrow) renderTopBar(g);
-        else renderRail(g);
+            if (narrow) renderTopBar(g);
+            else renderRail(g);
 
-        boolean hideList = panelReplacesGrid && panelAnim > 0.02f && !settingsPage;
-        if (settingsPage) renderSettingsPage(g);
-        else if (!hideList) renderList(g);
-        if (!settingsPage && (wide || (panelModule != null && panelAnim > 0.001f))) renderPanel(g);
+            boolean hideList = panelReplacesGrid && panelAnim > 0.02f && !settingsPage;
+            if (settingsPage) renderSettingsPage(g);
+            else if (!hideList) renderList(g);
+            if (!settingsPage && (wide || (panelModule != null && panelAnim > 0.001f))) renderPanel(g);
+        }
         pose.popMatrix();
 
         if (popover != null) {
@@ -455,7 +507,7 @@ public final class ClickGuiScreen extends DesignScreen {
 
     /** On wide windows something is always selected: the saved module, else the first in the list. */
     private void ensureSelection() {
-        if (!wide || settingsPage) return;
+        if (!wide || settingsPage || embedded) return;
         if (panelModule == null || panelModule.hidden()) {
             List<Module> visible = visibleModules();
             panelModule = visible.isEmpty() ? null : visible.get(0);
@@ -1044,6 +1096,9 @@ public final class ClickGuiScreen extends DesignScreen {
         int hx = innerX;
         if (!wide) {
             iconButton(g, "panel-back", "chevron-left", hx - 4, hy + (headH - 28) / 2, 28, Theme.muted(), b -> closePanel());
+            hx += 28;
+        } else if (embedded) {
+            iconButton(g, "panel-back", "close", hx - 4, hy + (headH - 28) / 2, 28, Theme.muted(), b -> onClose());
             hx += 28;
         }
         Icons.draw(g, m, hx, hy + (headH - 20) / 2, 20, m.isEnabled() ? Theme.accent() : Theme.muted());
@@ -2044,7 +2099,7 @@ public final class ClickGuiScreen extends DesignScreen {
             return true;
         }
         // Type anywhere to search.
-        if (!ch.isEmpty() && Character.isLetterOrDigit(ch.codePointAt(0))) {
+        if (!embedded && !ch.isEmpty() && Character.isLetterOrDigit(ch.codePointAt(0))) {
             focusInput(search, KEY_SEARCH, null);
             search.cursorToEnd();
             if (search.charTyped(ch)) gridScroll = 0;

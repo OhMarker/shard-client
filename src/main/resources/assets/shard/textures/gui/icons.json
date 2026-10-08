@@ -1,6 +1,6 @@
 {
  "columns": 16,
- "rows": 6,
+ "rows": 7,
  "sizes": [
   32,
   64,
@@ -99,6 +99,18 @@
   "glow": 89,
   "profile": 90,
   "pin": 91,
-  "eye-off": 92
+  "eye-off": 92,
+  "align-left": 93,
+  "align-center-x": 94,
+  "align-right": 95,
+  "align-top": 96,
+  "align-center-y": 97,
+  "align-bottom": 98,
+  "distribute-h": 99,
+  "distribute-v": 100,
+  "undo": 101,
+  "redo": 102,
+  "grid-on": 103,
+  "save": 104
  }
 }

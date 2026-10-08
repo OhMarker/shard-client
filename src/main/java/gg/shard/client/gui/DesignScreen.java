@@ -27,6 +27,8 @@ public abstract class DesignScreen extends Screen {
     protected float dt;
     private long lastFrameNs;
     private Integer savedBlur;
+    /** False for screens drawn inside another screen; the host owns the blur setting. */
+    protected boolean manageBlur = true;
 
     protected DesignScreen(Component title) {
         super(title);
@@ -76,7 +78,7 @@ public abstract class DesignScreen extends Screen {
     // ---- blur ---------------------------------------------------------------------------------
 
     private void applyBlur() {
-        if (ShardClient.modules() == null) return;
+        if (ShardClient.modules() == null || !manageBlur) return;
         OptionInstance<Integer> option = minecraft.options.menuBackgroundBlurriness();
         int wanted = ShardClient.appearance().blur.get();
         if (savedBlur == null) savedBlur = option.get();

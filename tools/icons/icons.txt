@@ -93,3 +93,15 @@ glow                lightbulb
 profile             users
 pin                 pin
 eye-off             eye-off
+align-left          align-start-vertical
+align-center-x      align-center-vertical
+align-right         align-end-vertical
+align-top           align-start-horizontal
+align-center-y      align-center-horizontal
+align-bottom        align-end-horizontal
+distribute-h        align-horizontal-distribute-center
+distribute-v        align-vertical-distribute-center
+undo                undo-2
+redo                redo-2
+grid-on             grid-3x3
+save                save

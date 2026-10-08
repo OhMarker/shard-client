@@ -36,6 +36,17 @@ public abstract class HudModule extends Module {
 
     private final double defaultFx;
     private final double defaultFy;
+    /**
+     * Position: anchor per axis ({@link HudGeometry#START}, CENTER, END) plus an offset in HUD
+     * units from that anchor, so an element keeps its distance from its corner when the window or
+     * GUI scale changes. Defaults and 0.3.0 configs are fractions of the GUI size; they are
+     * converted to an anchor the first time the element is drawn ({@link #resolve}).
+     */
+    private int anchorX = HudGeometry.START;
+    private int anchorY = HudGeometry.START;
+    private double offX;
+    private double offY;
+    private boolean fractional = true;
     private double fx;
     private double fy;
     private double scale = 1.0;
@@ -196,29 +207,86 @@ public abstract class HudModule extends Module {
         this.scale = Math.max(0.5, Math.min(3.0, Math.round(value * 20) / 20.0));
     }
 
-    public double fractionX() {
-        return fx;
+    /** Converts a fractional (default or 0.3.0) position to an anchored one for this GUI size. */
+    public void resolve(int guiWidth, int guiHeight) {
+        if (!fractional || guiWidth <= 0 || guiHeight <= 0) return;
+        setPosition(fx * guiWidth, fy * guiHeight, guiWidth, guiHeight);
     }
 
-    public double fractionY() {
-        return fy;
+    /** Left edge in GUI units (fractional so 1-pixel nudges at high GUI scales are kept). */
+    public double posX(int guiWidth) {
+        if (fractional) return fx * guiWidth;
+        double x = HudGeometry.positionFor(anchorX, offX, scaledWidthExact(), guiWidth, HudManager.hudScale());
+        return HudGeometry.clamp(x, scaledWidthExact(), guiWidth);
+    }
+
+    public double posY(int guiHeight) {
+        if (fractional) return fy * guiHeight;
+        double y = HudGeometry.positionFor(anchorY, offY, scaledHeightExact(), guiHeight, HudManager.hudScale());
+        return HudGeometry.clamp(y, scaledHeightExact(), guiHeight);
     }
 
     public int pixelX(int guiWidth) {
-        return (int) Math.round(fx * guiWidth);
+        return (int) Math.round(posX(guiWidth));
     }
 
     public int pixelY(int guiHeight) {
-        return (int) Math.round(fy * guiHeight);
+        return (int) Math.round(posY(guiHeight));
+    }
+
+    /** Moves the element (GUI units, clamped to the screen) and re-anchors it to the nearest third. */
+    public void setPosition(double x, double y, int guiWidth, int guiHeight) {
+        double w = scaledWidthExact();
+        double h = scaledHeightExact();
+        double cx = HudGeometry.clamp(x, w, guiWidth);
+        double cy = HudGeometry.clamp(y, h, guiHeight);
+        double unit = HudManager.hudScale();
+        anchorX = HudGeometry.anchorFor(cx, w, guiWidth);
+        anchorY = HudGeometry.anchorFor(cy, h, guiHeight);
+        offX = HudGeometry.offsetFor(anchorX, cx, w, guiWidth, unit);
+        offY = HudGeometry.offsetFor(anchorY, cy, h, guiHeight, unit);
+        fractional = false;
     }
 
     public void setPixelPosition(int x, int y, int guiWidth, int guiHeight) {
-        int maxX = Math.max(0, guiWidth - scaledWidth());
-        int maxY = Math.max(0, guiHeight - scaledHeight());
-        int cx = Math.max(0, Math.min(maxX, x));
-        int cy = Math.max(0, Math.min(maxY, y));
-        this.fx = guiWidth == 0 ? 0 : (double) cx / guiWidth;
-        this.fy = guiHeight == 0 ? 0 : (double) cy / guiHeight;
+        setPosition(x, y, guiWidth, guiHeight);
+    }
+
+    public int anchorX() {
+        return anchorX;
+    }
+
+    public int anchorY() {
+        return anchorY;
+    }
+
+    /** Layout snapshot for undo and presets: {anchorX, anchorY, offX, offY, scale}, or fractions while unresolved. */
+    public double[] layout() {
+        return fractional ? new double[]{-1, -1, fx, fy, scale} : new double[]{anchorX, anchorY, offX, offY, scale};
+    }
+
+    public void applyLayout(double[] l) {
+        if (l == null || l.length < 5) return;
+        if (l[0] < 0) {
+            fractional = true;
+            fx = l[2];
+            fy = l[3];
+        } else {
+            fractional = false;
+            anchorX = (int) l[0];
+            anchorY = (int) l[1];
+            offX = l[2];
+            offY = l[3];
+        }
+        setScale(l[4]);
+    }
+
+    public double scaledWidthExact() {
+        return lastWidth * scale * HudManager.hudScale();
+    }
+
+    public double scaledHeightExact() {
+        return lastHeight * scale * HudManager.hudScale();
     }
 
     /** Width in GUI units: HUD units times the global HUD scale times this element's scale. */
@@ -240,8 +308,15 @@ public abstract class HudModule extends Module {
     @Override
     protected void saveExtra(JsonObject out) {
         JsonObject hud = new JsonObject();
-        hud.addProperty("x", fx);
-        hud.addProperty("y", fy);
+        if (fractional) {
+            hud.addProperty("x", fx);
+            hud.addProperty("y", fy);
+        } else {
+            hud.addProperty("anchorX", anchorX);
+            hud.addProperty("anchorY", anchorY);
+            hud.addProperty("offsetX", offX);
+            hud.addProperty("offsetY", offY);
+        }
         hud.addProperty("scale", scale);
         out.add("hud", hud);
     }
@@ -250,8 +325,18 @@ public abstract class HudModule extends Module {
     protected void loadExtra(JsonObject in) {
         if (!in.has("hud") || !in.get("hud").isJsonObject()) return;
         JsonObject hud = in.getAsJsonObject("hud");
-        if (hud.has("x")) fx = Math.max(0, Math.min(1, hud.get("x").getAsDouble()));
-        if (hud.has("y")) fy = Math.max(0, Math.min(1, hud.get("y").getAsDouble()));
+        if (hud.has("anchorX") && hud.has("offsetX")) {
+            fractional = false;
+            anchorX = Math.max(0, Math.min(2, hud.get("anchorX").getAsInt()));
+            anchorY = Math.max(0, Math.min(2, hud.get("anchorY").getAsInt()));
+            offX = hud.get("offsetX").getAsDouble();
+            offY = hud.get("offsetY").getAsDouble();
+        } else {
+            // 0.3.0 and older: fractions, anchored on first draw.
+            fractional = true;
+            if (hud.has("x")) fx = Math.max(0, Math.min(1, hud.get("x").getAsDouble()));
+            if (hud.has("y")) fy = Math.max(0, Math.min(1, hud.get("y").getAsDouble()));
+        }
         if (hud.has("scale")) setScale(hud.get("scale").getAsDouble());
     }
 
@@ -274,6 +359,7 @@ public abstract class HudModule extends Module {
     public void resetPosition(double defaultFx, double defaultFy) {
         this.fx = defaultFx;
         this.fy = defaultFy;
+        this.fractional = true;
         this.scale = 1.0;
     }
 }

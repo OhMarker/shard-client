@@ -74,8 +74,10 @@ public final class HudManager {
 
     /** Shared by the live HUD and the editor so both show identical output. */
     public static void renderOne(GuiGraphics g, DeltaTracker delta, HudModule m) {
-        int x = m.pixelX(g.guiWidth());
-        int y = m.pixelY(g.guiHeight());
+        // Whole physical pixels, so text stays crisp after a 1-pixel nudge at any GUI scale.
+        int guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        float x = Math.round(m.posX(g.guiWidth()) * guiScale) / (float) guiScale;
+        float y = Math.round(m.posY(g.guiHeight()) * guiScale) / (float) guiScale;
         Matrix3x2fStack pose = g.pose();
         pose.pushMatrix();
         pose.translate(x, y);
@@ -93,5 +95,7 @@ public final class HudManager {
             Render2D.setPixelsPerUnit(before);
             pose.popMatrix();
         }
+        // Old fractional positions become anchored once the element's real size is known.
+        m.resolve(g.guiWidth(), g.guiHeight());
     }
 }
