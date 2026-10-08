@@ -38,6 +38,42 @@ public final class ServerBlacklist {
         public Set<String> modules() {
             return Collections.unmodifiableSet(modules);
         }
+
+        /** Adds or removes one module from this rule only (the editor's per-rule switches). */
+        public void setDisabled(String moduleKey, boolean disabled) {
+            if (disabled) modules.add(moduleKey);
+            else modules.remove(moduleKey);
+        }
+    }
+
+    /** A new empty rule for {@code pattern} (kept even while empty so the editor can fill it); null when invalid or present. */
+    public Entry add(String pattern) {
+        String p = normalize(pattern);
+        if (!validPattern(p)) return null;
+        for (Entry e : entries) if (e.pattern.equals(p)) return null;
+        Entry e = new Entry(p);
+        entries.add(e);
+        return e;
+    }
+
+    /** Replaces a rule's pattern, keeping its modules; false when the new pattern is invalid or taken. */
+    public boolean rename(Entry entry, String pattern) {
+        String p = normalize(pattern);
+        if (!validPattern(p) || !entries.contains(entry)) return false;
+        for (Entry e : entries) if (e != entry && e.pattern.equals(p)) return false;
+        Entry replacement = new Entry(p);
+        replacement.modules.addAll(entry.modules);
+        entries.set(entries.indexOf(entry), replacement);
+        return true;
+    }
+
+    /** Host names, IPs, optional port and a leading {@code *.} wildcard; no spaces or stray characters. */
+    public static boolean validPattern(String pattern) {
+        String p = normalize(pattern);
+        if (p.isEmpty() || p.length() > 253) return false;
+        String body = p.startsWith("*.") ? p.substring(2) : p;
+        if (body.isEmpty() || body.startsWith("*")) return false;
+        return body.matches("[a-z0-9._\\-\\[\\]:]+") && !body.contains("..");
     }
 
     private final List<Entry> entries = new ArrayList<>();

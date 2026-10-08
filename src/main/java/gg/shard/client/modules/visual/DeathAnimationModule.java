@@ -54,4 +54,9 @@ public final class DeathAnimationModule extends Module {
     public boolean removesInstantly(LivingEntity entity) {
         return removeInstantly.get() && applies(entity);
     }
+
+    @Override
+    public String about() {
+        return "Dead players and mobs stop tilting over and flashing red, and can optionally vanish at once. Only how this client draws the death changes.";
+    }
 }

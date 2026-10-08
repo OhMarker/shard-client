@@ -1,15 +1,17 @@
 package gg.shard.client.gui;
 
 import gg.shard.client.module.setting.EnumSetting;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
+import gg.shard.client.util.Colors;
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
-/** The list that opens under a dropdown control; keyboard and mouse both select. */
+/** The list that opens under a dropdown control; 12 units of padding, current value highlighted. */
 final class DropdownPopover extends Popover {
-    private static final int ITEM_H = 14;
-    private static final int MAX_VISIBLE = 8;
+    static final int ITEM_H = 32;
+    static final int PAD = 12;
+    private static final int MAX_VISIBLE = 7;
+    private static final Fonts.Weight WEIGHT = Fonts.Weight.MEDIUM;
+    private static final int SIZE = 13;
 
     private final EnumSetting<?> setting;
     private final Enum<?>[] values;
@@ -19,13 +21,12 @@ final class DropdownPopover extends Popover {
     DropdownPopover(EnumSetting<?> setting, int anchorX, int anchorBottom, int anchorTop, int minWidth, int screenW, int screenH) {
         this.setting = setting;
         this.values = setting.values();
-        Font font = Minecraft.getInstance().font;
         int widest = minWidth;
-        for (Enum<?> v : values) widest = Math.max(widest, font.width(EnumSetting.pretty(v)) + 22);
+        for (Enum<?> v : values) widest = Math.max(widest, Fonts.widthInt(EnumSetting.pretty(v), WEIGHT, SIZE) + PAD * 2 + 36);
         this.w = widest;
-        this.h = Math.min(values.length, MAX_VISIBLE) * ITEM_H + 8;
+        this.h = Math.min(values.length, MAX_VISIBLE) * ITEM_H + PAD * 2;
         this.x = anchorX;
-        this.y = anchorBottom + 2;
+        this.y = anchorBottom + 4;
         this.highlight = setting.get().ordinal();
         clampTo(screenW, screenH, anchorTop);
         ensureVisible();
@@ -37,28 +38,37 @@ final class DropdownPopover extends Popover {
     }
 
     private int indexAt(double my) {
-        int i = (int) ((my - y - 4) / ITEM_H) + scroll;
-        return i >= 0 && i < values.length && i < scroll + MAX_VISIBLE ? i : -1;
+        int i = (int) Math.floor((my - y - PAD) / ITEM_H) + scroll;
+        return i >= 0 && i < values.length && i < scroll + MAX_VISIBLE && my >= y + PAD ? i : -1;
     }
 
     @Override
-    void render(GuiGraphics g, int mouseX, int mouseY, float dt) {
-        fade = Render2D.approach(fade, 1f, 0.9f, dt);
-        Font font = Minecraft.getInstance().font;
-        int r = Theme.radiusSmall();
-        Render2D.roundedRect(g, x + 1, y + 2, w, h, r, Theme.shadow());
-        Render2D.panel(g, x, y, w, h, r, Theme.popover(), Theme.lineStrong());
+    void render(GuiGraphics g, int mouseX, int mouseY, float dtSeconds) {
+        advance(dtSeconds);
+        float a = alpha();
+        int r = Theme.radius();
+        Render2D.shadow(g, x, y, w, h, r, 0.6 * a);
+        Render2D.panel(g, x, y, w, h, r, Colors.fade(Theme.popover(), a), Colors.fade(Theme.lineStrong(), a));
         int hover = contains(mouseX, mouseY) ? indexAt(mouseY) : -1;
         if (hover >= 0) highlight = hover;
-        g.enableScissor(x, y + 4, x + w, y + h - 4);
+        g.enableScissor(x, y + PAD, x + w, y + h - PAD);
+        int lineH = Fonts.lineHeight(SIZE);
         for (int i = scroll; i < values.length && i < scroll + MAX_VISIBLE; i++) {
-            int iy = y + 4 + (i - scroll) * ITEM_H;
+            int iy = y + PAD + (i - scroll) * ITEM_H;
             boolean current = values[i] == setting.get();
-            if (i == highlight) Render2D.roundedRect(g, x + 3, iy, w - 6, ITEM_H, r - 1, Theme.controlHover());
-            Render2D.text(g, font, EnumSetting.pretty(values[i]), x + 9, iy + 3, current ? Theme.accent() : Theme.text(), false);
-            if (current) Glyphs.draw(g, "check", x + w - 20, iy - 1, Theme.accent());
+            if (i == highlight) Render2D.roundedRect(g, x + PAD / 2, iy, w - PAD, ITEM_H, Theme.radiusSmall(), Colors.fade(Theme.controlHover(), a));
+            int color = current ? Theme.accent() : Theme.text();
+            Fonts.draw(g, EnumSetting.pretty(values[i]), WEIGHT, SIZE, x + PAD + 4, iy + (ITEM_H - lineH) / 2, Colors.fade(color, a));
+            if (current) Glyphs.draw(g, "check", x + w - PAD - 20, iy + (ITEM_H - 16) / 2, Colors.fade(Theme.accent(), a));
         }
         g.disableScissor();
+        if (values.length > MAX_VISIBLE) {
+            // Scroll thumb.
+            int trackH = h - PAD * 2;
+            int thumbH = Math.max(16, trackH * MAX_VISIBLE / values.length);
+            int thumbY = y + PAD + (int) ((trackH - thumbH) * (scroll / (double) (values.length - MAX_VISIBLE)));
+            Render2D.roundedRect(g, x + w - 5, thumbY, 3, thumbH, 1, Colors.fade(Theme.lineStrong(), a));
+        }
     }
 
     @Override

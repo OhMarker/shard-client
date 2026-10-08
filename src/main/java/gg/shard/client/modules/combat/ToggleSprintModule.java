@@ -1,7 +1,5 @@
 package gg.shard.client.modules.combat;
 
-import gg.shard.client.gui.Render2D;
-import gg.shard.client.gui.Theme;
 import gg.shard.client.hud.HudModule;
 import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
@@ -9,6 +7,8 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
+
+import java.util.List;
 
 /**
  * Keeps the sprint key held for you, like the vanilla "Sprint: Toggle" option without the
@@ -20,6 +20,11 @@ public final class ToggleSprintModule extends HudModule {
 
     public ToggleSprintModule() {
         super("Toggle Sprint", "Hold sprint for you while the module is on.", ModuleCategory.COMBAT, 0.01, 0.97);
+    }
+
+    @Override
+    public String about() {
+        return "Holds the vanilla sprint key down for you, exactly like vanilla's own \"Sprint: Toggle\" option, with a status line. It cannot make you faster than vanilla sprinting and sends nothing extra.";
     }
 
     @Override
@@ -45,8 +50,7 @@ public final class ToggleSprintModule extends HudModule {
         }
         LocalPlayer p = mc().player;
         String text = p != null && p.isSprinting() ? "[Sprinting (Toggled)]" : "[Sprint (Toggled)]";
-        Render2D.text(g, font(), text, 0, 0, Theme.muted(), true);
-        size(font().width(text), 10);
+        lines(g, List.of(text), List.of(style().text()));
     }
 
     @Override
@@ -55,7 +59,7 @@ public final class ToggleSprintModule extends HudModule {
     }
 
     @Override
-    public java.util.List<String> conflictingMods() {
-        return java.util.List.of("sprintbydefault");
+    public List<String> conflictingMods() {
+        return List.of("sprintbydefault");
     }
 }

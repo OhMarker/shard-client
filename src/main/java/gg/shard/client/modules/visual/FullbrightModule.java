@@ -64,4 +64,9 @@ public final class FullbrightModule extends Module {
             savedGamma = null;
         }
     }
+
+    @Override
+    public String about() {
+        return "Lights everything at full brightness by raising the gamma the light texture is built from. It shows what your client already has loaded; nothing hidden is revealed.";
+    }
 }

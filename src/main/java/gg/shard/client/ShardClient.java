@@ -100,6 +100,9 @@ public final class ShardClient implements ClientModInitializer {
     }
 
     private static void registerModules(ModuleManager m) {
+        // Hidden settings holders (Settings → Appearance / HUD); registered first so HUD modules can inherit defaults.
+        m.register(new gg.shard.client.modules.settings.AppearanceModule());
+        m.register(new gg.shard.client.modules.settings.HudDefaultsModule());
         // HUD
         m.register(new FpsModule());
         m.register(new PingModule());
@@ -155,5 +158,15 @@ public final class ShardClient implements ClientModInitializer {
 
     public static LauncherInfo launcherInfo() {
         return launcherInfo;
+    }
+
+    /** Settings → Appearance (accent, interface size, font, blur, motion). */
+    public static gg.shard.client.modules.settings.AppearanceModule appearance() {
+        return modules.get(gg.shard.client.modules.settings.AppearanceModule.class);
+    }
+
+    /** Settings → HUD (HUD scale and the style every HUD element inherits). */
+    public static gg.shard.client.modules.settings.HudDefaultsModule hudDefaults() {
+        return modules.get(gg.shard.client.modules.settings.HudDefaultsModule.class);
     }
 }

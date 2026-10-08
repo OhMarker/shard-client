@@ -1,7 +1,9 @@
 package gg.shard.client.dev;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.platform.NativeImage;
 import gg.shard.client.ShardClient;
 import gg.shard.client.gui.ClickGuiScreen;
 import gg.shard.client.hud.HudEditorScreen;
@@ -24,8 +26,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
-
-
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -40,13 +40,19 @@ import java.util.List;
 /**
  * Development-only verification. With the JVM property {@code shard.smoke.dir} set in a dev
  * environment: skip first-run onboarding, connect to {@code shard.smoke.server}, wait for a
- * world, then screenshot the HUD, the settings grid, an open settings panel and the colour
- * picker at GUI scale 3 and 2, the HUD editor, and finally place and hit an end crystal in
- * creative to exercise the Crystal Optimizer. {@code shard.smoke.bench} runs {@link Benchmark}
- * instead. Never active in a distributed jar (Loom only sets the properties for runClient).
+ * world, then at GUI scale 1, 2, 3, 4 and Auto screenshot the HUD, the mod grid, an open
+ * settings panel, the colour picker, the Settings page and the HUD editor; write 4x zoomed crops
+ * of text regions so font smoothness is visible; record the page layout per scale (it must be
+ * identical); and finally place and hit an end crystal in creative to exercise the Crystal
+ * Optimizer. {@code shard.smoke.bench} runs {@link Benchmark} instead. Never active in a
+ * distributed jar (Loom only sets the properties for runClient).
  */
 public final class SmokeTest {
     private SmokeTest() {}
+
+    /** 0 is vanilla's "Auto". */
+    private static final int[] SCALES = {1, 2, 3, 4, 0};
+    private static final int STEP_TICKS = 150;
 
     private static int ticksInWorld = -1;
     private static int ticksOutOfWorld;
@@ -62,6 +68,7 @@ public final class SmokeTest {
     private static BlockPos ground;
     private static int crystalsBeforeAttack;
     private static final JsonObject SUMMARY = new JsonObject();
+    private static final JsonArray LAYOUTS = new JsonArray();
 
     public static void init() {
         String dir = System.getProperty("shard.smoke.dir");
@@ -137,41 +144,28 @@ public final class SmokeTest {
             Benchmark.tick(mc, ticksInWorld);
             return;
         }
-        switch (ticksInWorld) {
-            case 5 -> quietHud(mc);
-            case 10 -> setScale(mc, 3);
-            case 40 -> shot(mc, "smoke-hud.png");
-            case 60 -> openGui(mc);
-            case 90 -> shot(mc, "smoke-gui-scale3.png");
-            case 100 -> openPanel(mc, "crystal-optimizer");
-            case 130 -> shot(mc, "smoke-panel-scale3.png");
-            case 140 -> openPanel(mc, "keystrokes");
-            case 150 -> openColor(mc, "keystrokes", "pressed");
-            case 180 -> shot(mc, "smoke-color-scale3.png");
-            case 190 -> {
+        if (ticksInWorld == 5) quietHud(mc);
+        if (ticksInWorld < 10) return;
+        int t = ticksInWorld - 10;
+        int block = t / STEP_TICKS;
+        int local = t % STEP_TICKS;
+        if (block < SCALES.length) {
+            scaleBlock(mc, SCALES[block], local);
+            return;
+        }
+        int after = t - SCALES.length * STEP_TICKS;
+        switch (after) {
+            case 0 -> {
                 mc.setScreen(null);
                 setScale(mc, 2);
-            }
-            case 210 -> openGui(mc);
-            case 240 -> shot(mc, "smoke-gui-scale2.png");
-            case 250 -> openPanel(mc, "totem-pop-tweaks");
-            case 280 -> shot(mc, "smoke-panel-scale2.png");
-            case 290 -> {
-                mc.setScreen(null);
-                setScale(mc, 3);
-            }
-            case 310 -> mc.setScreen(new HudEditorScreen(null, ShardClient.hud()));
-            case 330 -> shot(mc, "smoke-editor.png");
-            case 340 -> {
-                mc.setScreen(null);
                 prepareCrystalTest(mc);
             }
-            case 350 -> placeObsidian(mc);
-            case 360 -> placeCrystal(mc);
-            case 363 -> logPlacement(mc);
-            case 380 -> shot(mc, "smoke-crystal.png");
-            case 390 -> attackCrystal(mc);
-            case 405 -> {
+            case 30 -> placeObsidian(mc);
+            case 40 -> placeCrystal(mc);
+            case 43 -> logPlacement(mc);
+            case 60 -> shot(mc, "smoke-crystal.png", null);
+            case 70 -> attackCrystal(mc);
+            case 85 -> {
                 logRemoval(mc);
                 finish(mc);
             }
@@ -180,23 +174,67 @@ public final class SmokeTest {
         }
     }
 
-    // ---- GUI steps ---------------------------------------------------------------------------
+    /** One pass of screenshots at a GUI scale (0 = Auto); {@code local} is the tick within the pass. */
+    private static void scaleBlock(Minecraft mc, int scale, int local) {
+        String tag = scale == 0 ? "auto" : String.valueOf(scale);
+        switch (local) {
+            case 0 -> {
+                mc.setScreen(null);
+                setScale(mc, scale);
+                // Park the pointer in the page margin so no hover state leaks into the screenshots.
+                org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().handle(), 4, 4);
+            }
+            case 15 -> shot(mc, "smoke-hud-scale" + tag + ".png", null);
+            case 20 -> openGui(mc);
+            case 22, 47, 72, 97, 122 -> parkCursor(mc);
+            case 40 -> {
+                recordLayout(mc, tag);
+                shot(mc, "smoke-gui-scale" + tag + ".png", scale == 2 || scale == 4 ? "smoke-zoom-card-scale" + tag + ".png" : null);
+            }
+            case 45 -> openPanel(mc, "crystal-optimizer");
+            case 65 -> shot(mc, "smoke-panel-scale" + tag + ".png", scale == 2 || scale == 1 ? "smoke-zoom-panel-scale" + tag + ".png" : null);
+            case 70 -> {
+                openPanel(mc, "keystrokes");
+                openColor(mc, "keystrokes", "pressed");
+            }
+            case 90 -> shot(mc, "smoke-color-scale" + tag + ".png", null);
+            case 95 -> openSettings(mc);
+            case 115 -> shot(mc, "smoke-settings-scale" + tag + ".png", null);
+            case 120 -> mc.setScreen(new HudEditorScreen(null, ShardClient.hud()));
+            case 135 -> shot(mc, "smoke-editor-scale" + tag + ".png", null);
+            case 140 -> mc.setScreen(null);
+            default -> {
+            }
+        }
+    }
+
+    /** Opening a screen recentres the cursor; move it into the page margin so no hover state shows. */
+    private static void parkCursor(Minecraft mc) {
+        org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().handle(), 4, 4);
+    }
+
+    // ---- GUI steps -----------------------------------------------------------------------------
 
     private static void setScale(Minecraft mc, int scale) {
         mc.options.guiScale().set(scale);
         mc.resizeDisplay();
-        ShardClient.LOGGER.info("Smoke: GUI scale {} ({}x{})", scale, mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
+        ShardClient.LOGGER.info("Smoke: GUI scale {} -> effective {} ({}x{})", scale == 0 ? "auto" : scale, mc.getWindow().getGuiScale(),
+                mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
     }
 
     private static void openGui(Minecraft mc) {
         mc.setScreen(new ClickGuiScreen(null));
     }
 
+    private static ClickGuiScreen gui(Minecraft mc) {
+        if (mc.screen instanceof ClickGuiScreen g) return g;
+        ShardClient.LOGGER.error("Smoke: settings screen is not open (screen {})", mc.screen == null ? "none" : mc.screen.getClass().getSimpleName());
+        return null;
+    }
+
     private static void openPanel(Minecraft mc, String moduleKey) {
-        if (!(mc.screen instanceof ClickGuiScreen gui)) {
-            ShardClient.LOGGER.error("Smoke: settings screen is not open");
-            return;
-        }
+        ClickGuiScreen gui = gui(mc);
+        if (gui == null) return;
         Module m = ShardClient.modules().find(moduleKey);
         if (m == null) {
             ShardClient.LOGGER.error("Smoke: no module {}", moduleKey);
@@ -206,14 +244,42 @@ public final class SmokeTest {
     }
 
     private static void openColor(Minecraft mc, String moduleKey, String settingKey) {
-        if (!(mc.screen instanceof ClickGuiScreen gui)) return;
+        ClickGuiScreen gui = gui(mc);
+        if (gui == null) return;
         Module m = ShardClient.modules().find(moduleKey);
         Setting<?> s = m == null ? null : m.setting(settingKey);
         if (s instanceof ColorSetting c) gui.openColorPicker(c);
         else ShardClient.LOGGER.error("Smoke: {}.{} is not a colour setting", moduleKey, settingKey);
     }
 
-    // ---- crystal exercise --------------------------------------------------------------------
+    private static void openSettings(Minecraft mc) {
+        ClickGuiScreen gui = gui(mc);
+        if (gui != null) gui.openSettingsPage();
+    }
+
+    private static void recordLayout(Minecraft mc, String tag) {
+        ClickGuiScreen gui = gui(mc);
+        if (gui == null) return;
+        ClickGuiScreen.LayoutInfo info = gui.layoutInfo();
+        JsonObject o = new JsonObject();
+        o.addProperty("guiScaleSetting", tag);
+        o.addProperty("guiScale", mc.getWindow().getGuiScale());
+        o.addProperty("guiWidth", mc.getWindow().getGuiScaledWidth());
+        o.addProperty("guiHeight", mc.getWindow().getGuiScaledHeight());
+        o.addProperty("pageScale", info.pageScale());
+        o.addProperty("designWidth", info.designWidth());
+        o.addProperty("designHeight", info.designHeight());
+        o.addProperty("narrow", info.narrow());
+        o.addProperty("gridColumns", info.gridColumns());
+        o.addProperty("cardWidth", info.cardWidth());
+        o.addProperty("cardHeight", info.cardHeight());
+        o.addProperty("sidebarWidth", info.sidebarWidth());
+        o.addProperty("panelWidth", info.panelWidth());
+        LAYOUTS.add(o);
+        ShardClient.LOGGER.info("Smoke: layout at GUI scale {}: {}", tag, o);
+    }
+
+    // ---- crystal exercise ----------------------------------------------------------------------
 
     /** Items come from server commands (the smoke player is an operator) so both sides agree. */
     static void giveKit(LocalPlayer player) {
@@ -229,6 +295,11 @@ public final class SmokeTest {
         player.getInventory().setSelectedSlot(0);
         Direction dir = player.getDirection();
         ground = player.blockPosition().relative(dir, 2).below();
+        // Do not depend on the terrain (the benchmark leaves the player hovering): build the base block and clear above it.
+        player.connection.sendCommand(String.format(java.util.Locale.ROOT, "setblock %d %d %d minecraft:obsidian", ground.getX(), ground.getY(), ground.getZ()));
+        player.connection.sendCommand(String.format(java.util.Locale.ROOT, "fill %d %d %d %d %d %d minecraft:air", ground.getX(), ground.getY() + 1, ground.getZ(),
+                ground.getX(), ground.getY() + 3, ground.getZ()));
+        player.connection.sendCommand("kill @e[type=minecraft:end_crystal]");
         ShardClient.LOGGER.info("Smoke: crystal test at {} (facing {}), game mode {}", ground, dir, mc.gameMode.getPlayerMode());
     }
 
@@ -236,7 +307,8 @@ public final class SmokeTest {
         LocalPlayer player = mc.player;
         if (player == null || ground == null) return;
         player.getInventory().setSelectedSlot(0);
-        ShardClient.LOGGER.info("Smoke: hotbar 0 = {}, hotbar 1 = {}", player.getInventory().getItem(0), player.getInventory().getItem(1));
+        ShardClient.LOGGER.info("Smoke: hotbar 0 = {}, hotbar 1 = {}, target {} is {}", player.getInventory().getItem(0), player.getInventory().getItem(1),
+                ground, mc.level.getBlockState(ground));
         var result = use(mc, player, ground);
         ShardClient.LOGGER.info("Smoke: placed obsidian above {} -> {} (client result {})", ground, mc.level.getBlockState(ground.above()), result);
     }
@@ -312,25 +384,65 @@ public final class SmokeTest {
 
     private static void finish(Minecraft mc) {
         ShardClient.config().save();
+        SUMMARY.add("layouts", LAYOUTS);
+        boolean identical = true;
+        for (int i = 1; i < LAYOUTS.size(); i++) {
+            JsonObject a = LAYOUTS.get(0).getAsJsonObject();
+            JsonObject b = LAYOUTS.get(i).getAsJsonObject();
+            for (String k : new String[]{"designWidth", "designHeight", "narrow", "gridColumns", "cardWidth", "cardHeight", "sidebarWidth", "panelWidth"}) {
+                if (!a.get(k).equals(b.get(k))) identical = false;
+            }
+        }
+        SUMMARY.addProperty("layoutIdenticalAcrossScales", identical);
+        SUMMARY.addProperty("configSchemaLoaded", ShardClient.config().loadedVersion());
         try {
             Files.writeString(out.resolve("smoke-summary.json"), new GsonBuilder().setPrettyPrinting().create().toJson(SUMMARY), StandardCharsets.UTF_8);
         } catch (IOException e) {
             ShardClient.LOGGER.error("Smoke: could not write summary", e);
         }
-        ShardClient.LOGGER.info("Smoke test complete; stopping client");
+        ShardClient.LOGGER.info("Smoke test complete (layouts identical across scales: {}); stopping client", identical);
         mc.stop();
     }
 
-    static void shot(Minecraft mc, String name) {
+    /**
+     * Writes the framebuffer to {@code name}; with {@code zoomName} also writes a 4x
+     * nearest-neighbour crop of the region around the first card's text (or the panel header),
+     * so anti-aliasing is visible pixel for pixel.
+     */
+    static void shot(Minecraft mc, String name, String zoomName) {
         quietHud(mc);
         Path file = out.resolve(name);
         Screenshot.takeScreenshot(mc.getMainRenderTarget(), image -> {
             try (image) {
                 image.writeToFile(file);
                 ShardClient.LOGGER.info("Smoke: wrote {}", file);
+                if (zoomName != null) writeZoom(image, out.resolve(zoomName), zoomName.contains("panel"));
             } catch (IOException e) {
                 ShardClient.LOGGER.error("Smoke: could not write {}", file, e);
             }
         });
+    }
+
+    /** Crops a text region (physical pixels) and scales it 4x with nearest sampling. */
+    private static void writeZoom(NativeImage image, Path file, boolean panel) throws IOException {
+        int zoom = 4;
+        // The 1280x720 window at any GUI scale is 640x360 design units, 2 px per unit:
+        // first card text starts at design (296, 92); the panel header text at (contentX + 60, 52).
+        int cropW = 220;
+        int cropH = 70;
+        int x = panel ? image.getWidth() - 2 * (224 + 360 - 20) + 2 * 72 : 2 * 296;
+        int y = panel ? 2 * 76 : 2 * 92;
+        if (panel && image.getWidth() <= 2 * 640) x = 2 * (224 + 52);
+        x = Math.max(0, Math.min(image.getWidth() - cropW, x));
+        y = Math.max(0, Math.min(image.getHeight() - cropH, y));
+        try (NativeImage zoomed = new NativeImage(cropW * zoom, cropH * zoom, false)) {
+            for (int zy = 0; zy < cropH * zoom; zy++) {
+                for (int zx = 0; zx < cropW * zoom; zx++) {
+                    zoomed.setPixel(zx, zy, image.getPixel(x + zx / zoom, y + zy / zoom) | 0xFF000000);
+                }
+            }
+            zoomed.writeToFile(file);
+            ShardClient.LOGGER.info("Smoke: wrote {} (crop {},{} {}x{} at {}x)", file, x, y, cropW, cropH, zoom);
+        }
     }
 }

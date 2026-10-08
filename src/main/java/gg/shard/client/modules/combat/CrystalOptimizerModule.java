@@ -4,6 +4,7 @@ import gg.shard.client.ShardClient;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
+import gg.shard.client.module.setting.ColorSetting;
 import gg.shard.client.module.setting.DoubleSetting;
 import gg.shard.client.module.setting.IntSetting;
 import net.minecraft.client.Minecraft;
@@ -44,6 +45,7 @@ public final class CrystalOptimizerModule extends Module {
     private final DoubleSetting explosionRange = add(new DoubleSetting("Explosion range", "How close to an explosion a crystal must be", 4.0, 1.5, 6.0, 0.5, " blocks").group("Breaking"));
     private final BoolSetting showPlaced = add(new BoolSetting("Show placed instantly", "Draw the crystal you place before the server confirms it", true).group("Placing"));
     private final BoolSetting highlight = add(new BoolSetting("Highlight my crystals", "Pulse crystals you just placed so you can tell them apart", false).group("Placing"));
+    private final ColorSetting highlightColor = add(new ColorSetting("Highlight colour", "Outline colour on crystals you just placed (alpha 0 turns the outline off)", 0xFF22D3EE, true).group("Placing"));
     private final IntSetting highlightMs = add(new IntSetting("Highlight time", "How long the pulse lasts", 400, 100, 1000, 50, " ms").group("Placing"));
     private final BoolSetting hitSound = add(new BoolSetting("Hit sound", "Play a short glass sound when a crystal is dropped", true).group("Feedback"));
     private final BoolSetting hitParticles = add(new BoolSetting("Hit particles", "Show a small burst where the crystal was", true).group("Feedback"));
@@ -60,6 +62,7 @@ public final class CrystalOptimizerModule extends Module {
         removeOnExplosion.onChange(v -> {});
         explosionRange.visibleWhen(removeOnExplosion::get);
         highlightMs.visibleWhen(highlight::get);
+        highlightColor.visibleWhen(highlight::get);
     }
 
     @Override
@@ -196,6 +199,21 @@ public final class CrystalOptimizerModule extends Module {
         if (level != null) for (int id : fakes.keySet()) level.removeEntity(id, Entity.RemovalReason.DISCARDED);
         fakes.clear();
         predictor.clear();
+    }
+
+    /** Outline colour (RGB, 0 = none) for a crystal at (x, y, z) you placed within the highlight time. */
+    public int highlightOutline(double x, double y, double z) {
+        if (!isEnabled() || !highlight.get() || (highlightColor.get() >>> 24) == 0) return 0;
+        long key = CrystalPredictor.posKey((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
+        double progress = predictor.placedProgress(key, System.currentTimeMillis(), highlightMs.get());
+        return progress < 0 ? 0 : 0xFF000000 | (highlightColor.get() & 0xFFFFFF);
+    }
+
+    @Override
+    public String about() {
+        return "Client-side crystal prediction. The crystal you hit disappears at once and the crystal you place appears at once as a stand-in, "
+                + "instead of waiting a round trip. The server stays authoritative: no packet is added, changed or dropped, and its real crystals replace "
+                + "the stand-ins (or remove them after 1.5 s if it disagrees).";
     }
 
     /** Scale multiplier for a crystal at (x, y, z): a short pulse for crystals you just placed. */

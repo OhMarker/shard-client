@@ -24,4 +24,13 @@ abstract class EndCrystalRendererMixin {
                 * ShardClient.modules().get(CrystalOptimizerModule.class).highlightScale(state.x, state.y, state.z);
         if (s != 1f) poseStack.scale(s, s, s);
     }
+
+    /** Crystal Optimizer "Highlight colour": a glow outline on crystals you just placed (your own, so nothing hidden). */
+    @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;Lnet/minecraft/client/renderer/entity/state/EndCrystalRenderState;F)V",
+            at = @At("TAIL"), require = 0)
+    private void shard$highlight(net.minecraft.world.entity.boss.enderdragon.EndCrystal crystal, EndCrystalRenderState state, float partialTick, CallbackInfo ci) {
+        if (!ShardClient.isReady()) return;
+        int outline = ShardClient.modules().get(CrystalOptimizerModule.class).highlightOutline(state.x, state.y, state.z);
+        if (outline != 0) state.outlineColor = outline;
+    }
 }

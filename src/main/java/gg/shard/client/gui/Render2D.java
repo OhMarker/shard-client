@@ -3,23 +3,54 @@ package gg.shard.client.gui;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 2D drawing helpers on top of GuiGraphics: real rounded rectangles (per-row fills, so they
- * work at any GUI scale), outlines, switches, sliders, checkerboards and text utilities.
+ * 2D drawing helpers on top of GuiGraphics. Rounded rectangles and outlines are drawn from
+ * anti-aliased corner textures ({@link RoundedTextures}) plus plain fills for the straight
+ * parts; the old per-row fill path stays available as a fallback ({@link #setTexturedCorners}).
+ * Everything is in design units; {@link #setPixelsPerUnit} tells the helpers how many physical
+ * pixels a unit is so textures are generated at exactly the on-screen resolution.
  */
 public final class Render2D {
     private Render2D() {}
+
+    private static double pixelsPerUnit = Scale.DESIGN_PX_PER_UNIT;
+    private static boolean texturedCorners = true;
+
+    public static void setPixelsPerUnit(double value) {
+        pixelsPerUnit = Math.max(0.25, value);
+    }
+
+    public static double pixelsPerUnit() {
+        return pixelsPerUnit;
+    }
+
+    /** False switches every rounded shape to the per-row fill fallback (Settings → Appearance). */
+    public static void setTexturedCorners(boolean value) {
+        texturedCorners = value;
+    }
+
+    public static boolean texturedCorners() {
+        return texturedCorners;
+    }
+
+    static int px(double units) {
+        return Scale.pixels(units, pixelsPerUnit);
+    }
+
+    // ---- fills ----------------------------------------------------------------------------------
 
     public static void fill(GuiGraphics g, int x, int y, int w, int h, int color) {
         if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) return;
         g.fill(x, y, x + w, y + h, color);
     }
 
-    /** Legacy 1px-radius rectangle used by HUD modules. */
+    /** Legacy 1-unit-radius rectangle used by HUD modules. */
     public static void rounded(GuiGraphics g, int x, int y, int w, int h, int color) {
         if (w <= 2 || h <= 2) {
             fill(g, x, y, w, h, color);
@@ -30,7 +61,7 @@ public final class Render2D {
         g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
     }
 
-    /** Horizontal inset of a quarter-circle corner at row {@code i} (0 = outermost row). */
+    /** Horizontal inset of a quarter-circle corner at row {@code i} (0 = outermost row); fallback path. */
     static int cornerInset(int r, int i) {
         double d = r - 0.5 - i;
         double inside = r * r - d * d;
@@ -38,7 +69,7 @@ public final class Render2D {
         return (int) Math.round(r - Math.sqrt(inside));
     }
 
-    /** Filled rectangle with circular corners of radius {@code r}. */
+    /** Filled rectangle with circular corners of radius {@code r} (design units). */
     public static void roundedRect(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
         if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) return;
         r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
@@ -47,6 +78,53 @@ public final class Render2D {
             else fill(g, x, y, w, h, color);
             return;
         }
+        if (!texturedCorners) {
+            roundedRectFallback(g, x, y, w, h, r, color);
+            return;
+        }
+        int radiusPx = px(r);
+        Identifier tex = RoundedTextures.disc(radiusPx);
+        corners(g, tex, x, y, w, h, r, radiusPx, color);
+        fill(g, x + r, y, w - 2 * r, r, color);
+        fill(g, x, y + r, w, h - 2 * r, color);
+        fill(g, x + r, y + h - r, w - 2 * r, r, color);
+    }
+
+    /** 1-unit outline following the same rounded shape. */
+    public static void roundedOutline(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
+        if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) return;
+        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+        if (r <= 1) {
+            g.renderOutline(x, y, w, h, color);
+            return;
+        }
+        if (!texturedCorners) {
+            roundedOutlineFallback(g, x, y, w, h, r, color);
+            return;
+        }
+        int radiusPx = px(r);
+        Identifier tex = RoundedTextures.ring(radiusPx, px(1));
+        corners(g, tex, x, y, w, h, r, radiusPx, color);
+        fill(g, x + r, y, w - 2 * r, 1, color);
+        fill(g, x + r, y + h - 1, w - 2 * r, 1, color);
+        fill(g, x, y + r, 1, h - 2 * r, color);
+        fill(g, x + w - 1, y + r, 1, h - 2 * r, color);
+    }
+
+    /** Blits the four quadrants of a {@code 2 * radiusPx} square texture as the corners. */
+    private static void corners(GuiGraphics g, Identifier tex, int x, int y, int w, int h, int r, int radiusPx, int color) {
+        int size = radiusPx * 2;
+        corner(g, tex, x, y, 0, 0, r, radiusPx, size, color);
+        corner(g, tex, x + w - r, y, radiusPx, 0, r, radiusPx, size, color);
+        corner(g, tex, x, y + h - r, 0, radiusPx, r, radiusPx, size, color);
+        corner(g, tex, x + w - r, y + h - r, radiusPx, radiusPx, r, radiusPx, size, color);
+    }
+
+    private static void corner(GuiGraphics g, Identifier tex, int x, int y, int u, int v, int r, int radiusPx, int size, int color) {
+        g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, (float) u, (float) v, r, r, radiusPx, radiusPx, size, size, color);
+    }
+
+    static void roundedRectFallback(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
         for (int i = 0; i < r; i++) {
             int inset = cornerInset(r, i);
             g.fill(x + inset, y + i, x + w - inset, y + i + 1, color);
@@ -55,14 +133,7 @@ public final class Render2D {
         g.fill(x, y + r, x + w, y + h - r, color);
     }
 
-    /** 1px outline following the same rounded shape. */
-    public static void roundedOutline(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
-        if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) return;
-        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
-        if (r <= 1) {
-            g.renderOutline(x, y, w, h, color);
-            return;
-        }
+    static void roundedOutlineFallback(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
         int prev = -1;
         for (int i = 0; i < r; i++) {
             int inset = cornerInset(r, i);
@@ -88,17 +159,22 @@ public final class Render2D {
         g.fill(x + w - 1, y + r, x + w, y + h - r, color);
     }
 
-    /** Rounded fill with a 1px border of {@code border}. */
+    /** Rounded fill with a 1-unit border of {@code border}. */
     public static void panel(GuiGraphics g, int x, int y, int w, int h, int r, int fill, int border) {
         roundedRect(g, x, y, w, h, r, fill);
         roundedOutline(g, x, y, w, h, r, border);
     }
 
-    /** Legacy panel with a shadow (HUD editor, tooltips). */
+    /** Legacy panel with a shadow (tooltips). */
     public static void panel(GuiGraphics g, int x, int y, int w, int h, int fill, int border) {
         rounded(g, x + 1, y + 2, w, h, Theme.shadow());
         rounded(g, x, y, w, h, fill);
         outline(g, x, y, w, h, border);
+    }
+
+    /** Soft drop shadow under a rounded shape. */
+    public static void shadow(GuiGraphics g, int x, int y, int w, int h, int r, double strength) {
+        roundedRect(g, x + 1, y + 3, w, h, r, Colors.fade(Theme.shadow(), strength));
     }
 
     public static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {
@@ -110,29 +186,32 @@ public final class Render2D {
         roundedRect(g, cx - radius, cy - radius, radius * 2, radius * 2, radius, color);
     }
 
-    /** Lunar-style toggle: pill track, round knob; {@code knob} is the animated 0..1 position. */
+    // ---- controls -------------------------------------------------------------------------------
+
+    /** Toggle switch: pill track, round knob; {@code knob} is the animated 0..1 position. */
     public static void toggle(GuiGraphics g, int x, int y, int w, int h, float knob, boolean on, boolean focused) {
         int track = Colors.mix(Theme.control(), Theme.accent(), knob);
         roundedRect(g, x, y, w, h, h / 2, track);
-        if (focused) roundedOutline(g, x - 1, y - 1, w + 2, h + 2, h / 2 + 1, Theme.accentAlpha(0x90));
+        if (focused) roundedOutline(g, x - 2, y - 2, w + 4, h + 4, h / 2 + 2, Theme.accentAlpha(0xA0));
         else roundedOutline(g, x, y, w, h, h / 2, on ? Theme.accentAlpha(0x60) : Theme.lineStrong());
-        int kd = h - 4;
-        int kx = x + 2 + Math.round(knob * (w - 4 - kd));
-        roundedRect(g, kx, y + 2, kd, kd, kd / 2, on ? Theme.accentText() : Theme.muted());
+        int inset = 3;
+        int kd = h - inset * 2;
+        int kx = x + inset + Math.round(knob * (w - inset * 2 - kd));
+        roundedRect(g, kx, y + inset, kd, kd, kd / 2, on ? Theme.accentText() : Theme.muted());
     }
 
-    /** Slider track with the filled portion in accent and a round knob. */
-    public static void slider(GuiGraphics g, int x, int y, int w, double fraction, boolean active, boolean focused) {
-        int trackH = 3;
-        int ty = y + 4;
-        roundedRect(g, x, ty, w, trackH, 1, Theme.control());
+    /** Slider track with the filled portion in accent and a round knob, centred in a box {@code h} tall. */
+    public static void slider(GuiGraphics g, int x, int y, int w, int h, double fraction, boolean active, boolean focused) {
+        int trackH = 4;
+        int ty = y + (h - trackH) / 2;
+        roundedRect(g, x, ty, w, trackH, trackH / 2, Theme.control());
         int fw = (int) Math.round(w * Math.max(0, Math.min(1, fraction)));
-        if (fw > 0) roundedRect(g, x, ty, fw, trackH, 1, Theme.accent());
-        int knobD = 9;
+        if (fw > 0) roundedRect(g, x, ty, fw, trackH, trackH / 2, Theme.accent());
+        int knobD = 16;
         int kx = x + fw - knobD / 2;
-        kx = Math.max(x - 1, Math.min(x + w - knobD + 1, kx));
+        kx = Math.max(x - 2, Math.min(x + w - knobD + 2, kx));
         int ky = ty + trackH / 2 - knobD / 2;
-        if (focused || active) circle(g, kx + knobD / 2, ky + knobD / 2, knobD / 2 + 1, Theme.accentAlpha(0x50));
+        if (focused || active) circle(g, kx + knobD / 2, ky + knobD / 2, knobD / 2 + 3, Theme.accentAlpha(0x40));
         roundedRect(g, kx, ky, knobD, knobD, knobD / 2, active ? Theme.accentHover() : Theme.text());
     }
 
@@ -158,6 +237,8 @@ public final class Render2D {
         g.fillGradient(x, y, x + w, y + h, top, bottom);
     }
 
+    // ---- legacy vanilla-font text helpers (HUD fallbacks) --------------------------------------
+
     public static void text(GuiGraphics g, Font font, String text, int x, int y, int color, boolean shadow) {
         g.drawString(font, text, x, y, color, shadow);
     }
@@ -170,7 +251,6 @@ public final class Render2D {
         g.drawString(font, text, right - font.width(text), y, color, shadow);
     }
 
-    /** Draws {@code text} trimmed with an ellipsis so it never exceeds {@code maxWidth}. */
     public static void textClipped(GuiGraphics g, Font font, String text, int x, int y, int maxWidth, int color, boolean shadow) {
         if (maxWidth <= 0) return;
         String shown = text;
@@ -181,7 +261,6 @@ public final class Render2D {
         g.drawString(font, shown, x, y, color, shadow);
     }
 
-    /** Word-wraps plain text to {@code maxWidth}; long words are split by width. */
     public static List<String> wrap(Font font, String text, int maxWidth) {
         List<String> out = new ArrayList<>();
         if (text == null || text.isEmpty() || maxWidth <= 0) return out;
@@ -212,19 +291,39 @@ public final class Render2D {
         return out;
     }
 
+    // ---- geometry and motion --------------------------------------------------------------------
+
     public static boolean hovered(double mx, double my, int x, int y, int w, int h) {
         return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 
-    /** Frame-rate independent easing toward a target. */
+    /** Frame-rate independent easing toward a target (legacy, tick-based). */
     public static float approach(float current, float target, float speed, float deltaTicks) {
         float t = Math.min(1f, speed * Math.max(0f, deltaTicks));
         float next = current + (target - current) * t;
         return Math.abs(target - next) < 0.002f ? target : next;
     }
 
+    /**
+     * Time-based motion: moves {@code current} toward {@code target} so a full 0..1 trip takes
+     * {@code durationMs}; snaps when "Reduce motion" is on. Apply {@link #easeOut} or
+     * {@link #easeInOut} to the result for the curve.
+     */
+    public static float step(float current, float target, float dtSeconds, float durationMs) {
+        if (Theme.reduceMotion() || durationMs <= 0f) return target;
+        float rate = Math.max(0f, dtSeconds) * 1000f / durationMs;
+        float delta = target - current;
+        if (Math.abs(delta) <= rate) return target;
+        return current + Math.signum(delta) * rate;
+    }
+
     public static float easeOut(float t) {
         t = Math.max(0f, Math.min(1f, t));
         return 1f - (float) Math.pow(1f - t, 3);
+    }
+
+    public static float easeInOut(float t) {
+        t = Math.max(0f, Math.min(1f, t));
+        return t * t * (3f - 2f * t);
     }
 }

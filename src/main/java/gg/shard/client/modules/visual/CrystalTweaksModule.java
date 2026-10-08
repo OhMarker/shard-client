@@ -25,4 +25,9 @@ public final class CrystalTweaksModule extends Module {
     public String icon() {
         return "item:end_crystal";
     }
+
+    @Override
+    public String about() {
+        return "Draws end crystals smaller so the player behind them stays visible. Hitboxes, placement and explosions are unchanged; this is purely visual.";
+    }
 }

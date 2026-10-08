@@ -29,17 +29,44 @@ public final class Icons {
 
     /** Draws a 16x16 icon at (x, y); {@code color} is used for glyphs only. */
     public static void draw(GuiGraphics g, Module module, int x, int y, int color) {
+        draw(g, module, x, y, 16, color);
+    }
+
+    /**
+     * Draws the icon {@code size} units square. Glyphs scale by whole cells so they stay crisp;
+     * items go through the pose (a 16px item at 32 units is the 2x vanilla already shows at
+     * GUI scale 2).
+     */
+    public static void draw(GuiGraphics g, Module module, int x, int y, int size, int color) {
         String spec = module.icon();
         if (spec != null && spec.startsWith("item:")) {
             ItemStack stack = item(spec.substring(5));
             if (stack != null) {
-                g.renderItem(stack, x, y);
+                if (size == 16) {
+                    g.renderItem(stack, x, y);
+                    return;
+                }
+                float s = size / 16f;
+                g.pose().pushMatrix();
+                g.pose().translate(x, y);
+                g.pose().scale(s, s);
+                g.renderItem(stack, 0, 0);
+                g.pose().popMatrix();
                 return;
             }
         }
         String glyph = spec != null && spec.startsWith("glyph:") ? spec.substring(6) : null;
         if (glyph == null || !Glyphs.has(glyph)) glyph = categoryGlyph(module.category());
-        Glyphs.draw(g, glyph, x, y, color);
+        if (size % 16 == 0) {
+            Glyphs.draw(g, glyph, x, y, color, size / 16);
+            return;
+        }
+        float s = size / 16f;
+        g.pose().pushMatrix();
+        g.pose().translate(x, y);
+        g.pose().scale(s, s);
+        Glyphs.draw(g, glyph, 0, 0, color);
+        g.pose().popMatrix();
     }
 
     private static ItemStack item(String id) {

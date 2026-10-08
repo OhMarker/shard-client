@@ -20,5 +20,6 @@ abstract class LivingEntityRendererMixin {
         DeathAnimationModule module = ShardClient.modules().get(DeathAnimationModule.class);
         if (state.deathTime > 0f && module.hidesTilt(entity)) state.deathTime = 0f;
         if (state.hasRedOverlay && module.skipsTint(entity)) state.hasRedOverlay = false;
+        if (state.hasRedOverlay && !ShardClient.modules().get(gg.shard.client.modules.visual.HitColorModule.class).showsOverlay(entity)) state.hasRedOverlay = false;
     }
 }

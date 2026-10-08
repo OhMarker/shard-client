@@ -8,6 +8,8 @@ import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
 import gg.shard.client.module.setting.DoubleSetting;
 import gg.shard.client.module.setting.IntSetting;
+import gg.shard.client.module.setting.StringSetting;
+import gg.shard.client.util.Placeholders;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,6 +34,8 @@ public final class TotemPopModule extends Module {
     private final DoubleSetting pitch = add(new DoubleSetting("Pop pitch", "Totem sound pitch", 1.0, 0.5, 2.0, 0.1).group("Sound"));
     private final IntSetting particles = add(new IntSetting("Pop particles", "Totem particles to keep", 50, 0, 100, 5, "%").group("Particles"));
     private final BoolSetting messages = add(new BoolSetting("Chat line", "Say who popped and how many times this session", true).group("Messages"));
+    private final StringSetting format = add(new StringSetting("Message format", "The chat line; {name}, {count}, {ordinal} and {s} are filled in", "{name} popped {count} totem{s}", 80).group("Messages")
+            .details("{name} is \"You\" for your own pops. {count} counts this session, {ordinal} reads 1st, 2nd, 3rd; {s} adds an s after counts above one."));
     private final BoolSetting ownPops = add(new BoolSetting("Own pops", "Include your own pops", true).group("Messages"));
     private final BoolSetting ping = add(new BoolSetting("Ping sound", "Play a ping when someone pops", true).group("Messages"));
     private final DoubleSetting pingPitch = add(new DoubleSetting("Ping pitch", "Ping sound pitch", 1.4, 0.5, 2.0, 0.1).group("Messages"));
@@ -52,6 +56,12 @@ public final class TotemPopModule extends Module {
     @Override
     public String icon() {
         return "item:totem_of_undying";
+    }
+
+    @Override
+    public String about() {
+        return "Everything that happens when a totem pops: hides the full-screen animation, scales the sound and particles, adds an optional flash and a chat line "
+                + "with per-player counts. Pops are read from the totem event the server sends to every client; nothing is sent back.";
     }
 
     public boolean hideAnimation() {
@@ -88,7 +98,7 @@ public final class TotemPopModule extends Module {
         if (self && flash.get()) flashAt = System.currentTimeMillis();
         if (!messages.get() || (self && !ownPops.get())) return;
         String name = self ? "You" : player.getName().getString();
-        CommandManager.reply(name + " popped " + ordinal(n) + " totem" + (n == 1 ? "" : "s"), self ? Theme.warning() : Theme.text());
+        CommandManager.reply(Placeholders.popMessage(format.get(), name, n), self ? Theme.warning() : Theme.text());
         if (ping.get()) mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, pingPitch.getFloat()));
     }
 

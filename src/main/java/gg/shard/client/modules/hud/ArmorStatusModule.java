@@ -3,6 +3,7 @@ package gg.shard.client.modules.hud;
 import gg.shard.client.gui.Render2D;
 import gg.shard.client.gui.Theme;
 import gg.shard.client.hud.HudModule;
+import gg.shard.client.hud.HudStyle;
 import gg.shard.client.module.setting.BoolSetting;
 import gg.shard.client.module.setting.EnumSetting;
 import gg.shard.client.module.setting.IntSetting;
@@ -23,10 +24,14 @@ public final class ArmorStatusModule extends HudModule {
     private final BoolSetting hands = add(new BoolSetting("Held items", "Include main hand and offhand", true));
     private final BoolSetting percent = add(new BoolSetting("Percent", "Show durability as a percentage instead of points", false));
     private final IntSetting warnAt = add(new IntSetting("Warn below", "Turn red under this durability percentage", 20, 5, 60, 5, "%"));
-    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the items", true));
 
     public ArmorStatusModule() {
         super("Armor Status", "Durability of your armor and held items, with a low-durability warning.", 0.01, 0.40);
+    }
+
+    @Override
+    public String about() {
+        return "Your own armour pieces and held items with their remaining durability, from your inventory. Other players' gear is not shown.";
     }
 
     @Override
@@ -46,31 +51,33 @@ public final class ArmorStatusModule extends HudModule {
             items.add(p.getItemBySlot(EquipmentSlot.MAINHAND));
             items.add(p.getItemBySlot(EquipmentSlot.OFFHAND));
         }
+        HudStyle.Resolved st = style();
+        int pad = st.padding();
         boolean vertical = layout.get() == Layout.VERTICAL;
-        int rowH = 18;
-        int labelW = 34;
-        int w = vertical ? 18 + labelW : items.size() * 18 + 4;
-        int h = vertical ? items.size() * rowH + 2 : 18 + 10;
-        if (background.get()) Render2D.rounded(g, 0, 0, w, h, 0x66000000);
+        int icon = 16;
+        int rowH = Math.max(icon + 2, lineH() + 2);
+        int labelW = Math.max(36, textW("100%"));
+        int w = vertical ? pad * 2 + icon + 6 + labelW : pad * 2 + items.size() * (icon + 6) - 6;
+        int h = vertical ? pad * 2 + items.size() * rowH - 2 : pad * 2 + icon + 2 + lineH();
+        box(g, st, w, h);
 
         int i = 0;
         for (ItemStack stack : items) {
-            int x = vertical ? 2 : 2 + i * 18;
-            int y = vertical ? 1 + i * rowH : 1;
+            int x = vertical ? pad : pad + i * (icon + 6);
+            int y = vertical ? pad + i * rowH : pad;
             if (!stack.isEmpty()) {
                 g.renderItem(stack, x, y);
-                g.renderItemDecorations(font(), stack, x, y);
                 if (stack.isDamaged() || stack.getMaxDamage() > 0) {
                     int max = stack.getMaxDamage();
                     int left = max - stack.getDamageValue();
                     double frac = max == 0 ? 1 : (double) left / max;
                     int color = frac * 100 < warnAt.get() ? Theme.danger() : Colors.health(frac);
                     String label = percent.get() || max == 0 ? Math.round(frac * 100) + "%" : String.valueOf(left);
-                    if (vertical) Render2D.text(g, font(), label, x + 19, y + 4, color, true);
-                    else Render2D.text(g, font(), label, x - 1, y + 18, color, true);
+                    if (vertical) text(g, st, label, x + icon + 6, y + (icon - lineH()) / 2, color);
+                    else text(g, st, label, x + (icon - textW(label)) / 2, y + icon + 2, color);
                 }
             } else {
-                Render2D.rounded(g, x + 2, y + 2, 12, 12, 0x22FFFFFF);
+                Render2D.roundedRect(g, x + 2, y + 2, icon - 4, icon - 4, 3, Colors.withAlpha(st.text(), 0x22));
             }
             i++;
         }

@@ -34,7 +34,9 @@ abstract class MultiPlayerGameModeMixin {
     /** After vanilla sent the attack packet, drop the crystal locally. */
     @Inject(method = "attack", at = @At("TAIL"))
     private void shard$attackTail(Player player, Entity target, CallbackInfo ci) {
-        if (ShardClient.isReady()) ShardClient.modules().get(CrystalOptimizerModule.class).onAttack(target);
+        if (!ShardClient.isReady()) return;
+        ShardClient.modules().get(CrystalOptimizerModule.class).onAttack(target);
+        ShardClient.modules().get(gg.shard.client.modules.visual.CrosshairModule.class).onAttack(target);
     }
 
     /** After vanilla processed the block use (and its own charge prediction), predict the rest. */

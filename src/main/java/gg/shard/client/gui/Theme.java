@@ -3,56 +3,79 @@ package gg.shard.client.gui;
 import gg.shard.client.util.Colors;
 
 /**
- * Dark, calm palette driven by one accent colour (the launcher's, defaulting to crystal cyan).
- * Surfaces are near-opaque so they read cleanly over the blurred world; lines are 1px and
- * low-contrast; the accent only ever appears on the thing that is "on" or focused.
+ * Dark, calm palette driven by one accent colour (the launcher's, defaulting to crystal cyan,
+ * optionally overridden in Settings → Appearance). Surfaces are near-opaque so they read
+ * cleanly over the blurred world; lines are 1 design unit and low-contrast; the accent only
+ * ever appears on the active switch, the focused control, the selected category and the
+ * primary button.
+ *
+ * <p>All sizes are design units (see {@link Scale}), so they are the same at every GUI scale.
  */
 public final class Theme {
     private Theme() {}
 
-    private static int accent = 0xFF22D3EE;
-    private static int guiScale = 2;
+    private static int launcherAccent = 0xFF22D3EE;
+    private static Integer accentOverride;
+    private static boolean reduceMotion;
 
     public static void setAccent(int argb) {
-        accent = 0xFF000000 | (argb & 0xFFFFFF);
+        launcherAccent = 0xFF000000 | (argb & 0xFFFFFF);
     }
 
-    /** The screen tells the theme the current GUI scale so radii stay around 12-16 screen px. */
-    public static void setGuiScale(int scale) {
-        guiScale = Math.max(1, scale);
+    /** The launcher's accent (or the default) before any user override. */
+    public static int launcherAccent() {
+        return launcherAccent;
     }
 
-    public static int guiScale() {
-        return guiScale;
+    /** Settings → Appearance can replace the launcher's accent; null restores it. */
+    public static void setAccentOverride(Integer argb) {
+        accentOverride = argb == null ? null : 0xFF000000 | (argb & 0xFFFFFF);
     }
 
-    /** Corner radius in GUI units: about 14 screen pixels, never below 3 or above 7. */
+    public static void setReduceMotion(boolean value) {
+        reduceMotion = value;
+    }
+
+    public static boolean reduceMotion() {
+        return reduceMotion;
+    }
+
+    // ---- shape --------------------------------------------------------------------------------
+
+    /** Cards and popovers. */
     public static int radius() {
-        return Math.max(3, Math.min(7, Math.round(14f / guiScale)));
+        return 12;
     }
 
-    /** Smaller radius for controls (switches, buttons, fields). */
+    /** Controls: buttons, fields, dropdowns, swatches. */
     public static int radiusSmall() {
-        return Math.max(2, Math.min(5, Math.round(8f / guiScale)));
+        return 6;
     }
+
+    /** The sidebar and the settings panel. */
+    public static int radiusLarge() {
+        return 16;
+    }
+
+    // ---- accent -------------------------------------------------------------------------------
 
     public static int accent() {
-        return accent;
+        return accentOverride != null ? accentOverride : launcherAccent;
     }
 
     public static int accentAlpha(int alpha) {
-        return Colors.withAlpha(accent, alpha);
+        return Colors.withAlpha(accent(), alpha);
     }
 
     public static int accentHover() {
-        return Colors.lighten(accent, 0.12);
+        return Colors.lighten(accent(), 0.12);
     }
 
     public static int accentText() {
-        return Colors.contrastText(accent);
+        return Colors.contrastText(accent());
     }
 
-    // ---- surfaces ---------------------------------------------------------------------------
+    // ---- surfaces -----------------------------------------------------------------------------
 
     /** Full-screen tint behind the settings page (drawn over the blur). */
     public static int overlay() {
@@ -82,9 +105,14 @@ public final class Theme {
         return 0xFF232C3D;
     }
 
-    /** Popovers (dropdown lists, colour picker). */
+    /** Popovers (dropdown lists, colour picker, confirmations). */
     public static int popover() {
         return 0xFF161D2A;
+    }
+
+    /** Tinted square behind a module icon. */
+    public static int iconWell() {
+        return 0x14FFFFFF;
     }
 
     public static int line() {
@@ -99,14 +127,14 @@ public final class Theme {
         return 0x55000000;
     }
 
-    // ---- text -------------------------------------------------------------------------------
+    // ---- text ---------------------------------------------------------------------------------
 
     public static int text() {
         return 0xFFE8ECF4;
     }
 
     public static int muted() {
-        return 0xFF97A0B3;
+        return 0xFF9AA3B5;
     }
 
     public static int subtle() {
@@ -125,7 +153,7 @@ public final class Theme {
         return 0xFFFB7185;
     }
 
-    // ---- legacy names kept for HUD modules ------------------------------------------------
+    // ---- legacy names kept for HUD modules ---------------------------------------------------
 
     public static int bg() {
         return 0xF00B0F18;

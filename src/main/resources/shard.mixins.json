@@ -14,7 +14,9 @@
     "LivingEntityMixin",
     "LivingEntityRendererMixin",
     "MinecraftMixin",
+    "MouseHandlerMixin",
     "MultiPlayerGameModeMixin",
+    "NameTagFeatureRendererMixin",
     "OverlayTextureAccessor",
     "ParticleEngineMixin",
     "ScreenEffectRendererMixin"

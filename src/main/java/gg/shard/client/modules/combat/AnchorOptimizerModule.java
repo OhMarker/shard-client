@@ -136,4 +136,9 @@ public final class AnchorOptimizerModule extends Module {
     protected void onDisable() {
         predictor.clear();
     }
+
+    @Override
+    public String about() {
+        return "Client-side respawn anchor prediction: the anchor you detonate disappears at once and the explosion sound plays right away, instead of after a round trip. The server stays authoritative: its block update always wins, and its duplicate sound and particles are skipped only for anchors you predicted.";
+    }
 }

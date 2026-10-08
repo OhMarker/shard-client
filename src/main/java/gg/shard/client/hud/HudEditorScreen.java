@@ -1,7 +1,10 @@
 package gg.shard.client.hud;
 
 import gg.shard.client.ShardClient;
+import gg.shard.client.gui.DesignScreen;
+import gg.shard.client.gui.Fonts;
 import gg.shard.client.gui.Render2D;
+import gg.shard.client.gui.Scale;
 import gg.shard.client.gui.Theme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -11,9 +14,14 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.Locale;
 
-/** Drag HUD elements around, scroll to scale, right-click to reset, arrows to nudge. */
-public final class HudEditorScreen extends Screen {
+/**
+ * Drag HUD elements around, scroll to scale, right-click to reset, arrows to nudge. Elements
+ * live in GUI units (their positions are fractions of the GUI size); the editor's own chrome is
+ * drawn in design units so it looks the same at every GUI scale.
+ */
+public final class HudEditorScreen extends DesignScreen {
     private static final int GRID = 4;
     private static final int SNAP = 6;
 
@@ -31,9 +39,16 @@ public final class HudEditorScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.fill(0, 0, width, height, 0x66000000);
-        // Grid for alignment.
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        beginFrame();
+        int guiScale = minecraft.getWindow().getGuiScale();
+        HudManager.updateScale(minecraft);
+        // Alignment grid in GUI units.
         for (int x = 0; x < width; x += GRID * 8) g.fill(x, 0, x + 1, height, 0x11FFFFFF);
         for (int y = 0; y < height; y += GRID * 8) g.fill(0, y, width, y + 1, 0x11FFFFFF);
 
@@ -49,17 +64,39 @@ public final class HudEditorScreen extends Screen {
             boolean active = m == selected || m == hovered;
             g.fill(x - 2, y - 2, x + w + 2, y + h + 2, active ? Theme.accentAlpha(0x30) : 0x18FFFFFF);
             Render2D.outline(g, x - 2, y - 2, w + 4, h + 4, active ? Theme.accent() : 0x55FFFFFF);
-            if (active) {
-                String label = m.name() + (m.scale() != 1.0 ? String.format("  %.2fx", m.scale()) : "");
-                Render2D.text(g, font, label, x, y - 12, Theme.text(), true);
-            }
         }
 
-        String hint = "Drag to move  ·  Scroll to scale  ·  Right-click to reset  ·  Arrows to nudge  ·  Esc to finish";
-        if (font.width(hint) > width - 16) hint = "Drag · Scroll = scale · Right-click = reset · Esc";
-        Render2D.text(g, font, hint, (width - font.width(hint)) / 2, height - 14, Theme.muted(), true);
-        String title = "HUD editor";
-        Render2D.text(g, font, title, (width - font.width(title)) / 2, 6, Theme.text(), true);
+        // Chrome in design units.
+        Render2D.setPixelsPerUnit(Scale.pixelsPerUnit(pageScale, guiScale));
+        pushDesign(g);
+        HudModule labelled = selected != null ? selected : hovered;
+        if (labelled != null && labelled.isEnabled()) {
+            String label = labelled.name() + (labelled.scale() != 1.0 ? String.format(Locale.ROOT, "  %.2fx", labelled.scale()) : "");
+            int lx = (int) Math.round(toDesign(labelled.pixelX(width)));
+            int ly = (int) Math.round(toDesign(labelled.pixelY(height))) - Fonts.lineHeight(12) - 8;
+            int lw = Fonts.widthInt(label, Fonts.Weight.MEDIUM, 12) + 16;
+            if (ly < 8) ly = (int) Math.round(toDesign(labelled.pixelY(height) + labelled.scaledHeight())) + 6;
+            lx = Math.max(8, Math.min(designW - lw - 8, lx));
+            Render2D.roundedRect(g, lx, ly, lw, Fonts.lineHeight(12) + 8, Theme.radiusSmall(), Theme.popover());
+            Fonts.draw(g, label, Fonts.Weight.MEDIUM, 12, lx + 8, ly + 4, Theme.text());
+        }
+        if (dragging != null) {
+            popDesign(g);
+            return;
+        }
+        int cardW = Math.min(designW - 48, 400);
+        int cardH = 64;
+        int cx = (designW - cardW) / 2;
+        int cy = 16;
+        Render2D.shadow(g, cx, cy, cardW, cardH, Theme.radius(), 0.5);
+        Render2D.panel(g, cx, cy, cardW, cardH, Theme.radius(), Theme.surface(), Theme.lineStrong());
+        Fonts.draw(g, "HUD editor", Fonts.Weight.SEMIBOLD, 14, cx + 20, cy + 10, Theme.text());
+        String hint = "Drag · Scroll to scale · Right-click to reset · Arrows nudge · Esc";
+        if (Fonts.width(hint, Fonts.Weight.REGULAR, 12) > cardW - 40) hint = "Drag · Scroll = scale · Right-click = reset";
+        Fonts.drawClipped(g, hint, Fonts.Weight.REGULAR, 12, cx + 20, cy + 10 + Fonts.lineHeight(14) + 2, cardW - 40, Theme.muted());
+        int pct = ShardClient.hudDefaults().hudScale.get();
+        Fonts.drawRight(g, "HUD scale " + pct + "%", Fonts.Weight.MEDIUM, 11, cx + cardW - 20, cy + 12, Theme.subtle());
+        popDesign(g);
     }
 
     private HudModule at(double mx, double my) {
@@ -79,11 +116,11 @@ public final class HudEditorScreen extends Screen {
         HudModule m = at(event.x(), event.y());
         if (m == null) {
             selected = null;
-            return super.mouseClicked(event, doubleClick);
+            return true;
         }
         selected = m;
         if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-            m.resetPosition(0.01, 0.01);
+            m.resetExtra();
             ShardClient.config().markDirty();
             return true;
         }
@@ -95,7 +132,7 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-        if (dragging == null) return super.mouseDragged(event, dx, dy);
+        if (dragging == null) return false;
         int nx = (int) event.x() - dragOffsetX;
         int ny = (int) event.y() - dragOffsetY;
         nx = Math.round((float) nx / GRID) * GRID;
@@ -120,13 +157,13 @@ public final class HudEditorScreen extends Screen {
             ShardClient.config().markDirty();
             return true;
         }
-        return super.mouseReleased(event);
+        return false;
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         HudModule m = at(mx, my);
-        if (m == null) return super.mouseScrolled(mx, my, sx, sy);
+        if (m == null) return false;
         m.setScale(m.scale() + (sy > 0 ? 0.05 : -0.05));
         ShardClient.config().markDirty();
         return true;

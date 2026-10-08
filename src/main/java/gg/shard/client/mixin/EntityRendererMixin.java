@@ -17,6 +17,11 @@ abstract class EntityRendererMixin {
             at = @At("TAIL"))
     private void shard$nameTag(Entity entity, EntityRenderState state, float partialTick, CallbackInfo ci) {
         if (!ShardClient.isReady() || state.nameTag == null) return;
-        state.nameTag = ShardClient.modules().get(NametagsModule.class).decorate(entity, state.nameTag);
+        NametagsModule tags = ShardClient.modules().get(NametagsModule.class);
+        if (tags.hidesOwn() && entity == net.minecraft.client.Minecraft.getInstance().player) {
+            state.nameTag = null;
+            return;
+        }
+        state.nameTag = tags.decorate(entity, state.nameTag);
     }
 }

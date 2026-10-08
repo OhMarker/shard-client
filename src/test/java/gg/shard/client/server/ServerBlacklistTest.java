@@ -58,4 +58,33 @@ class ServerBlacklistTest {
         assertEquals(Set.of("hitbox"), again.modulesFor("mc.other.net"));
         assertTrue(ServerBlacklist.fromJson(null).isEmpty());
     }
+
+    @Test
+    void editorAddsRenamesAndValidatesPatterns() {
+        assertTrue(ServerBlacklist.validPattern("*.hypixel.net"));
+        assertTrue(ServerBlacklist.validPattern("play.example.net:25566"));
+        assertTrue(ServerBlacklist.validPattern("127.0.0.1"));
+        assertFalse(ServerBlacklist.validPattern(""));
+        assertFalse(ServerBlacklist.validPattern("*"));
+        assertFalse(ServerBlacklist.validPattern("**.x.net"));
+        assertFalse(ServerBlacklist.validPattern("bad host.net"));
+        assertFalse(ServerBlacklist.validPattern("a..b"));
+
+        ServerBlacklist b = new ServerBlacklist();
+        ServerBlacklist.Entry e = b.add("*.Example.net");
+        assertEquals("*.example.net", e.pattern());
+        assertEquals(null, b.add("*.example.net"), "duplicates are refused");
+        assertEquals(null, b.add("not valid"));
+        e.setDisabled("zoom", true);
+        assertTrue(b.isDisabled("mc.example.net", "zoom"));
+        assertTrue(b.rename(e, "play.other.net"));
+        assertFalse(b.isDisabled("mc.example.net", "zoom"));
+        assertTrue(b.isDisabled("play.other.net", "zoom"), "modules move with the rename");
+        assertFalse(b.rename(b.entries().get(0), "bad host"));
+        b.add("x.net");
+        assertFalse(b.rename(b.entries().get(0), "x.net"), "cannot rename onto another rule");
+        b.entries().get(0).setDisabled("zoom", false);
+        assertFalse(b.isDisabled("play.other.net", "zoom"));
+        assertEquals(2, b.entries().size(), "empty rules stay so the editor can fill them");
+    }
 }

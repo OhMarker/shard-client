@@ -1,20 +1,24 @@
 package gg.shard.client.modules.hud;
 
-import gg.shard.client.gui.Render2D;
-import gg.shard.client.gui.Theme;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import gg.shard.client.hud.HudModule;
-import gg.shard.client.module.setting.BoolSetting;
-import gg.shard.client.module.setting.ColorSetting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class FpsModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the text", true));
-    private final BoolSetting label = add(new BoolSetting("Label", "Show the FPS prefix", true));
-    private final ColorSetting color = add(new ColorSetting("Color", "Text colour", 0xFFE8ECF4));
-
     public FpsModule() {
         super("FPS", "Frames per second.", 0.01, 0.02);
+    }
+
+    @Override
+    protected String defaultLabel() {
+        return "FPS";
+    }
+
+    @Override
+    public String about() {
+        return "The client's current frame rate, the same number vanilla's F3 screen shows. Informational only; it changes nothing about rendering.";
     }
 
     @Override
@@ -29,20 +33,34 @@ public final class FpsModule extends HudModule {
 
     @Override
     public void render(GuiGraphics g, DeltaTracker delta) {
-        String text = (label.get() ? "FPS " : "") + mc().getFps();
-        int w = font().width(text) + 6;
-        int h = 12;
-        if (background.get()) Render2D.rounded(g, 0, 0, w, h, 0x66000000);
-        Render2D.text(g, font(), text, 3, 2, color.get(), true);
-        size(w, h);
-    }
-
-    static int accentOrText(boolean accent) {
-        return accent ? Theme.accent() : Theme.text();
+        line(g, String.valueOf(mc().getFps()), 0);
     }
 
     @Override
     public String icon() {
         return "glyph:fps";
+    }
+
+    // 0.2.0: "Color" was the text colour and "Label" a switch for the FPS prefix.
+
+    @Override
+    protected boolean migratesKey(String key, int version) {
+        return version < 3 && key.equals("label");
+    }
+
+    @Override
+    protected void migrateSetting(String key, JsonElement value, JsonObject all, int version) {
+        switch (key) {
+            case "color" -> {
+                style.custom.set(true);
+                style.text.fromJson(value);
+                style.value.fromJson(value);
+            }
+            case "label" -> {
+                if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean()) style.label.set(value.getAsBoolean() ? "FPS" : "");
+                else style.label.fromJson(value);
+            }
+            default -> super.migrateSetting(key, value, all, version);
+        }
     }
 }

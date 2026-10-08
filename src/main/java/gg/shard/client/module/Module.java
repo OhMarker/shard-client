@@ -189,13 +189,27 @@ public abstract class Module {
     }
 
     public void load(JsonObject in) {
+        load(in, CURRENT_CONFIG_VERSION);
+    }
+
+    /** Config schema version written by this build; older files go through {@link #migrateSetting}. */
+    public static final int CURRENT_CONFIG_VERSION = 3;
+
+    /**
+     * Loads saved state written by config schema {@code version}. Keys the current build does
+     * not know are offered to {@link #migrateSetting} so renamed settings keep their values.
+     */
+    public void load(JsonObject in, int version) {
         if (in.has("keybind") && in.get("keybind").isJsonPrimitive()) keybind = in.get("keybind").getAsInt();
         if (in.has("settings") && in.get("settings").isJsonObject()) {
-            for (Map.Entry<String, JsonElement> e : in.getAsJsonObject("settings").entrySet()) {
+            JsonObject values = in.getAsJsonObject("settings");
+            for (Map.Entry<String, JsonElement> e : values.entrySet()) {
                 Setting<?> s = setting(e.getKey());
-                // 0.1.0 called every "Show background" switch "Background".
-                if (s == null && e.getKey().equals("background")) s = setting("show-background");
-                if (s != null) s.fromJson(e.getValue());
+                if (s != null && !(version < CURRENT_CONFIG_VERSION && migratesKey(e.getKey(), version))) {
+                    s.fromJson(e.getValue());
+                    continue;
+                }
+                migrateSetting(e.getKey(), e.getValue(), values, version);
             }
         }
         loadExtra(in);
@@ -203,10 +217,42 @@ public abstract class Module {
         setEnabled(wantEnabled);
     }
 
+    /**
+     * True when {@code key} from a config of {@code version} must go through
+     * {@link #migrateSetting} even though a setting with that key still exists (its meaning
+     * changed). The default handles nothing.
+     */
+    protected boolean migratesKey(String key, int version) {
+        return false;
+    }
+
+    /**
+     * A saved key this build has no setting for (or one {@link #migratesKey} flagged). Subclasses
+     * map renamed keys here; {@code all} is the whole saved settings object in case a new value
+     * depends on several old ones. The default handles 0.1.0's "background" → "show-background".
+     */
+    protected void migrateSetting(String key, JsonElement value, JsonObject all, int version) {
+        if (key.equals("background")) {
+            Setting<?> s = setting("show-background");
+            if (s != null) s.fromJson(value);
+        }
+    }
+
+    /**
+     * Longer explanation shown in the settings panel header: exactly what the module does and
+     * does not do. Defaults to the one-line description.
+     */
+    public String about() {
+        return description;
+    }
+
     /** Subclasses persist extra state (HUD position) here. */
     protected void saveExtra(JsonObject out) {}
 
     protected void loadExtra(JsonObject in) {}
+
+    /** Resets the extra state (HUD position and scale) for "Reset all". */
+    public void resetExtra() {}
 
     @Override
     public String toString() {

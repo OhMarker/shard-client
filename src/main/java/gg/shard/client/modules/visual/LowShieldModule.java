@@ -29,4 +29,9 @@ public final class LowShieldModule extends Module {
         if (onlyBlocking.get() && !(player.isUsingItem() && player.getUsedItemHand() == hand)) return 0f;
         return (float) -offset.get();
     }
+
+    @Override
+    public String about() {
+        return "Lowers the shield in your first-person view so it covers less of the screen. Blocking works exactly as in vanilla.";
+    }
 }

@@ -21,7 +21,7 @@ Crystals, the anchor optimizers, No Death Animation, BetterHurtCam, WI Zoom, Spr
 Custom Crosshair, TotemCounter, Sodium Fullbright, Visual Tweaks' hurt tint), Shard's equivalent
 stays off and the card says why, so nothing is ever applied twice.
 
-## Modules (0.2.0)
+## Modules (0.3.0)
 
 | Category | Modules |
 | --- | --- |
@@ -43,49 +43,74 @@ Highlights:
   optional flash, and the "You popped" / "X popped" chat line with per-player session counts.
 - **Explosion Optimizer**: thin explosion/smoke/crit particles, replace the huge explosion
   emitter with a single burst, and cap explosion sounds per tick. See `BENCHMARKS.md`.
-- **No Death Animation**, **Hit Color**, **Low Fire**, **Low Shield**, **Fullbright**,
-  **Hitboxes** (vanilla F3+B without the debug screen), **Nametags** (health, armour and pops
-  from data the vanilla client already has), **Crosshair**.
+- **No Death Animation**, **Hit Color** (colour, strength, flash duration), **Low Fire** (with a
+  live preview), **Low Shield**, **Fullbright**, **Hitboxes** (vanilla F3+B without the debug
+  screen), **Nametags** (health, armour and pops from data the vanilla client already has; scale,
+  background opacity, hide own), **Crosshair** (dynamic gap and hit marker), **Zoom** (scroll to
+  adjust, optional cinematic camera).
 
 ## Settings page
 
-Open it with **Right Shift** (or `.gui` in chat, or Mod Menu → Configure). A sidebar lists the
-categories with on/off counts and a search box; the main area is a grid of mod cards with
-Lunar-style toggle switches. Click a card to slide in its settings panel: keybind, "Disable on
-this server", reset, then every setting as a tidy row (switches, sliders with values, dropdown
-lists, a real colour picker with hue bar, brightness square, alpha and hex field, keybind
-capture, text fields), grouped under small headings. On narrow screens (GUI scale 3 at 720p,
-Auto at 1080p and above) the sidebar becomes a tab strip and the panel replaces the grid.
+Open it with **Right Shift** (or `.gui` in chat, or Mod Menu → Configure). The page uses Inter,
+the launcher's font, and is laid out at a fixed pixel density, so it looks exactly the same at
+GUI scale 1, 2, 3, 4 and Auto; only Settings → Appearance → Interface size changes its size.
+A sidebar lists the categories with on/off counts and a search box; the main area is a grid of
+mod cards (icon in a tinted square, two-line description, toggle switch). Click a card to slide
+in its settings panel: an About paragraph that says exactly what the module does and does not
+do, then the keybind, "Disable on this server", reset, and every setting grouped under section
+titles, with switches, sliders with a numeric field you can type into, dropdowns, a colour
+picker (swatch, hex, Edit), keybind capture and text fields. Rest the pointer on a setting to
+see its details line. On small windows (under about 920 px wide) the sidebar becomes a tab strip
+and the panel replaces the grid.
 
 Keyboard: Tab / Shift+Tab move focus, Enter or Space activates, arrows adjust sliders and
 dropdowns or move between cards, Esc closes the popover, then the panel, then the screen,
 `/` or Ctrl+F jumps to search.
 
-The **Settings** entry holds profiles (save, load, delete), the per-server rules and the About
-box. The HUD editor (button in the sidebar, or `.hud`) drags, scales, snaps and nudges every HUD
-element.
+The **Settings** entry holds:
+
+- **Appearance**: accent colour (the launcher's by default, or your own), interface size
+  75–150%, font (Smooth = Inter, or Vanilla), background blur strength, reduce motion, and
+  smooth corners.
+- **HUD**: the global HUD scale (normalised so the HUD also looks the same at every GUI scale)
+  and the default style every HUD element inherits: Card, Minimal or Outlined, text and value
+  colours, background colour and opacity, corner radius, padding, text shadow and alignment.
+  Any HUD module can switch on "Custom style" to keep its own values; each also has its own
+  label text (for example "FPS" can become "fps" or be hidden).
+- **Keybinds**: every module keybind in one list, with capture buttons and a warning when a key
+  is shared with another module or a vanilla control.
+- **Profiles** with an optional description, **Server rules** with an editor for wildcard
+  patterns (`*.example.net`, `host:port`) and a per-rule module list, **Export and import**
+  (copy the config JSON to the clipboard, paste one back), **Reset** (with a confirmation) and
+  **About**.
+
+The HUD editor (button in the sidebar, or `.hud`) drags, scales, snaps and nudges every HUD
+element; its per-element scale multiplies the global HUD scale.
 
 Chat commands use the `.` prefix and never reach the server: `.toggle <module>`,
-`.bind <module> <key|none>`, `.set <module> <setting> <value>`, `.reset <module>`,
-`.config save|load|list [name]`, `.gui`, `.hud`, `.list`, `.help`.
+`.bind <module> <key|none>`, `.set <module> <setting> <value>` (also `.set appearance font vanilla`),
+`.reset <module>`, `.config save|load|list [name]`, `.gui`, `.hud`, `.list`, `.help`.
 
 ### Screenshots
 
-Taken by the smoke test on the offline test server (1280x720 dev window).
+Taken by the smoke test on the offline test server (1280x720 dev window). The page is the same
+at every GUI scale; the 4x crops show the anti-aliased text.
 
 | | |
 | --- | --- |
-| ![Mod grid, GUI scale 2](docs/screenshots/smoke-gui-scale2.png) | ![Settings panel, GUI scale 2](docs/screenshots/smoke-panel-scale2.png) |
-| ![Mod grid, narrow layout](docs/screenshots/smoke-gui-scale3.png) | ![Colour picker](docs/screenshots/smoke-color-scale3.png) |
-| ![HUD](docs/screenshots/smoke-hud.png) | ![Crystal placed with instant preview](docs/screenshots/smoke-crystal.png) |
+| ![Mod grid, GUI scale 1](docs/screenshots/smoke-gui-scale1.png) | ![Mod grid, GUI scale 3](docs/screenshots/smoke-gui-scale3.png) |
+| ![Settings panel, GUI scale 2](docs/screenshots/smoke-panel-scale2.png) | ![Colour picker, GUI scale 3](docs/screenshots/smoke-color-scale3.png) |
+| ![Settings page](docs/screenshots/smoke-settings-scale2.png) | ![HUD editor](docs/screenshots/smoke-editor-scale2.png) |
+| ![HUD, GUI scale 2](docs/screenshots/smoke-hud-scale2.png) | ![HUD, GUI scale Auto](docs/screenshots/smoke-hud-scaleauto.png) |
+| ![Card text at 4x](docs/screenshots/smoke-zoom-card-scale2.png) | ![Crystal placed with instant preview](docs/screenshots/smoke-crystal.png) |
 
 ## Launcher integration
 
 - Reads `launcher-info.json` from the game directory on start: the settings page takes the
   launcher's accent colour and theme; the launcher version and instance are logged. Without the
   file everything falls back to defaults, so the mod also works from any other launcher.
-- Config lives in `config/shard/config.json` (schema version 2: modules, per-server rules, GUI
-  state) so the launcher's shared-config layer can sync it across versions.
+- Config lives in `config/shard/config.json` (schema version 3: modules, per-server rules, GUI
+  state; 0.2.0 files migrate automatically) so the launcher's shared-config layer can sync it across versions.
 - Cosmetics (`equipped.json`) are the next milestone; see "Roadmap".
 
 ## Building
@@ -96,7 +121,8 @@ Taken by the smoke test on the offline test server (1280x720 dev window).
 ./gradlew runClient      # dev client with Fabric API, Mod Menu, Sodium, Iris, Lithium, Cloth Config
 ```
 
-Requires JDK 21 or newer. Versions of Minecraft, Fabric and the companion mods are pinned in
+Requires JDK 21 or newer. The bundled Inter font (`assets/shard/font`) is © The Inter Project
+Authors under the SIL Open Font License 1.1; the licence ships next to the font files. Versions of Minecraft, Fabric and the companion mods are pinned in
 `gradle.properties`.
 
 ### In-game verification
@@ -108,10 +134,12 @@ The dev client has a headless smoke test. Start the offline-mode server in `.smo
 ./gradlew runClient -PquickPlay=localhost:25599 -PsmokeDir="$PWD/smoke-out"
 ```
 
-The client skips onboarding, connects, and writes `smoke-hud.png`, the mod grid, an open settings
-panel and the colour picker at GUI scale 3 and 2, the HUD editor, then gives itself obsidian and
-crystals, places a crystal (logging the instant client-side stand-in), hits it (logging the
-client-side removal) and writes `smoke-crystal.png` plus `smoke-summary.json`. Add `-PsmokeBench`
+The client skips onboarding, connects, and at GUI scale 1, 2, 3, 4 and Auto writes the HUD, the
+mod grid, an open settings panel, the colour picker, the Settings page and the HUD editor, plus
+4x zoomed crops of text; it records the page layout at each scale (`layoutIdenticalAcrossScales`
+in the summary). Then it gives itself obsidian and crystals, places a crystal (logging the
+instant client-side stand-in), hits it (logging the client-side removal) and writes
+`smoke-crystal.png` plus `smoke-summary.json`. Add `-PsmokeBench`
 to run the `BENCHMARKS.md` scenario instead; results land in `bench.json`.
 
 ## Releasing to the launcher
@@ -128,6 +156,4 @@ to run the `BENCHMARKS.md` scenario instead; results land in `bench.json`.
   `equipped.json`, and the emote wheel.
 - Environment colours (sky, water, foliage) in the spirit of Ambience; shield state colours;
   totem pop ghosts.
-- Wildcard server rules editor (today rules are per exact host; `*.domain` patterns work when
-  edited in `config.json`).
 - Later versions: 1.21.x and 26.x targets.

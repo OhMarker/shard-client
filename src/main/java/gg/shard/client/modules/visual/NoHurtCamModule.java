@@ -23,4 +23,9 @@ public final class NoHurtCamModule extends Module {
     public java.util.List<String> conflictingMods() {
         return java.util.List.of("betterhurtcam");
     }
+
+    @Override
+    public String about() {
+        return "Removes the camera tilt when you take damage. You still take the same damage and knockback; only your camera stops shaking.";
+    }
 }

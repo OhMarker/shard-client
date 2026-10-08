@@ -3,6 +3,7 @@ package gg.shard.client.modules.hud;
 import gg.shard.client.gui.Render2D;
 import gg.shard.client.gui.Theme;
 import gg.shard.client.hud.HudModule;
+import gg.shard.client.hud.HudStyle;
 import gg.shard.client.module.setting.BoolSetting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
@@ -14,12 +15,21 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class PotionEffectsModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the list", true));
     private final BoolSetting hideAmbient = add(new BoolSetting("Hide beacon effects", "Skip ambient effects from beacons and conduits", false));
     private final BoolSetting blink = add(new BoolSetting("Blink when ending", "Flash effects with under 5 seconds left", true));
 
     public PotionEffectsModule() {
         super("Potion Effects", "Active effects with amplifier and remaining time.", 0.86, 0.02);
+    }
+
+    @Override
+    protected boolean hasAlignment() {
+        return true;
+    }
+
+    @Override
+    public String about() {
+        return "Your active potion effects with their level and time left, the same list the inventory screen shows, sorted so the one ending first is on top.";
     }
 
     @Override
@@ -38,28 +48,34 @@ public final class PotionEffectsModule extends HudModule {
             size(1, 1);
             return;
         }
-        int w = 0;
+        HudStyle.Resolved st = style();
+        int pad = st.padding();
+        int widest = 0;
         List<String> lines = new ArrayList<>();
         List<Integer> colors = new ArrayList<>();
+        long now = System.currentTimeMillis();
         for (MobEffectInstance e : effects) {
             String name = e.getEffect().value().getDisplayName().getString();
             String amp = e.getAmplifier() > 0 ? " " + roman(e.getAmplifier() + 1) : "";
             String time = e.isInfiniteDuration() ? "∞" : formatTicks(e.getDuration());
             String line = name + amp + "  " + time;
             lines.add(line);
-            colors.add(0xFF000000 | (e.getEffect().value().getColor() & 0xFFFFFF));
-            w = Math.max(w, font().width(line));
-        }
-        int h = lines.size() * 11 + 4;
-        w += 12;
-        if (background.get()) Render2D.rounded(g, 0, 0, w, h, 0x66000000);
-        long now = System.currentTimeMillis();
-        for (int i = 0; i < lines.size(); i++) {
-            MobEffectInstance e = effects.get(i);
             boolean ending = blink.get() && !e.isInfiniteDuration() && e.getDuration() < 100;
             boolean hide = ending && (now / 300) % 2 == 0;
-            Render2D.fill(g, 3, 4 + i * 11, 3, 7, colors.get(i));
-            Render2D.text(g, font(), lines.get(i), 9, 3 + i * 11, hide ? Theme.danger() : Theme.text(), true);
+            colors.add(hide ? Theme.danger() : st.value());
+            widest = Math.max(widest, textW(line));
+        }
+        int barW = 3;
+        int innerW = barW + 6 + widest;
+        int w = pad * 2 + innerW;
+        int h = pad * 2 + lines.size() * lineH();
+        box(g, st, w, h);
+        for (int i = 0; i < lines.size(); i++) {
+            int lineY = pad + i * lineH();
+            int tint = 0xFF000000 | (effects.get(i).getEffect().value().getColor() & 0xFFFFFF);
+            int x = alignX(st, pad, innerW, barW + 6 + textW(lines.get(i)));
+            Render2D.fill(g, x, lineY + 2, barW, lineH() - 4, tint);
+            text(g, st, lines.get(i), x + barW + 6, lineY, colors.get(i));
         }
         size(w, h);
     }

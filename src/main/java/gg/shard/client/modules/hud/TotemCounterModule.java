@@ -4,6 +4,7 @@ import gg.shard.client.event.ShardEvents;
 import gg.shard.client.gui.Render2D;
 import gg.shard.client.gui.Theme;
 import gg.shard.client.hud.HudModule;
+import gg.shard.client.hud.HudStyle;
 import gg.shard.client.module.setting.BoolSetting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,7 +14,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public final class TotemCounterModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the counter", true));
     private final BoolSetting pops = add(new BoolSetting("Pop count", "Show how many totems you have popped this session", true));
     private final BoolSetting flash = add(new BoolSetting("Flash on pop", "Briefly highlight the counter when you pop", true));
 
@@ -29,6 +29,11 @@ public final class TotemCounterModule extends HudModule {
                 lastPopMs = System.currentTimeMillis();
             }
         });
+    }
+
+    @Override
+    public String about() {
+        return "Counts the totems in your own inventory and how many times you have popped since joining. Pops are detected from the totem event the server sends to every client.";
     }
 
     @Override
@@ -51,14 +56,18 @@ public final class TotemCounterModule extends HudModule {
         int count = countTotems(p.getInventory());
         String main = String.valueOf(count);
         String sub = pops.get() ? sessionPops + " popped" : "";
-        int w = Math.max(44, font().width(sub) + 8);
-        int h = pops.get() ? 30 : 20;
+        HudStyle.Resolved st = style();
+        int pad = st.padding();
+        int icon = 16;
+        int w = pad * 2 + Math.max(icon + 6 + textW(main), textW(sub));
+        int h = pad * 2 + Math.max(icon, lineH()) + (pops.get() ? lineH() + 2 : 0);
         boolean flashing = flash.get() && System.currentTimeMillis() - lastPopMs < 700;
-        if (background.get()) Render2D.rounded(g, 0, 0, w, h, flashing ? Theme.accentAlpha(0x99) : 0x66000000);
-        g.renderItem(new ItemStack(Items.TOTEM_OF_UNDYING), 3, 2);
-        int color = count == 0 ? Theme.danger() : count <= 2 ? Theme.warning() : Theme.text();
-        Render2D.text(g, font(), main, 23, 6, color, true);
-        if (pops.get()) Render2D.text(g, font(), sub, 4, 20, Theme.muted(), true);
+        if (flashing) Render2D.roundedRect(g, 0, 0, w, h, st.radius(), Theme.accentAlpha(0x99));
+        else box(g, st, w, h);
+        g.renderItem(new ItemStack(Items.TOTEM_OF_UNDYING), pad, pad);
+        int color = count == 0 ? Theme.danger() : count <= 2 ? Theme.warning() : st.value();
+        text(g, st, main, pad + icon + 6, pad + (icon - lineH()) / 2, color);
+        if (pops.get()) text(g, st, sub, pad, pad + Math.max(icon, lineH()) + 2, st.text());
         size(w, h);
     }
 

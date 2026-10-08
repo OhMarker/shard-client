@@ -1,18 +1,26 @@
 package gg.shard.client.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 
-/** A single-line text field drawn in the Shard theme: cursor, placeholder, paste, home/end. */
+/**
+ * A single-line text field drawn in the Shard theme (design units, Inter medium 13): cursor,
+ * placeholder, paste, home/end, select-all-on-focus for numeric fields.
+ */
 final class TextInput {
+    static final int HEIGHT = 32;
+    static final int PAD = 12;
+    private static final Fonts.Weight WEIGHT = Fonts.Weight.MEDIUM;
+    private static final int SIZE = 13;
+
     private String value = "";
     private int cursor;
     private final int maxLength;
     private String placeholder = "";
+    private boolean rightAlign;
     private Consumer<String> onChange = v -> {};
     private Runnable onCommit = () -> {};
 
@@ -22,6 +30,12 @@ final class TextInput {
 
     TextInput placeholder(String text) {
         this.placeholder = text;
+        return this;
+    }
+
+    /** Numbers sit against the right edge (sliders' numeric fields). */
+    TextInput rightAlign(boolean value) {
+        this.rightAlign = value;
         return this;
     }
 
@@ -60,35 +74,46 @@ final class TextInput {
         cursor = value.length();
     }
 
-    void render(GuiGraphics g, Font font, int x, int y, int w, int h, boolean focused) {
+    void render(GuiGraphics g, int x, int y, int w, int h, boolean focused) {
         int r = Theme.radiusSmall();
         Render2D.roundedRect(g, x, y, w, h, r, Theme.control());
         Render2D.roundedOutline(g, x, y, w, h, r, focused ? Theme.accentAlpha(0xB0) : Theme.line());
-        int textX = x + 5;
-        int textY = y + (h - 8) / 2;
-        int maxW = w - 10;
+        int lineH = Fonts.lineHeight(SIZE);
+        int textY = y + (h - lineH) / 2;
+        int maxW = w - PAD * 2;
         if (value.isEmpty() && !focused) {
-            Render2D.textClipped(g, font, placeholder, textX, textY, maxW, Theme.subtle(), false);
+            if (rightAlign) Fonts.drawRight(g, Fonts.clip(placeholder, WEIGHT, SIZE, maxW), WEIGHT, SIZE, x + w - PAD, textY, Theme.subtle());
+            else Fonts.drawClipped(g, placeholder, WEIGHT, SIZE, x + PAD, textY, maxW, Theme.subtle());
             return;
         }
-        // Keep the cursor visible by scrolling the text horizontally.
-        String beforeCursor = value.substring(0, cursor);
-        int offset = Math.max(0, font.width(beforeCursor) - maxW + 2);
-        g.enableScissor(x + 3, y, x + w - 3, y + h);
-        Render2D.text(g, font, value, textX - offset, textY, Theme.text(), false);
+        float fullW = Fonts.width(value, WEIGHT, SIZE);
+        float beforeW = Fonts.width(value.substring(0, cursor), WEIGHT, SIZE);
+        int textX;
+        if (rightAlign && fullW <= maxW) textX = Math.round(x + w - PAD - fullW);
+        else {
+            // Keep the cursor visible by scrolling the text horizontally.
+            int offset = (int) Math.max(0, beforeW - maxW + 2);
+            textX = x + PAD - offset;
+        }
+        g.enableScissor(x + 4, y, x + w - 4, y + h);
+        Fonts.draw(g, value, WEIGHT, SIZE, textX, textY, Theme.text());
         if (focused && (System.currentTimeMillis() / 500) % 2 == 0) {
-            int cx = textX - offset + font.width(beforeCursor);
-            g.fill(cx, textY - 1, cx + 1, textY + 9, Theme.accent());
+            int cx = Math.round(textX + beforeW);
+            int cap = Fonts.capHeight(SIZE);
+            int baseline = textY + Fonts.baseline(SIZE);
+            g.fill(cx, baseline - cap - 2, cx + 1, baseline + 3, Theme.accent());
         }
         g.disableScissor();
     }
 
     /** Places the cursor at the clicked x position. */
-    void clickAt(Font font, int fieldX, double mouseX) {
-        int textX = fieldX + 5;
+    void clickAt(int fieldX, int fieldW, double mouseX) {
+        float fullW = Fonts.width(value, WEIGHT, SIZE);
+        int textX = rightAlign && fullW <= fieldW - PAD * 2 ? Math.round(fieldX + fieldW - PAD - fullW) : fieldX + PAD;
         int best = value.length();
         for (int i = 0; i <= value.length(); i++) {
-            if (textX + font.width(value.substring(0, i)) > mouseX) {
+            float wi = Fonts.width(value.substring(0, i), WEIGHT, SIZE);
+            if (textX + wi > mouseX) {
                 best = Math.max(0, i - 1);
                 break;
             }
@@ -139,6 +164,13 @@ final class TextInput {
             case GLFW.GLFW_KEY_V -> {
                 if (ctrl) {
                     insert(Minecraft.getInstance().keyboardHandler.getClipboard());
+                    return true;
+                }
+                return false;
+            }
+            case GLFW.GLFW_KEY_C -> {
+                if (ctrl) {
+                    Minecraft.getInstance().keyboardHandler.setClipboard(value);
                     return true;
                 }
                 return false;

@@ -2,6 +2,8 @@ package gg.shard.client.hud;
 
 import gg.shard.client.ShardClient;
 import gg.shard.client.dev.SmokeTest;
+import gg.shard.client.gui.Render2D;
+import gg.shard.client.gui.Scale;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleManager;
 import gg.shard.client.modules.visual.CrosshairModule;
@@ -16,9 +18,15 @@ import org.joml.Matrix3x2fStack;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Draws every enabled HUD module (plus the crosshair and totem flash) through Fabric's HUD registry. */
+/**
+ * Draws every enabled HUD module (plus the crosshair and totem flash) through Fabric's HUD
+ * registry. Elements are drawn in HUD units, normalised against the GUI scale exactly like the
+ * settings page ({@link Scale#hudScale}), so the HUD looks the same at every GUI scale; the
+ * per-element scale from the editor sits on top. Positions stay stored as fractions.
+ */
 public final class HudManager {
     public static final Identifier LAYER = Identifier.fromNamespaceAndPath(ShardClient.MOD_ID, "hud");
+    private static double hudScale = 1.0;
     private final ModuleManager modules;
 
     public HudManager(ModuleManager modules) {
@@ -35,10 +43,24 @@ public final class HudManager {
         return out;
     }
 
+    /** GUI units per HUD unit for the current GUI scale and the global HUD scale setting. */
+    public static double hudScale() {
+        return hudScale;
+    }
+
+    /** Recomputes the HUD scale; the HUD layer and the editor call this once per frame. */
+    public static void updateScale(Minecraft mc) {
+        int guiScale = mc.getWindow().getGuiScale();
+        int percent = ShardClient.modules() == null ? 100 : ShardClient.hudDefaults().hudScale.get();
+        hudScale = Scale.hudScale(guiScale, percent);
+        Render2D.setPixelsPerUnit(Scale.pixelsPerUnit(hudScale, guiScale));
+    }
+
     private void renderLayer(GuiGraphics g, DeltaTracker delta) {
         SmokeTest.onFrame();
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.screen instanceof HudEditorScreen) return;
+        updateScale(mc);
         for (HudModule m : hudModules()) {
             if (!m.isEnabled()) continue;
             if (m.needsPlayer() && mc.player == null) continue;
@@ -57,7 +79,8 @@ public final class HudManager {
         Matrix3x2fStack pose = g.pose();
         pose.pushMatrix();
         pose.translate(x, y);
-        pose.scale((float) m.scale(), (float) m.scale());
+        float s = (float) (hudScale * m.scale());
+        pose.scale(s, s);
         try {
             m.render(g, delta);
         } catch (RuntimeException e) {

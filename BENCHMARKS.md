@@ -22,7 +22,7 @@ not as a performance claim.
 Everything is scripted: `./gradlew runClient -PquickPlay=localhost:25599 -PsmokeDir=... -PsmokeBench`
 writes `bench.json` into the smoke directory. The harness lives in `src/main/java/gg/shard/client/dev/Benchmark.java`.
 
-## Results (2026-10-07, owner's machine, dev environment)
+## Results (2026-10-07, owner's machine under load, dev environment, 0.2.0)
 
 Explosion Optimizer defaults: skip the explosion emitter, keep 25% of explosion particles, 50%
 smoke, 100% crits and damage hearts, at most 3 explosion sounds per tick.
@@ -63,6 +63,45 @@ before quoting them.
 | Totem Pop Tweaks: 50% pop particles | on | not measured; same particle hook as the explosion thinning |
 | No Death Animation: remove instantly | off | not measured; visual option |
 | Crystal Size | on | visual only, not a performance claim |
+
+## 0.3.0 rendering check (2026-10-07, same machine, quiet)
+
+0.3.0 replaces the HUD's vanilla font with Inter, draws HUD backgrounds with textured rounded
+corners and scales the HUD by a fractional pose. To check that this costs nothing, the same
+scenario ran twice back to back against the same server: once on 0.3.0 and once on the 0.2.0
+commit (a separate git worktree). The machine was otherwise idle this time, so every run sits at
+vanilla's 120 fps cap and the averages say little; the 1% lows and the worst frame are the
+numbers that would move if the new rendering were slower. Raw results:
+`docs/bench-2026-10-07-0.3.0.json` and `docs/bench-2026-10-07-0.2.0-baseline.json`.
+
+| Build | Explosion Optimizer | Runs | Avg fps | 1% low fps | Worst frame |
+| --- | --- | --- | --- | --- | --- |
+| 0.3.0 | on | 6 | 118.0 | 99.2 | 10.9 ms |
+| 0.3.0 | off | 6 | 118.2 | 96.6 | 11.1 ms |
+| 0.2.0 | on | 6 | 117.7 | 100.1 | 30.4 ms (one 128 ms hitch in run 4; 10.8 ms without it) |
+| 0.2.0 | off | 6 | 118.3 | 96.8 | 12.8 ms |
+
+Reading: no frame-time regression. 0.3.0 and 0.2.0 are within run-to-run noise on every metric
+(1% lows differ by under 1 fps, worst frames by about 1 ms once 0.2.0's single hitch is set
+aside). With the frame cap reached, the optimizer's effect shrinks to about 3 fps on the 1% low;
+the loaded-machine numbers above remain the better picture of what it does under pressure.
+
+0.3.0 per run (alternating, warm-up excluded):
+
+| Run | Optimizer | Frames in 3 s | Avg fps | 1% low fps | Worst ms |
+| --- | --- | --- | --- | --- | --- |
+| 1 | off | 354 | 118.6 | 97.1 | 11.2 |
+| 2 | on | 353 | 118.2 | 94.3 | 11.1 |
+| 3 | off | 354 | 118.3 | 97.5 | 11.0 |
+| 4 | on | 353 | 118.1 | 98.9 | 10.4 |
+| 5 | off | 354 | 118.2 | 99.0 | 11.0 |
+| 6 | on | 352 | 117.7 | 95.3 | 13.2 |
+| 7 | off | 353 | 118.0 | 90.0 | 11.7 |
+| 8 | on | 353 | 117.9 | 100.4 | 10.4 |
+| 9 | off | 353 | 118.0 | 97.2 | 11.1 |
+| 10 | on | 353 | 118.1 | 103.2 | 9.9 |
+| 11 | off | 352 | 117.9 | 98.6 | 10.6 |
+| 12 | on | 353 | 118.1 | 103.0 | 10.2 |
 
 ## Re-running
 

@@ -16,6 +16,7 @@ public abstract class Setting<T> {
     private final T defaultValue;
     private T value;
     private String group = "";
+    private String details = "";
     private Consumer<T> onChange = v -> {};
     private Supplier<Boolean> visible = () -> true;
 
@@ -48,6 +49,17 @@ public abstract class Setting<T> {
     @SuppressWarnings("unchecked")
     public <S extends Setting<T>> S group(String label) {
         this.group = label == null ? "" : label;
+        return (S) this;
+    }
+
+    /** Optional second line the settings panel shows on hover: the detail behind the one-line description. */
+    public String details() {
+        return details;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <S extends Setting<T>> S details(String text) {
+        this.details = text == null ? "" : text;
         return (S) this;
     }
 

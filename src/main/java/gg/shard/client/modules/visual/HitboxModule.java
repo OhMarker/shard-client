@@ -37,4 +37,9 @@ public final class HitboxModule extends Module {
         mc.debugEntries.setStatus(DebugScreenEntries.ENTITY_HITBOXES, previous == null ? DebugScreenEntryStatus.NEVER : previous);
         previous = null;
     }
+
+    @Override
+    public String about() {
+        return "Turns on vanilla's own F3+B hitboxes without the debug screen and restores your setting when switched off. Nothing is drawn that vanilla cannot draw itself.";
+    }
 }

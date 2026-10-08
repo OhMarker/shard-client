@@ -1,23 +1,47 @@
 package gg.shard.client.hud;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import gg.shard.client.ShardClient;
+import gg.shard.client.gui.Fonts;
+import gg.shard.client.gui.Render2D;
+import gg.shard.client.gui.Theme;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
+import gg.shard.client.modules.settings.HudDefaultsModule;
+import gg.shard.client.util.Colors;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
+import java.util.List;
+
 /**
  * A module that draws something on screen. Position is stored as a fraction of the GUI size so
- * layouts survive resolution and GUI-scale changes; the editor drags these around.
+ * layouts survive resolution and GUI-scale changes; the editor drags these around. Elements are
+ * drawn in HUD units (see {@link HudManager#hudScale()}): like the settings page they look the
+ * same at every GUI scale, times the global HUD scale and the element's own scale.
+ *
+ * <p>Every HUD module declares the shared {@link HudStyle} group and draws through
+ * {@link #box}, {@link #text} and {@link #line}, so colours, background, padding, shadow,
+ * alignment and labels behave identically everywhere.
  */
 public abstract class HudModule extends Module {
+    /** Text size in HUD units; Inter 10 has about the cap height of vanilla's 8px font (7 units). */
+    public static final int TEXT_SIZE = 10;
+    /** HUD line pitch, tighter than the page so a one-line element with padding 2 is 14 units tall, close to 0.2.0. */
+    public static final int LINE = 10;
+    public static final Fonts.Weight WEIGHT = Fonts.Weight.MEDIUM;
+
+    private final double defaultFx;
+    private final double defaultFy;
     private double fx;
     private double fy;
     private double scale = 1.0;
     private int lastWidth = 10;
     private int lastHeight = 10;
+    protected final HudStyle style;
 
     protected HudModule(String name, String description, double defaultFx, double defaultFy) {
         this(name, description, ModuleCategory.HUD, defaultFx, defaultFy);
@@ -26,8 +50,26 @@ public abstract class HudModule extends Module {
     /** For modules that draw on screen but belong to another category in the GUI (Toggle Sprint). */
     protected HudModule(String name, String description, ModuleCategory category, double defaultFx, double defaultFy) {
         super(name, description, category);
+        this.defaultFx = defaultFx;
+        this.defaultFy = defaultFy;
         this.fx = defaultFx;
         this.fy = defaultFy;
+        this.style = HudStyle.forModule(this::add, defaultLabel(), hasAlignment());
+    }
+
+    @Override
+    public void resetExtra() {
+        resetPosition(defaultFx, defaultFy);
+    }
+
+    /** Label text shown before the value, or null when the element has no label. */
+    protected String defaultLabel() {
+        return null;
+    }
+
+    /** False hides the alignment row for elements where it has no effect. */
+    protected boolean hasAlignment() {
+        return false;
     }
 
     protected static Minecraft mc() {
@@ -40,6 +82,98 @@ public abstract class HudModule extends Module {
 
     /** Draw at (0,0); the manager has already translated and scaled. Report bounds via {@link #size}. */
     public abstract void render(GuiGraphics g, DeltaTracker delta);
+
+    // ---- style helpers ---------------------------------------------------------------------
+
+    /** This element's style after inheriting the global defaults from Settings → HUD. */
+    public HudStyle.Resolved style() {
+        HudDefaultsModule defaults = ShardClient.modules() == null ? null : ShardClient.hudDefaults();
+        return style.resolve(defaults == null ? null : defaults.style());
+    }
+
+    public HudStyle styleSettings() {
+        return style;
+    }
+
+    protected static int lineH() {
+        return LINE;
+    }
+
+    protected static int textW(String text) {
+        return Fonts.widthInt(text, WEIGHT, TEXT_SIZE);
+    }
+
+    /** Background for a {@code w} x {@code h} element according to the preset. */
+    protected static void box(GuiGraphics g, HudStyle.Resolved st, int w, int h) {
+        switch (st.preset()) {
+            case CARD -> Render2D.roundedRect(g, 0, 0, w, h, st.radius(), st.background());
+            case OUTLINED -> {
+                Render2D.roundedRect(g, 0, 0, w, h, st.radius(), Colors.fade(st.background(), 0.5));
+                Render2D.roundedOutline(g, 0, 0, w, h, st.radius(), Colors.withAlpha(st.text(), 0x60));
+            }
+            case MINIMAL -> {
+            }
+        }
+    }
+
+    /** Draws one HUD line whose box starts at {@code y} and is {@link #lineH()} tall. */
+    protected static void text(GuiGraphics g, HudStyle.Resolved st, String text, int x, int y, int color) {
+        Fonts.draw(g, text, WEIGHT, TEXT_SIZE, x, y + lineOffset(), color, st.shadow());
+    }
+
+    /** Shift from a HUD line box to the font's own (taller) line box so capitals stay centred. */
+    protected static int lineOffset() {
+        return (LINE - Fonts.lineHeight(TEXT_SIZE)) / 2;
+    }
+
+    /** The label from the style, with a trailing space, or "" when hidden. */
+    protected static String labelText(HudStyle.Resolved st) {
+        return st.hasLabel() ? st.label() + " " : "";
+    }
+
+    /** One line: optional label in the text colour, then the value. Sets the size. */
+    protected void line(GuiGraphics g, String value, int valueColor) {
+        HudStyle.Resolved st = style();
+        String label = labelText(st);
+        int pad = st.padding();
+        int lw = textW(label);
+        int w = pad * 2 + lw + textW(value);
+        int h = pad * 2 + lineH();
+        box(g, st, w, h);
+        text(g, st, label, pad, pad, st.text());
+        text(g, st, value, pad + lw, pad, valueColor == 0 ? st.value() : valueColor);
+        size(w, h);
+    }
+
+    /** Several lines of text, aligned inside the box per the style. Sets the size. */
+    protected void lines(GuiGraphics g, List<String> lines, List<Integer> colors) {
+        HudStyle.Resolved st = style();
+        int pad = st.padding();
+        int widest = 0;
+        for (String l : lines) widest = Math.max(widest, textW(l));
+        int w = pad * 2 + widest;
+        int h = pad * 2 + lines.size() * lineH();
+        box(g, st, w, h);
+        for (int i = 0; i < lines.size(); i++) {
+            int x = alignX(st, pad, widest, textW(lines.get(i)));
+            text(g, st, lines.get(i), x, pad + i * lineH(), colors == null ? st.value() : colors.get(i));
+        }
+        size(w, h);
+    }
+
+    protected static int alignX(HudStyle.Resolved st, int pad, int innerW, int textW) {
+        return switch (st.align()) {
+            case LEFT -> pad;
+            case CENTER -> pad + (innerW - textW) / 2;
+            case RIGHT -> pad + innerW - textW;
+        };
+    }
+
+    protected static int accentOrText(boolean accent, HudStyle.Resolved st) {
+        return accent ? Theme.accent() : st.value();
+    }
+
+    // ---- geometry ----------------------------------------------------------------------------
 
     protected void size(int width, int height) {
         this.lastWidth = Math.max(1, width);
@@ -87,18 +221,21 @@ public abstract class HudModule extends Module {
         this.fy = guiHeight == 0 ? 0 : (double) cy / guiHeight;
     }
 
+    /** Width in GUI units: HUD units times the global HUD scale times this element's scale. */
     public int scaledWidth() {
-        return (int) Math.ceil(lastWidth * scale);
+        return (int) Math.ceil(lastWidth * scale * HudManager.hudScale());
     }
 
     public int scaledHeight() {
-        return (int) Math.ceil(lastHeight * scale);
+        return (int) Math.ceil(lastHeight * scale * HudManager.hudScale());
     }
 
     /** Whether to draw when there is no player (main menu). HUD modules normally need a world. */
     public boolean needsPlayer() {
         return true;
     }
+
+    // ---- persistence -------------------------------------------------------------------------
 
     @Override
     protected void saveExtra(JsonObject out) {
@@ -116,6 +253,22 @@ public abstract class HudModule extends Module {
         if (hud.has("x")) fx = Math.max(0, Math.min(1, hud.get("x").getAsDouble()));
         if (hud.has("y")) fy = Math.max(0, Math.min(1, hud.get("y").getAsDouble()));
         if (hud.has("scale")) setScale(hud.get("scale").getAsDouble());
+    }
+
+    /**
+     * 0.2.0 HUD modules had a "Show background" switch; off becomes the Minimal preset with a
+     * custom style so the element keeps looking the way it did.
+     */
+    @Override
+    protected void migrateSetting(String key, JsonElement value, JsonObject all, int version) {
+        if (key.equals("show-background") || key.equals("background")) {
+            if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean() && !value.getAsBoolean()) {
+                style.custom.set(true);
+                style.preset.set(HudStyle.Preset.MINIMAL);
+            }
+            return;
+        }
+        super.migrateSetting(key, value, all, version);
     }
 
     public void resetPosition(double defaultFx, double defaultFy) {

@@ -1,8 +1,8 @@
 package gg.shard.client.modules.hud;
 
-import gg.shard.client.gui.Render2D;
 import gg.shard.client.gui.Theme;
 import gg.shard.client.hud.HudModule;
+import gg.shard.client.hud.HudStyle;
 import gg.shard.client.module.setting.BoolSetting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,12 +12,21 @@ import net.minecraft.core.Direction;
 import java.util.Locale;
 
 public final class CoordinatesModule extends HudModule {
-    private final BoolSetting background = add(new BoolSetting("Show background", "Dark backing behind the text", true));
-    private final BoolSetting direction = add(new BoolSetting("Direction", "Show the facing direction", true));
-    private final BoolSetting decimals = add(new BoolSetting("Decimals", "One decimal place instead of block coordinates", false));
+    private final BoolSetting direction = add(new BoolSetting("Direction", "Show the facing direction after the position", true));
+    private final BoolSetting decimals = add(new BoolSetting("Decimals", "One decimal place instead of whole block coordinates", false));
 
     public CoordinatesModule() {
         super("Coordinates", "Your position and facing direction.", 0.01, 0.10);
+    }
+
+    @Override
+    protected String defaultLabel() {
+        return "XYZ";
+    }
+
+    @Override
+    public String about() {
+        return "Your own X, Y and Z and the direction you face, as vanilla's F3 shows them. Only your position is read; other players are never located.";
     }
 
     @Override
@@ -33,12 +42,18 @@ public final class CoordinatesModule extends HudModule {
                 ? String.format(Locale.ROOT, "%.1f  %.1f  %.1f", p.getX(), p.getY(), p.getZ())
                 : p.getBlockX() + "  " + p.getBlockY() + "  " + p.getBlockZ();
         String dir = direction.get() ? "  " + facing(p.getDirection(), p.getYRot()) : "";
-        String text = pos + dir;
-        int w = font().width(text) + 6;
-        if (background.get()) Render2D.rounded(g, 0, 0, w, 12, 0x66000000);
-        Render2D.text(g, font(), pos, 3, 2, Theme.text(), true);
-        if (direction.get()) Render2D.text(g, font(), dir, 3 + font().width(pos), 2, Theme.accent(), true);
-        size(w, 12);
+        HudStyle.Resolved st = style();
+        String label = labelText(st);
+        int pad = st.padding();
+        int lw = textW(label);
+        int pw = textW(pos);
+        int w = pad * 2 + lw + pw + textW(dir);
+        int h = pad * 2 + lineH();
+        box(g, st, w, h);
+        text(g, st, label, pad, pad, st.text());
+        text(g, st, pos, pad + lw, pad, st.value());
+        if (!dir.isEmpty()) text(g, st, dir, pad + lw + pw, pad, Theme.accent());
+        size(w, h);
     }
 
     static String facing(Direction d, float yaw) {
