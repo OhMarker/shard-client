@@ -149,6 +149,8 @@ public final class SmokeTest {
             if (mc.player.isDeadOrDying()) mc.player.respawn();
             mc.player.connection.sendCommand("gamemode creative");
             mc.player.connection.sendCommand("tp @s -5 -22 2 180 30");
+            mc.player.connection.sendCommand("time set noon");
+            mc.player.connection.sendCommand("gamerule doDaylightCycle false");
         }
         if (ticksInWorld == 5) quietHud(mc);
         if (ticksInWorld < 10) return;
@@ -180,6 +182,11 @@ public final class SmokeTest {
             return;
         }
         after -= CROSSHAIR_TICKS;
+        if (after < SHIELD_TICKS) {
+            shieldBlock(mc, after);
+            return;
+        }
+        after -= SHIELD_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -444,6 +451,49 @@ public final class SmokeTest {
                 setSetting("crosshair", "style", "CROSS");
                 setSetting("crosshair", "colour", "#FFFFFF");
                 module("crosshair").setEnabled(false);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int SHIELD_TICKS = 130;
+
+    /** Shield: holding and blocking with the module off and on, and the panel preview. */
+    private static void shieldBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Module shield = module("low-shield");
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                mc.setScreen(null);
+                cmd(mc, "item replace entity @s weapon.offhand with minecraft:shield");
+                p.getInventory().setSelectedSlot(8);
+                p.setXRot(10f);
+                shield.setEnabled(false);
+            }
+            case 20 -> shot(mc, "smoke-shield-vanilla-hold.png", null);
+            case 22 -> mc.options.keyUse.setDown(true);
+            case 40 -> shot(mc, "smoke-shield-vanilla-block.png", null);
+            case 42 -> {
+                mc.options.keyUse.setDown(false);
+                shield.setEnabled(true);
+            }
+            case 60 -> shot(mc, "smoke-shield-hold.png", null);
+            case 62 -> mc.options.keyUse.setDown(true);
+            case 80 -> shot(mc, "smoke-shield-block.png", null);
+            case 82 -> {
+                mc.options.keyUse.setDown(false);
+                openGui(mc);
+                openPanel(mc, "low-shield");
+            }
+            case 84 -> parkCursor(mc);
+            case 100 -> shot(mc, "smoke-shield-panel.png", null);
+            case 105 -> {
+                mc.setScreen(null);
+                cmd(mc, "item replace entity @s weapon.offhand with minecraft:air");
+                p.getInventory().setSelectedSlot(0);
             }
             default -> {
             }
