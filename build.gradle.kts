@@ -63,7 +63,9 @@ loom {
             configName = "Shard Client"
             ideConfigGenerated(true)
             runDir = "run"
-            programArgs("--width", "1280", "--height", "720")
+            // -PwindowSize=1920x1080 changes the dev window (the smoke test uses 1280x720 by default).
+            val size = (project.findProperty("windowSize")?.toString() ?: "1280x720").split("x")
+            programArgs("--width", size[0], "--height", size[1])
             // Fixed dev username so the offline smoke server can op it (see .smoke-server/ops.json).
             programArgs("--username", "ShardSmoke")
             // Verification hooks: -PquickPlay=host:port joins a server on start;

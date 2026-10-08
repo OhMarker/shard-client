@@ -4,9 +4,11 @@
 Work follows `docs/PROMPT-ui-overhaul-0.4.0.md` step by step, stopping for the owner at each ★.
 - Step 1 done: `docs/DESIGN.md`, mockups in `docs/design/` (owner picked **A: rail + list + detail**).
 - Step 2 done: sharp text (linear-filtered Shard font atlases, per-density rasters) and the Lucide
-  icon atlas; proof in `docs/screenshots/0.4.0/`. Waiting for the owner's OK on step 2.
-- Next: step 3, rebuild `ClickGuiScreen` as direction A (rail, list/grid, detail panel, search
-  over settings, keyboard), then steps 4-8.
+  icon atlas; proof in `docs/screenshots/0.4.0/`. Owner approved.
+- Step 3 done: new menu (rail + list/grid + detail column, search over settings, favorites,
+  keyboard, segmented controls). Run the smoke test with `-PwindowSize=1920x1080` too; the wide
+  layout only appears from 1640 px. Waiting for the owner's OK on step 3.
+- Next: step 4 (HUD editor + presets), then steps 5-8.
 - The 0.3.0 notes below still describe the released build.
 
 Last updated 2026-10-07 (0.3.0).

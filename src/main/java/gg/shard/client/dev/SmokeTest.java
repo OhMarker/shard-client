@@ -154,6 +154,11 @@ public final class SmokeTest {
             return;
         }
         int after = t - SCALES.length * STEP_TICKS;
+        if (after < MENU_TICKS) {
+            menuBlock(mc, after);
+            return;
+        }
+        after -= MENU_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -207,6 +212,37 @@ public final class SmokeTest {
             case 120 -> mc.setScreen(new HudEditorScreen(null, ShardClient.hud()));
             case 135 -> shot(mc, "smoke-editor-scale" + tag + ".png", null);
             case 140 -> mc.setScreen(null);
+            default -> {
+            }
+        }
+    }
+
+    private static final int MENU_TICKS = 100;
+
+    /** The 0.4.0 menu: list view, grid view, search over settings, and jumping to a setting. */
+    private static void menuBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                openGui(mc);
+                gui(mc).setGridView(false);
+                openPanel(mc, "crystal-optimizer");
+            }
+            case 2, 27, 47, 67 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-menu-list.png", null);
+            case 25 -> gui(mc).setGridView(true);
+            case 40 -> shot(mc, "smoke-menu-grid.png", null);
+            case 45 -> {
+                gui(mc).setGridView(false);
+                gui(mc).setSearch("hit sound");
+            }
+            case 60 -> shot(mc, "smoke-menu-search.png", null);
+            case 65 -> gui(mc).openSearchResult(0);
+            case 80 -> shot(mc, "smoke-menu-jump.png", null);
+            case 85 -> {
+                gui(mc).setSearch("");
+                mc.setScreen(null);
+            }
             default -> {
             }
         }
@@ -427,8 +463,13 @@ public final class SmokeTest {
         for (int i = 1; i < LAYOUTS.size(); i++) {
             JsonObject a = LAYOUTS.get(0).getAsJsonObject();
             JsonObject b = LAYOUTS.get(i).getAsJsonObject();
-            for (String k : new String[]{"designWidth", "designHeight", "narrow", "gridColumns", "cardWidth", "cardHeight", "sidebarWidth", "panelWidth"}) {
+            for (String k : new String[]{"narrow", "gridColumns", "cardWidth", "cardHeight", "sidebarWidth", "panelWidth"}) {
                 if (!a.get(k).equals(b.get(k))) identical = false;
+            }
+            // Vanilla rounds the GUI size up, so a window height that does not divide by the GUI
+            // scale (1061 on a 1080p monitor) shifts the page by a unit or two; that is not a layout change.
+            for (String k : new String[]{"designWidth", "designHeight"}) {
+                if (Math.abs(a.get(k).getAsInt() - b.get(k).getAsInt()) > 2) identical = false;
             }
         }
         SUMMARY.addProperty("layoutIdenticalAcrossScales", identical);
