@@ -87,6 +87,14 @@ loom {
             if (project.hasProperty("equippedPath")) {
                 vmArgs("-Dshard.dev.equippedPath=" + project.property("equippedPath").toString())
             }
+            // -PapiBase=<url> uses a local Shard API (`npm run dev` in shard-api) with dev sign-in.
+            if (project.hasProperty("apiBase")) {
+                vmArgs("-Dshard.dev.apiBase=" + project.property("apiBase").toString())
+            }
+            // -PmetaBase=<url> serves the shared cape list from somewhere else (smoke test: a local folder).
+            if (project.hasProperty("metaBase")) {
+                vmArgs("-Dshard.dev.metaBase=" + project.property("metaBase").toString())
+            }
             // -PsmokeBench runs the BENCHMARKS.md scenario instead of the screenshot pass.
             if (project.hasProperty("smokeBench")) {
                 vmArgs("-Dshard.smoke.bench=1")

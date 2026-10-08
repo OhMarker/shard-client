@@ -136,6 +136,7 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new gg.shard.client.modules.hud.SpeedModule());
         m.register(new gg.shard.client.modules.hud.TpsModule());
         m.register(new ClockModule());
+        m.register(new gg.shard.client.modules.hud.TokensModule());
         m.register(new MemoryModule());
         m.register(new HitDelayIndicatorModule());
         // Visuals

@@ -875,7 +875,7 @@ public final class SmokeTest {
     }
 
     /** Opening a screen recentres the cursor; move it into the page margin so no hover state shows. */
-    private static final int COSMETICS_TICKS = 220;
+    private static final int COSMETICS_TICKS = 320;
 
     /**
      * The cape equipped in Shard Launcher (dev runs: -PequippedPath=<equipped.json>): from behind,
@@ -883,6 +883,11 @@ public final class SmokeTest {
      */
     private static void cosmeticsBlock(Minecraft mc, int local) {
         var cosmetics = ShardClient.modules().get(gg.shard.client.modules.visual.CosmeticsModule.class);
+        // Five seconds after setup for sign-in, the cape lookup and the catalogue download.
+        if (local >= 2) {
+            if (local < 102) return;
+            local -= 100;
+        }
         switch (local) {
             case 0 -> {
                 mc.setScreen(null);
@@ -891,6 +896,13 @@ public final class SmokeTest {
                 cmd(mc, "tp @s -5 60 2 180 8");
                 mc.options.hideGui = true;
                 mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+            }
+            case 1 -> {
+                spawnOtherPlayer(mc);
+                if (mc.player != null) {
+                    mc.player.getAbilities().flying = true;
+                    mc.player.onUpdateAbilities();
+                }
             }
             // Out in the open, above the test arena's roof, so the cape is lit by the sky.
             case 2, 47, 67, 92, 117, 147 -> {
@@ -901,6 +913,12 @@ public final class SmokeTest {
             }
             case 40 -> {
                 SUMMARY.addProperty("capeStatus", cosmetics.status());
+                SUMMARY.addProperty("apiSaysOtherWears", cosmetics.wornSnapshot().get(OTHER_PLAYER));
+                var account = cosmetics.account();
+                SUMMARY.addProperty("shardAccount", account == null ? "not signed in" : account.name() + " " + account.tokens() + " tokens");
+                SUMMARY.addProperty("otherPlayerHasShardCape", otherPlayer != null
+                        && otherPlayer.getSkin().cape() != null
+                        && otherPlayer.getSkin().cape().texturePath().getNamespace().equals(ShardClient.MOD_ID));
                 ShardClient.LOGGER.info("Smoke: cosmetics {}", cosmetics.status());
                 shot(mc, "smoke-cape-back.png", null);
             }
@@ -928,8 +946,17 @@ public final class SmokeTest {
                 cosmetics.setEnabled(false);
             }
             case 165 -> shot(mc, "smoke-cape-off.png", null);
-            case 170 -> cosmetics.setEnabled(true);
+            case 170 -> {
+                cosmetics.setEnabled(true);
+                setSetting("cosmetics", "show-shard-capes", "false");
+            }
+            case 180 -> shot(mc, "smoke-cape-others-off.png", null);
+            case 185 -> setSetting("cosmetics", "show-shard-capes", "true");
             case 190 -> {
+                if (otherPlayer != null) {
+                    otherPlayer.discard();
+                    otherPlayer = null;
+                }
                 cmd(mc, "tp @s -5 -22 2 180 30");
                 mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
                 mc.options.hideGui = false;
@@ -938,6 +965,36 @@ public final class SmokeTest {
             default -> {
             }
         }
+    }
+
+    /** A UUID that is in the dev cape list (run/dev-meta/player-cosmetics.json) but is not ShardSmoke. */
+    private static final java.util.UUID OTHER_PLAYER = java.util.UUID.fromString("5f3c1a2e-0000-4000-8000-0000000000aa");
+    private static net.minecraft.client.player.RemotePlayer otherPlayer;
+
+    /**
+     * A second player that exists only on this client, standing three blocks ahead with its back to
+     * the camera, so the shots show what another Shard player sees on someone in the cape list.
+     */
+    private static void spawnOtherPlayer(Minecraft mc) {
+        if (mc.level == null || mc.player == null) return;
+        var player = new net.minecraft.client.player.RemotePlayer(mc.level, new com.mojang.authlib.GameProfile(OTHER_PLAYER, "ShardFriend"));
+        player.setPos(-3.5, 60, -1.0);
+        player.setYRot(180);
+        player.setYHeadRot(180);
+        player.yBodyRot = 180;
+        player.yBodyRotO = 180;
+        try {
+            // Real clients send their skin customisation; this one has none, so turn every part on (dev mappings).
+            var field = net.minecraft.world.entity.Avatar.class.getDeclaredField("DATA_PLAYER_MODE_CUSTOMISATION");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            var accessor = (net.minecraft.network.syncher.EntityDataAccessor<Byte>) field.get(null);
+            player.getEntityData().set(accessor, (byte) 0x7F);
+        } catch (ReflectiveOperationException e) {
+            ShardClient.LOGGER.error("Smoke: could not show the other player's cape layer", e);
+        }
+        mc.level.addEntity(player);
+        otherPlayer = player;
     }
 
     private static void parkCursor(Minecraft mc) {
