@@ -194,6 +194,25 @@
   three ticks: with two, a tick that ran without a frame in between read a stale hovered slot and
   0-3 of 47 slots "missed" at random, with or without the cape.
 
+## 0.6.0: Shard API (capes for everyone, tokens, friends)
+
+- **A real service, not a list.** Showing purchases to everyone and paying tokens for play time
+  needs a shared, trusted record, so there is now a small API (`shard-api`, a Cloudflare Worker
+  with a D1 database; contract in its API.md). The address is read from meta's `services.json`, so
+  it can move without a client release.
+- **Identity without passwords.** The client proves who it is exactly like joining an online-mode
+  server: `sessionService().joinServer(profile, accessToken, serverId)` with a one-time `serverId`
+  from the API, which then asks Mojang `hasJoined`. The access token only goes to Mojang.
+- **Tokens for active play only.** A heartbeat every two minutes while in a world; it is "active"
+  when the player turned or moved in the last five minutes. The API credits at most 150 s per
+  heartbeat, never more than wall-clock time, 10 tokens per 10 minutes (API.md).
+- **Your own cape must be owned.** The launcher's local choice still shows offline, but once
+  signed in the client only shows it if the API says you own it.
+- **Everyone's capes.** Players in the world are looked up in batches (new faces at once, everyone
+  again every minute); textures come from the meta catalogue once per cape. A failure anywhere in
+  the skin hook turns the module off instead of crashing the game (a null lookup did crash the dev
+  build once; it is fixed and guarded now).
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.

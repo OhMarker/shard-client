@@ -21,7 +21,7 @@ Crystals, the anchor optimizers, No Death Animation, BetterHurtCam, WI Zoom, Spr
 Custom Crosshair, TotemCounter, Sodium Fullbright, Visual Tweaks' hurt tint), Shard's equivalent
 stays off and the card says why, so nothing is ever applied twice.
 
-## Modules (0.5.0)
+## Modules (0.6.0)
 
 | Category | Modules |
 | --- | --- |
@@ -31,6 +31,13 @@ stays off and the card says why, so nothing is ever applied twice.
 | Performance | Explosion Optimizer |
 | Chat | Chat (timestamps, stacked repeats, hidden joins and leaves, highlighted mentions) |
 | Utility | Display (borderless fullscreen, background and menu FPS caps, window title), GUI Scales (inventory, hotbar, scoreboard, tab list, titles, boss bar, chat), Sounds |
+
+New in 0.6.0:
+
+- **Shard capes for everyone** and **Shard tokens**: the Cosmetics module signs in to the Shard
+  API with Mojang's server-join check, shows every Shard player's equipped cape, and earns 10
+  tokens per 10 minutes of active play (spent on capes in Shard Launcher). The Tokens HUD element
+  shows the balance. Nothing is sent to the Minecraft server; the API is `shard-api` (API.md).
 
 New in 0.5.0:
 

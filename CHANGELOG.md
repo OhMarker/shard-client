@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- **Everyone's capes:** every Shard player now sees the capes other Shard players equipped.
+- **Shard tokens:** earn 10 tokens for every 10 minutes you play (standing idle for five minutes
+  pauses it) and spend them on capes in Shard Launcher. A small pop-up tells you when you earn
+  some; the new Tokens HUD element shows your balance and the minutes to the next 10.
+- Sign-in to Shard uses Mojang's own check, the same one servers use: your account details never
+  reach Shard. Capes show on online-mode servers (offline-mode servers use different player ids).
+
 ## 0.5.0 (2026-10-08)
 
 - **Cosmetics:** the cape you equip in Shard Launcher now shows in-game on your own player, in
