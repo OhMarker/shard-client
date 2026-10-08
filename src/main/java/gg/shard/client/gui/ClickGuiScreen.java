@@ -140,6 +140,8 @@ public final class ClickGuiScreen extends DesignScreen {
     private int panelScroll;
     private int pageScroll;
     private int sidebarScroll;
+    private PanelPreview previewDragging;
+    private int previewButton;
     private Setting<?> flashSetting;
     private long flashSince;
     private boolean flashScrollPending;
@@ -1131,8 +1133,17 @@ public final class ClickGuiScreen extends DesignScreen {
             }
         }
         if (m instanceof PanelPreview preview) {
+            preview.previewMouse(mouseX, mouseY);
             int used = preview.renderPreview(g, innerX, cy + 10, innerW);
-            if (used > 0) cy += used + 10;
+            if (used > 0) {
+                hits.add(new Hit("preview", innerX, cy + 10, innerW, used, currentClip, false, b -> {
+                    String msg = preview.previewInput(mouseX, mouseY, b, false);
+                    if (msg != null) showToast(msg);
+                    previewDragging = preview;
+                    previewButton = b;
+                }));
+                cy += used + 10;
+            }
         }
         cy += 12;
         g.fill(x + 1, cy, x + w - 1, cy + 1, Theme.line());
@@ -1834,6 +1845,10 @@ public final class ClickGuiScreen extends DesignScreen {
             applySlider(mx);
             return true;
         }
+        if (previewDragging != null) {
+            previewDragging.previewInput((int) Math.floor(mx), (int) Math.floor(my), previewButton, true);
+            return true;
+        }
         return false;
     }
 
@@ -1843,6 +1858,7 @@ public final class ClickGuiScreen extends DesignScreen {
             popover.mouseReleased();
             return true;
         }
+        if (previewDragging != null) previewDragging = null;
         if (sliding != null) {
             sliding = null;
             slideAnchorMouse = Double.NaN;

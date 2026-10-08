@@ -175,6 +175,11 @@ public final class SmokeTest {
             return;
         }
         after -= FIRE_TICKS;
+        if (after < CROSSHAIR_TICKS) {
+            crosshairBlock(mc, after);
+            return;
+        }
+        after -= CROSSHAIR_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -412,6 +417,37 @@ public final class SmokeTest {
         BlockPos.MutableBlockPos m = from.mutable();
         for (int i = 0; i < 6 && mc.level.getBlockState(m.below()).isAir(); i++) m.move(Direction.DOWN);
         return m.getY();
+    }
+
+    private static final int CROSSHAIR_TICKS = 90;
+
+    /** Crosshair: the preview, the pixel editor, and a styled crosshair in the world. */
+    private static void crosshairBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                module("crosshair").setEnabled(true);
+                openGui(mc);
+                openPanel(mc, "crosshair");
+            }
+            case 2, 27 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-crosshair-panel.png", null);
+            case 25 -> setSetting("crosshair", "style", "CUSTOM");
+            case 40 -> shot(mc, "smoke-crosshair-editor.png", null);
+            case 45 -> {
+                setSetting("crosshair", "style", "CIRCLE");
+                setSetting("crosshair", "colour", "#22D3EE");
+                mc.setScreen(null);
+            }
+            case 60 -> shot(mc, "smoke-crosshair-world.png", null);
+            case 65 -> {
+                setSetting("crosshair", "style", "CROSS");
+                setSetting("crosshair", "colour", "#FFFFFF");
+                module("crosshair").setEnabled(false);
+            }
+            default -> {
+            }
+        }
     }
 
     private static final int DENSITY_TICKS = 80;
