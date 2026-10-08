@@ -158,6 +158,7 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new FullbrightModule());
         m.register(new HitboxModule());
         m.register(new NametagsModule());
+        m.register(new gg.shard.client.modules.visual.CosmeticsModule());
         m.register(new CrosshairModule());
         m.register(new ZoomModule());
         // Combat QoL

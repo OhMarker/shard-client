@@ -21,16 +21,24 @@ Crystals, the anchor optimizers, No Death Animation, BetterHurtCam, WI Zoom, Spr
 Custom Crosshair, TotemCounter, Sodium Fullbright, Visual Tweaks' hurt tint), Shard's equivalent
 stays off and the card says why, so nothing is ever applied twice.
 
-## Modules (0.4.0)
+## Modules (0.5.0)
 
 | Category | Modules |
 | --- | --- |
 | HUD | FPS (with 1% low and an optional graph), Ping (spike warnings, graph), CPS, Coords, Keystrokes, Armor, Totem Counter, Item Counter, Effects, Attack Cooldown, Cooldowns, Target HUD, Combo, Reach, Fight Recap, Session (kills, K/D, streak), Compass, Speed, TPS, Server, Clock, Memory |
-| Visuals | Low Fire, Crosshair, Shield, Crystal Visuals, Anchor Glow, Totem Pops, Hit Color, Nametags, Block Outline, Low Health Warning, Clean Screen, Weather and Time, No Hurt Cam, No Death Animation, Fullbright, Hitboxes, Zoom |
+| Visuals | Cosmetics (your Shard Launcher cape), Low Fire, Crosshair, Shield, Crystal Visuals, Anchor Glow, Totem Pops, Hit Color, Nametags, Block Outline, Low Health Warning, Clean Screen, Weather and Time, No Hurt Cam, No Death Animation, Fullbright, Hitboxes, Zoom |
 | Combat | Crystal Optimizer, Anchor Optimizer, Toggle Sprint |
 | Performance | Explosion Optimizer |
 | Chat | Chat (timestamps, stacked repeats, hidden joins and leaves, highlighted mentions) |
 | Utility | Display (borderless fullscreen, background and menu FPS caps, window title), GUI Scales (inventory, hotbar, scoreboard, tab list, titles, boss bar, chat), Sounds |
+
+New in 0.5.0:
+
+- **Cosmetics**: the cape you equip in Shard Launcher shows on your own player in third person
+  and (optionally) on your elytra. High-resolution capes such as the
+  4096x2048 OhMarker cape are uploaded with a full mip chain and smooth filtering, so they stay
+  sharp up close and do not flicker from a distance. It is only on your screen: other players
+  see your normal Minecraft cape, and nothing is sent to the server.
 
 New in 0.4.0:
 
@@ -123,7 +131,7 @@ More, step by step, in `docs/screenshots/0.4.0/`.
   file everything falls back to defaults, so the mod also works from any other launcher.
 - Config lives in `config/shard/config.json` (schema version 3: modules, per-server rules, GUI
   state; 0.2.0 files migrate automatically) so the launcher's shared-config layer can sync it across versions.
-- Cosmetics (`equipped.json`) are the next milestone; see "Roadmap".
+- Cosmetics: the cape equipped in the launcher (`equipped.json`; the launcher caches its texture next to it) is drawn on your player.
 
 ## Building
 
@@ -175,8 +183,8 @@ Add `-PsmokeBench` to run the `BENCHMARKS.md` scenario instead; results land in 
 
 ## Roadmap
 
-- Cosmetics rendering (capes, cloaks, wings, hats, bandanas, back-bling) from the launcher's
-  `equipped.json`, and the emote wheel.
+- More cosmetic types (hats, wings and so on) and the emote wheel; showing capes to other Shard
+  players would need a Shard server and is not planned yet.
 - Environment colours (sky, water, foliage) in the spirit of Ambience; shield state colours;
   totem pop ghosts.
 - Later versions: 1.21.x and 26.x targets.

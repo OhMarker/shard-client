@@ -79,6 +79,14 @@ loom {
             if (project.hasProperty("smokeDir")) {
                 vmArgs("-Dshard.smoke.dir=" + project.property("smokeDir").toString())
             }
+            // -PsmokeOnly=cosmetics runs only the cape pass of the smoke test.
+            if (project.hasProperty("smokeOnly")) {
+                vmArgs("-Dshard.smoke.only=" + project.property("smokeOnly").toString())
+            }
+            // -PequippedPath=<equipped.json> stands in for launcher-info.json's equippedPath in dev runs.
+            if (project.hasProperty("equippedPath")) {
+                vmArgs("-Dshard.dev.equippedPath=" + project.property("equippedPath").toString())
+            }
             // -PsmokeBench runs the BENCHMARKS.md scenario instead of the screenshot pass.
             if (project.hasProperty("smokeBench")) {
                 vmArgs("-Dshard.smoke.bench=1")

@@ -171,6 +171,29 @@
   no shield opacity, alt-tab not automated, a wide toolbar can cover top-left elements) still
   apply.
 
+## 0.5.0: the launcher cape in-game
+
+- **Only your own player.** The Cosmetics module swaps the cape (and, by default, the elytra
+  texture) in `AbstractClientPlayer.getSkin()` for the local player only. equipped.json is a local
+  file, so there is no way to know what other people wear without a Shard server; showing capes to
+  others is not built. Nothing is sent to the server; other players see your Minecraft cape.
+- **Where the texture comes from.** launcher-info.json's `equippedPath`; the launcher caches every
+  equipped back texture as `textures/<id>.png` next to it (same file-name rule as the launcher's
+  `CosmeticAssets.cachePath`). Launcher 0.2.1 also copies bundled textures there, so the bundled
+  catalogue fallback works in-game too. Dev runs use `-PequippedPath=<equipped.json>`.
+- **Sharp without flicker.** Vanilla uploads capes as one level sampled NEAREST. `CapeTexture`
+  creates the GPU texture with a full mip chain (4096 down to 64 wide, 7 levels; `MipChain`, tested,
+  averages 2x2 blocks weighted by alpha so the transparent parts of the layout never darken the
+  painted edges) and samples it with trilinear filtering through `SamplerCache.getSampler(..., true)`;
+  RenderSetup binds a texture with its own sampler, so the entity render type picks it up.
+- **Loaded once, off the render thread.** The PNG is decoded and the mip chain built on a worker
+  thread on the first tick in a world; only the upload runs on the render thread.
+- **Smoke test.** A cape pass shoots the player from behind, from above, close up, from the front,
+  with an elytra and with the module off, in daylight above the arena's roof (under it the whole
+  player is in shadow); `capeStatus` in the summary. The inventory-scale check now gives each slot
+  three ticks: with two, a tick that ran without a frame in between read a stale hovered slot and
+  0-3 of 47 slots "missed" at random, with or without the cape.
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.

@@ -4,6 +4,7 @@
   "package": "gg.shard.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "AbstractClientPlayerCapeMixin",
     "AbstractContainerScreenAccessor",
     "ChatComponentMixin",
     "ClientLevelWeatherMixin",

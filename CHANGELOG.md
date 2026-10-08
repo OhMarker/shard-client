@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 (2026-10-08)
+
+- **Cosmetics:** the cape you equip in Shard Launcher now shows in-game on your own player, in
+  third person and on your elytra (switchable). High-resolution
+  capes are drawn smooth and sharp, with no flicker. Only you see it; nothing is sent to the
+  server.
+
 ## 0.4.0 (2026-10-08)
 
 A new menu, sharp text, one icon set, a real HUD editor and the crystal PvP modules players

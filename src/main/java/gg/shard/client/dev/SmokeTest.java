@@ -159,6 +159,17 @@ public final class SmokeTest {
         if (ticksInWorld == 5) quietHud(mc);
         if (ticksInWorld < 10) return;
         int t = ticksInWorld - 10;
+        String only = System.getProperty("shard.smoke.only");
+        if ("cosmetics".equals(only)) {
+            if (t < COSMETICS_TICKS) cosmeticsBlock(mc, t);
+            else finish(mc);
+            return;
+        }
+        if ("scales".equals(only)) {
+            if (t < SCALES_TICKS) scalesBlock(mc, t);
+            else finish(mc);
+            return;
+        }
         int block = t / STEP_TICKS;
         int local = t % STEP_TICKS;
         if (block < SCALES.length) {
@@ -220,7 +231,12 @@ public final class SmokeTest {
             densityBlock(mc, after);
             return;
         }
-        switch (after - DENSITY_TICKS) {
+        after -= DENSITY_TICKS;
+        if (after < COSMETICS_TICKS) {
+            cosmeticsBlock(mc, after);
+            return;
+        }
+        switch (after - COSMETICS_TICKS) {
             case 0 -> {
                 mc.setScreen(null);
                 setScale(mc, 2);
@@ -609,7 +625,9 @@ public final class SmokeTest {
         }
     }
 
-    private static final int SCALES_TICKS = 160;
+    private static final int SCALES_TICKS = 210;
+    /** Ticks per slot: move, then read the hover after a frame has surely been drawn. */
+    private static final int SLOT_TICKS = 3;
     private static int slotIndex;
     private static int slotMisses;
     private static int slotChecks;
@@ -634,11 +652,11 @@ public final class SmokeTest {
             slotIndex = 0;
             slotMisses = 0;
             slotChecks = 0;
-        } else if (local >= 20 && local < 20 + 47 * 2 && mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+        } else if (local >= 20 && local < 20 + 47 * SLOT_TICKS && mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
             var acc = (gg.shard.client.mixin.AbstractContainerScreenAccessor) screen;
             var slots = screen.getMenu().slots;
             int step = local - 20;
-            if (step % 2 == 0 && slotIndex < slots.size()) {
+            if (step % SLOT_TICKS == 0 && slotIndex < slots.size()) {
                 // Move the real pointer to the centre of the next slot, in physical pixels.
                 var slot = slots.get(slotIndex);
                 double f = gg.shard.client.gui.ScaledScreen.factorOf(screen);
@@ -652,24 +670,24 @@ public final class SmokeTest {
                 double px = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$leftPos() + slot.x + 8, f, gs) * sx;
                 double py = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$topPos() + slot.y + 8, f, gs) * sy;
                 ((gg.shard.client.mixin.MouseHandlerInvoker) mc.mouseHandler).shard$onMove(mc.getWindow().handle(), px, py);
-            } else if (step % 2 == 1 && slotIndex < slots.size()) {
+            } else if (step % SLOT_TICKS == SLOT_TICKS - 1 && slotIndex < slots.size()) {
                 var hovered = acc.shard$hoveredSlot();
                 slotChecks++;
                 if (hovered != slots.get(slotIndex)) slotMisses++;
                 slotIndex++;
             }
-        } else if (local == 20 + 47 * 2 + 1) {
+        } else if (local == 20 + 47 * SLOT_TICKS + 1) {
             ShardClient.LOGGER.info("Smoke: inventory at GUI scale 3 over game scale 2: {} slots checked, {} wrong", slotChecks, slotMisses);
             SUMMARY.addProperty("inventoryScaleSlotsChecked", slotChecks);
             SUMMARY.addProperty("inventoryScaleSlotMisses", slotMisses);
             shot(mc, "smoke-inventory-scale3.png", null);
-        } else if (local == 20 + 47 * 2 + 4) {
+        } else if (local == 20 + 47 * SLOT_TICKS + 4) {
             mc.setScreen(null);
             setSetting("gui-scales", "inventory-scale", "GAME");
             setSetting("gui-scales", "hotbar-scale", "75");
-        } else if (local == 20 + 47 * 2 + 20) {
+        } else if (local == 20 + 47 * SLOT_TICKS + 20) {
             shot(mc, "smoke-hotbar-75.png", null);
-        } else if (local == 20 + 47 * 2 + 22) {
+        } else if (local == 20 + 47 * SLOT_TICKS + 22) {
             setSetting("gui-scales", "hotbar-scale", "100");
             scales.setEnabled(false);
         }
@@ -857,6 +875,71 @@ public final class SmokeTest {
     }
 
     /** Opening a screen recentres the cursor; move it into the page margin so no hover state shows. */
+    private static final int COSMETICS_TICKS = 220;
+
+    /**
+     * The cape equipped in Shard Launcher (dev runs: -PequippedPath=<equipped.json>): from behind,
+     * from the front, from above, zoomed in, on an elytra, and with the module off for comparison.
+     */
+    private static void cosmeticsBlock(Minecraft mc, int local) {
+        var cosmetics = ShardClient.modules().get(gg.shard.client.modules.visual.CosmeticsModule.class);
+        switch (local) {
+            case 0 -> {
+                mc.setScreen(null);
+                setScale(mc, 2);
+                cmd(mc, "item replace entity @s armor.chest with air");
+                cmd(mc, "tp @s -5 60 2 180 8");
+                mc.options.hideGui = true;
+                mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+            }
+            // Out in the open, above the test arena's roof, so the cape is lit by the sky.
+            case 2, 47, 67, 92, 117, 147 -> {
+                if (mc.player != null) {
+                    mc.player.getAbilities().flying = true;
+                    mc.player.onUpdateAbilities();
+                }
+            }
+            case 40 -> {
+                SUMMARY.addProperty("capeStatus", cosmetics.status());
+                ShardClient.LOGGER.info("Smoke: cosmetics {}", cosmetics.status());
+                shot(mc, "smoke-cape-back.png", null);
+            }
+            case 45 -> cmd(mc, "tp @s -5 60 2 180 45");
+            case 60 -> shot(mc, "smoke-cape-above.png", null);
+            case 65 -> {
+                cmd(mc, "tp @s -5 60 2 180 8");
+                mc.options.fov().set(30);
+            }
+            case 85 -> shot(mc, "smoke-cape-close.png", null);
+            case 90 -> {
+                mc.options.fov().set(70);
+                mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+                cmd(mc, "tp @s -5 60 2 150 8");
+            }
+            case 110 -> shot(mc, "smoke-cape-front.png", null);
+            case 115 -> {
+                mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+                cmd(mc, "tp @s -5 60 2 180 8");
+                cmd(mc, "item replace entity @s armor.chest with elytra");
+            }
+            case 140 -> shot(mc, "smoke-cape-elytra.png", null);
+            case 145 -> {
+                cmd(mc, "item replace entity @s armor.chest with air");
+                cosmetics.setEnabled(false);
+            }
+            case 165 -> shot(mc, "smoke-cape-off.png", null);
+            case 170 -> cosmetics.setEnabled(true);
+            case 190 -> {
+                cmd(mc, "tp @s -5 -22 2 180 30");
+                mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+                mc.options.hideGui = false;
+                mc.options.fov().set(70);
+            }
+            default -> {
+            }
+        }
+    }
+
     private static void parkCursor(Minecraft mc) {
         org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().handle(), 4, 4);
         // The unfocused dev window gets no move event for that, so tell the mouse handler directly;

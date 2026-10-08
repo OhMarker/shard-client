@@ -1,5 +1,13 @@
 # Status (handoff for a new session)
 
+## 0.5.0: the launcher cape in-game (2026-10-08)
+- The Cosmetics module (Visuals, on by default) draws the cape equipped in Shard Launcher on your
+  own player, mipmapped and smooth (DECISIONS.md "0.5.0"). 91 JUnit tests pass; the full smoke test
+  passes at 1280x720 and 1920x1080 with `capeStatus: Wearing cape-ohmarker (4096x2048, 7 mip levels)`
+  and every earlier check; screenshots in docs/screenshots/0.5.0/.
+- `-PsmokeOnly=cosmetics|scales` runs one pass; `-PequippedPath=<equipped.json>` stands in for the
+  launcher in dev (run/dev-cosmetics/ holds one with the OhMarker cape).
+
 ## 0.4.0: published 2026-10-08
 - Merged into `main` (0b6cd41) and pushed; release https://github.com/OhMarker/shard-client/releases/tag/v0.4.0
   (the downloaded jar's sha512 matches the one below); ../meta pushed with `latest` 0.4.0, and the live

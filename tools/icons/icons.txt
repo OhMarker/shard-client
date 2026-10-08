@@ -105,3 +105,4 @@ undo                undo-2
 redo                redo-2
 grid-on             grid-3x3
 save                save
+cape                shirt
