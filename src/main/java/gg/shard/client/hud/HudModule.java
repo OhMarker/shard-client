@@ -27,7 +27,7 @@ import java.util.List;
  * {@link #box}, {@link #text} and {@link #line}, so colours, background, padding, shadow,
  * alignment and labels behave identically everywhere.
  */
-public abstract class HudModule extends Module {
+public abstract class HudModule extends Module implements gg.shard.client.gui.PanelPreview {
     /** Text size in HUD units; Inter 10 has about the cap height of vanilla's 8px font (7 units). */
     public static final int TEXT_SIZE = 10;
     /** HUD line pitch, tighter than the page so a one-line element with padding 2 is 14 units tall, close to 0.2.0. */
@@ -50,8 +50,8 @@ public abstract class HudModule extends Module {
     private double fx;
     private double fy;
     private double scale = 1.0;
-    private int lastWidth = 10;
-    private int lastHeight = 10;
+    int lastWidth = 10;
+    int lastHeight = 10;
     protected final HudStyle style;
 
     protected HudModule(String name, String description, double defaultFx, double defaultFy) {
@@ -99,7 +99,123 @@ public abstract class HudModule extends Module {
     /** This element's style after inheriting the global defaults from Settings → HUD. */
     public HudStyle.Resolved style() {
         HudDefaultsModule defaults = ShardClient.modules() == null ? null : ShardClient.hudDefaults();
-        return style.resolve(defaults == null ? null : defaults.style());
+        HudStyle.Resolved r = style.resolve(defaults == null ? null : defaults.style());
+        return previewPreset != null ? r.withPreset(previewPreset) : r;
+    }
+
+    // ---- style preview (settings panel) ----------------------------------------------------------
+
+    /** Set while the panel preview draws one variant. */
+    private static HudStyle.Preset previewPreset;
+    private final java.util.Map<HudStyle.Preset, int[]> previewSizes = new java.util.EnumMap<>(HudStyle.Preset.class);
+    private final int[][] previewCells = new int[HudStyle.Preset.values().length][4];
+    private final int[] matchButton = new int[4];
+    private int previewMouseX;
+    private int previewMouseY;
+
+    @Override
+    public void previewMouse(int x, int y) {
+        previewMouseX = x;
+        previewMouseY = y;
+    }
+
+    /** This element drawn in each style, at a size that fits; click one to use it. */
+    @Override
+    public int renderPreview(GuiGraphics g, int x, int y, int width) {
+        Minecraft mc = mc();
+        HudStyle.Preset[] presets = HudStyle.Preset.values();
+        int cellH = 46;
+        int h = cellH + 36;
+        gg.shard.client.gui.Render2D.roundedRect(g, x, y, width, h, gg.shard.client.gui.Theme.radius(), 0xFF2A3446);
+        gg.shard.client.gui.Render2D.roundedOutline(g, x, y, width, h, gg.shard.client.gui.Theme.radius(), gg.shard.client.gui.Theme.line());
+        if (needsPlayer() && mc.player == null) {
+            gg.shard.client.gui.Fonts.drawCentered(g, "Join a world to preview", gg.shard.client.gui.Fonts.Weight.MEDIUM, 11, x + width / 2, y + h / 2 - 7, gg.shard.client.gui.Theme.subtle());
+            return h;
+        }
+        int gap = 4;
+        int cellW = (width - 8 - gap * (presets.length - 1)) / presets.length;
+        HudStyle.Preset current = style().preset();
+        int savedW = lastWidth;
+        int savedH = lastHeight;
+        for (int i = 0; i < presets.length; i++) {
+            HudStyle.Preset p = presets[i];
+            int cx = x + 4 + i * (cellW + gap);
+            int cy = y + 4;
+            previewCells[i] = new int[]{cx, cy, cellW, cellH};
+            boolean on = p == current;
+            boolean hover = previewMouseX >= cx && previewMouseX < cx + cellW && previewMouseY >= cy && previewMouseY < cy + cellH;
+            gg.shard.client.gui.Render2D.roundedRect(g, cx, cy, cellW, cellH, 6, on ? 0x40000000 : hover ? 0x26000000 : 0x14000000);
+            if (on) gg.shard.client.gui.Render2D.roundedOutline(g, cx, cy, cellW, cellH, 6, gg.shard.client.gui.Theme.accentAlpha(0xC0));
+            int[] size = previewSizes.getOrDefault(p, new int[]{lastWidth, lastHeight});
+            float s = Math.min(1f, Math.min((cellW - 8) / (float) Math.max(1, size[0]), (cellH - 18) / (float) Math.max(1, size[1])));
+            var pose = g.pose();
+            pose.pushMatrix();
+            pose.translate(cx + (cellW - size[0] * s) / 2f, cy + 4 + (cellH - 18 - size[1] * s) / 2f);
+            pose.scale(s, s);
+            previewPreset = p;
+            try {
+                render(g, mc.getDeltaTracker());
+            } catch (RuntimeException ignored) {
+                // A preview must never break the settings page.
+            } finally {
+                previewPreset = null;
+                pose.popMatrix();
+            }
+            previewSizes.put(p, new int[]{lastWidth, lastHeight});
+            gg.shard.client.gui.Fonts.drawCentered(g, p.label(), gg.shard.client.gui.Fonts.Weight.MEDIUM, 10, cx + cellW / 2, cy + cellH - 13,
+                    on ? gg.shard.client.gui.Theme.text() : gg.shard.client.gui.Theme.muted());
+        }
+        lastWidth = savedW;
+        lastHeight = savedH;
+        // "Use this look everywhere".
+        String label = "Use this look for every HUD element";
+        int bw = gg.shard.client.gui.Fonts.widthInt(label, gg.shard.client.gui.Fonts.Weight.MEDIUM, 11) + 20;
+        int bx = x + (width - bw) / 2;
+        int by = y + cellH + 10;
+        matchButton[0] = bx;
+        matchButton[1] = by;
+        matchButton[2] = bw;
+        matchButton[3] = 22;
+        boolean hover = previewMouseX >= bx && previewMouseX < bx + bw && previewMouseY >= by && previewMouseY < by + 22;
+        gg.shard.client.gui.Render2D.roundedRect(g, bx, by, bw, 22, 6, hover ? gg.shard.client.gui.Theme.surfaceHover() : gg.shard.client.gui.Theme.surfaceRaised());
+        gg.shard.client.gui.Render2D.roundedOutline(g, bx, by, bw, 22, 6, gg.shard.client.gui.Theme.lineStrong());
+        gg.shard.client.gui.Fonts.drawCentered(g, label, gg.shard.client.gui.Fonts.Weight.MEDIUM, 11, bx + bw / 2, by + (22 - gg.shard.client.gui.Fonts.lineHeight(11)) / 2,
+                gg.shard.client.gui.Theme.text());
+        return h;
+    }
+
+    @Override
+    public String previewInput(int mx, int my, int button, boolean drag) {
+        if (drag) return null;
+        HudStyle.Preset[] presets = HudStyle.Preset.values();
+        for (int i = 0; i < presets.length; i++) {
+            int[] c = previewCells[i];
+            if (mx >= c[0] && mx < c[0] + c[2] && my >= c[1] && my < c[1] + c[3]) {
+                if (style.custom != null && !style.custom.get()) {
+                    // Start from the inherited look so only the preset changes.
+                    HudDefaultsModule defaults = ShardClient.hudDefaults();
+                    if (defaults != null) style.copyLook(defaults.style());
+                    style.custom.set(true);
+                }
+                style.preset.set(presets[i]);
+                return null;
+            }
+        }
+        if (mx >= matchButton[0] && mx < matchButton[0] + matchButton[2] && my >= matchButton[1] && my < matchButton[1] + matchButton[3]) {
+            HudDefaultsModule defaults = ShardClient.hudDefaults();
+            if (defaults == null) return null;
+            HudStyle source = style.overrides() ? style : defaults.style();
+            if (source != defaults.style()) defaults.style().copyLook(source);
+            int n = 0;
+            for (var m : ShardClient.modules().all()) {
+                if (m instanceof HudModule hm && hm.style.custom != null && hm.style.custom.get()) {
+                    hm.style.custom.set(false);
+                    n++;
+                }
+            }
+            return "Every HUD element now uses this look" + (n > 0 ? " (" + n + " custom styles reset)" : "");
+        }
+        return null;
     }
 
     public HudStyle styleSettings() {
@@ -124,6 +240,7 @@ public abstract class HudModule extends Module {
             }
             case MINIMAL -> {
             }
+            case PILL -> Render2D.roundedRect(g, 0, 0, w, h, h / 2, st.background());
         }
     }
 
@@ -145,14 +262,22 @@ public abstract class HudModule extends Module {
     /** One line: optional label in the text colour, then the value. Sets the size. */
     protected void line(GuiGraphics g, String value, int valueColor) {
         HudStyle.Resolved st = style();
-        String label = labelText(st);
+        if (st.brackets()) value = "[" + value + "]";
+        String label = st.hasLabel() ? (st.labelAfter() ? " " + st.label() : st.label() + " ") : "";
         int pad = st.padding();
         int lw = textW(label);
-        int w = pad * 2 + lw + textW(value);
+        int vw = textW(value);
+        int w = pad * 2 + lw + vw;
         int h = pad * 2 + lineH();
+        if (st.preset() == HudStyle.Preset.PILL) {
+            pad = Math.max(pad, h / 3);
+            w = pad * 2 + lw + vw;
+        }
         box(g, st, w, h);
-        text(g, st, label, pad, pad, st.text());
-        text(g, st, value, pad + lw, pad, valueColor == 0 ? st.value() : valueColor);
+        int vx = st.labelAfter() ? pad : pad + lw;
+        int lx = st.labelAfter() ? pad + vw : pad;
+        text(g, st, label, lx, st.padding(), st.text());
+        text(g, st, value, vx, st.padding(), valueColor == 0 ? st.value() : valueColor);
         size(w, h);
     }
 

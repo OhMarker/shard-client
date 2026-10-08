@@ -202,6 +202,11 @@ public final class SmokeTest {
             return;
         }
         after -= DISPLAY_TICKS;
+        if (after < STYLE_TICKS) {
+            styleBlock(mc, after);
+            return;
+        }
+        after -= STYLE_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -667,6 +672,36 @@ public final class SmokeTest {
                 ShardClient.LOGGER.info("Smoke: after borderless off the window is {}x{} (was {}x{}); restored: {}",
                         w.getScreenWidth(), w.getScreenHeight(), windowBefore[2], windowBefore[3], restored);
                 SUMMARY.addProperty("borderlessRestoresWindow", restored);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static final int STYLE_TICKS = 70;
+
+    /** HUD styles: the FPS element's style preview, then Pill with the label after the value and brackets. */
+    private static void styleBlock(Minecraft mc, int local) {
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                openGui(mc);
+                openPanel(mc, "fps");
+            }
+            case 2 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-hudstyle-panel.png", null);
+            case 25 -> {
+                mc.setScreen(null);
+                setSetting("fps", "custom-style", "true");
+                setSetting("fps", "style", "PILL");
+                setSetting("fps", "label-position", "AFTER");
+                setSetting("fps", "brackets", "true");
+            }
+            case 45 -> shot(mc, "smoke-hudstyle-pill.png", null);
+            case 50 -> {
+                setSetting("fps", "custom-style", "false");
+                setSetting("fps", "label-position", "BEFORE");
+                setSetting("fps", "brackets", "false");
             }
             default -> {
             }

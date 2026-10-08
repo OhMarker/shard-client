@@ -59,8 +59,8 @@ public final class FpsModule extends HudModule {
             shownLow = HudManager.FRAMES.lowFps(1);
         }
         HudStyle.Resolved st = style();
-        String label = labelText(st);
-        String value = String.valueOf(shownFps);
+        String value = st.brackets() ? "[" + shownFps + "]" : String.valueOf(shownFps);
+        String label = st.hasLabel() ? (st.labelAfter() ? " " + st.label() : st.label() + " ") : "";
         String lowText = low.get() && shownLow > 0 ? "  1% " + shownLow : "";
         int pad = st.padding();
         int lw = textW(label);
@@ -70,12 +70,19 @@ public final class FpsModule extends HudModule {
         int gh = 14;
         w = Math.max(w, gw + pad * 2);
         int h = pad * 2 + lineH() + (graphOn.get() ? gh + 3 : 0);
+        int ox = 0;
+        if (st.preset() == HudStyle.Preset.PILL && !graphOn.get()) {
+            ox = Math.max(0, h / 3 - pad);
+            w += ox * 2;
+        }
         box(g, st, w, h);
-        text(g, st, label, pad, pad, st.text());
-        text(g, st, value, pad + lw, pad, st.value());
+        int vx = ox + (st.labelAfter() ? pad : pad + lw);
+        int lx = ox + (st.labelAfter() ? pad + vw : pad);
+        text(g, st, label, lx, pad, st.text());
+        text(g, st, value, vx, pad, st.value());
         if (!lowText.isEmpty()) {
             boolean stutter = shownLow < shownFps * 0.5;
-            text(g, st, lowText, pad + lw + vw, pad, stutter ? Theme.warning() : Colors.withAlpha(st.value(), 0xA0));
+            text(g, st, lowText, ox + pad + lw + vw, pad, stutter ? Theme.warning() : Colors.withAlpha(st.value(), 0xA0));
         }
         if (graphOn.get()) {
             FrameStats f = HudManager.FRAMES;

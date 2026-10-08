@@ -55,9 +55,9 @@ class HudStyleTest {
         List<String> keys = new ArrayList<>();
         for (Setting<?> s : m.settings) keys.add(s.key());
         assertEquals(List.of("custom-style", "style", "text-colour", "value-colour", "background", "corner-radius", "padding",
-                "text-shadow", "alignment", "label"), keys);
+                "text-shadow", "alignment", "brackets", "label", "label-position"), keys);
         for (Setting<?> s : m.settings) {
-            if (s == style.custom || s == style.label) assertTrue(s.isVisible(), s.key());
+            if (s == style.custom || s == style.label || s == style.labelSide) assertTrue(s.isVisible(), s.key());
             else assertFalse(s.isVisible(), s.key() + " hidden while inheriting");
             assertEquals(HudStyle.GROUP, s.group());
         }

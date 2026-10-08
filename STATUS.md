@@ -13,10 +13,16 @@ Work follows `docs/PROMPT-ui-overhaul-0.4.0.md` step by step, stopping for the o
   Screenshots `docs/screenshots/0.4.0/step4-*`. Owner approved.
 - Step 5 done: module audit (table in DECISIONS.md), renames with `legacyKey()`, upgrades to FPS,
   Ping, Keystrokes, Armor, Totem Counter, Item Counter, Effects, Attack Cooldown, Totem Pops,
-  Nametags and the Crystal Optimizer readout. Waiting for the owner's OK on step 5.
-- Next: step 6, the owner's must-have list (Low Fire incl. ground fire + colours, Crosshair
-  preview, Shield, Anchor Glow, Crystal visuals, separate GUI scales, borderless fullscreen, HUD
-  styles), then steps 7-8.
+  Nametags and the Crystal Optimizer readout. Owner approved.
+- Step 6 done (owner's must-have list): Low Fire (screen, ground fire blocks via Fabric model
+  wrapping, burning entities), Crosshair (pixel-mask shapes, preview, editor, share codes),
+  Shield (blocking/holding sets), Anchor Glow, Crystal Visuals (colours, spin, bounce, base),
+  GUI Scales (inventory scale with 0 slot misses, HUD part scales), Display (borderless, FPS
+  caps, title), HUD styles (Pill, label position, brackets, previews, use-for-all). Screenshots
+  `docs/screenshots/0.4.0/step6*`. Waiting for the owner's OK on step 6.
+- Known limits recorded in DECISIONS.md: fire tints multiply (no greyscale sprite), no shield
+  opacity, alt-tab speed not automated.
+- Next: step 7 (other new crystal PvP modules + performance work), then step 8.
 - The 0.3.0 notes below still describe the released build.
 
 Last updated 2026-10-07 (0.3.0).
