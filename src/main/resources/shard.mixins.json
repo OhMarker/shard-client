@@ -4,6 +4,7 @@
   "package": "gg.shard.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "AbstractContainerScreenAccessor",
     "ClientPacketListenerMixin",
     "EndCrystalModelMixin",
     "EndCrystalRendererMixin",
@@ -17,12 +18,15 @@
     "LivingEntityMixin",
     "LivingEntityRendererMixin",
     "MinecraftMixin",
+    "MouseHandlerInvoker",
     "MouseHandlerMixin",
+    "MouseHandlerScaleMixin",
     "MultiPlayerGameModeMixin",
     "NameTagFeatureRendererMixin",
     "OverlayTextureAccessor",
     "ParticleEngineMixin",
-    "ScreenEffectRendererMixin"
+    "ScreenEffectRendererMixin",
+    "ScreenScaleMixin"
   ],
   "mixins": [],
   "injectors": {

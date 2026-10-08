@@ -45,6 +45,7 @@ public final class Icons {
             case COMBAT -> "combat";
             case INPUT -> "input";
             case PERFORMANCE -> "performance";
+            case UTILITY -> "utility";
         };
     }
 

@@ -192,6 +192,11 @@ public final class SmokeTest {
             return;
         }
         after -= ANCHOR_TICKS;
+        if (after < SCALES_TICKS) {
+            scalesBlock(mc, after);
+            return;
+        }
+        after -= SCALES_TICKS;
         if (after < DENSITY_TICKS) {
             densityBlock(mc, after);
             return;
@@ -567,6 +572,66 @@ public final class SmokeTest {
             }
             default -> {
             }
+        }
+    }
+
+    private static final int SCALES_TICKS = 160;
+    private static int slotIndex;
+    private static int slotMisses;
+    private static int slotChecks;
+
+    /** GUI Scales: the inventory at scale 3 while the game is at 2, every slot hovered by the real pointer; a smaller hotbar. */
+    private static void scalesBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        Module scales = module("gui-scales");
+        if (local == 0) {
+            setScale(mc, 2);
+            scales.setEnabled(true);
+            setSetting("gui-scales", "inventory-scale", "GAME");
+            mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(p));
+        } else if (local == 2) {
+            parkCursor(mc);
+        } else if (local == 15) {
+            shot(mc, "smoke-inventory-game-scale.png", null);
+            mc.setScreen(null);
+            setSetting("gui-scales", "inventory-scale", "S3");
+            mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(p));
+            slotIndex = 0;
+            slotMisses = 0;
+            slotChecks = 0;
+        } else if (local >= 20 && local < 20 + 47 * 2 && mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+            var acc = (gg.shard.client.mixin.AbstractContainerScreenAccessor) screen;
+            var slots = screen.getMenu().slots;
+            int step = local - 20;
+            if (step % 2 == 0 && slotIndex < slots.size()) {
+                // Move the real pointer to the centre of the next slot, in physical pixels.
+                var slot = slots.get(slotIndex);
+                double f = gg.shard.client.gui.ScaledScreen.factorOf(screen);
+                int gs = mc.getWindow().getGuiScale();
+                double px = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$leftPos() + slot.x + 8, f, gs);
+                double py = gg.shard.client.gui.ScreenScale.toPhysical(acc.shard$topPos() + slot.y + 8, f, gs);
+                ((gg.shard.client.mixin.MouseHandlerInvoker) mc.mouseHandler).shard$onMove(mc.getWindow().handle(), px, py);
+            } else if (step % 2 == 1 && slotIndex < slots.size()) {
+                var hovered = acc.shard$hoveredSlot();
+                slotChecks++;
+                if (hovered != slots.get(slotIndex)) slotMisses++;
+                slotIndex++;
+            }
+        } else if (local == 20 + 47 * 2 + 1) {
+            ShardClient.LOGGER.info("Smoke: inventory at GUI scale 3 over game scale 2: {} slots checked, {} wrong", slotChecks, slotMisses);
+            SUMMARY.addProperty("inventoryScaleSlotsChecked", slotChecks);
+            SUMMARY.addProperty("inventoryScaleSlotMisses", slotMisses);
+            shot(mc, "smoke-inventory-scale3.png", null);
+        } else if (local == 20 + 47 * 2 + 4) {
+            mc.setScreen(null);
+            setSetting("gui-scales", "inventory-scale", "GAME");
+            setSetting("gui-scales", "hotbar-scale", "75");
+        } else if (local == 20 + 47 * 2 + 20) {
+            shot(mc, "smoke-hotbar-75.png", null);
+        } else if (local == 20 + 47 * 2 + 22) {
+            setSetting("gui-scales", "hotbar-scale", "100");
+            scales.setEnabled(false);
         }
     }
 
