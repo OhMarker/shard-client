@@ -24,7 +24,17 @@ import java.util.List;
 public final class ItemCounterModule extends HudModule {
     public enum Layout { ROW, COLUMN }
 
+    /** Below this many the count turns yellow: a crystal fight's "time to refill" points. */
+    static int lowAt(Item item) {
+        if (item == Items.END_CRYSTAL || item == Items.OBSIDIAN || item == Items.EXPERIENCE_BOTTLE) return 16;
+        if (item == Items.GLOWSTONE) return 8;
+        if (item == Items.RESPAWN_ANCHOR || item == Items.ENCHANTED_GOLDEN_APPLE) return 4;
+        if (item == Items.TOTEM_OF_UNDYING || item == Items.ENDER_PEARL) return 3;
+        return 0;
+    }
+
     private final EnumSetting<Layout> layout = add(new EnumSetting<>("Layout", "Row or column", Layout.ROW));
+    private final BoolSetting lowWarnings = add(new BoolSetting("Low warnings", "Yellow when you are running low: under 16 crystals, obsidian or XP, 8 glowstone, 4 anchors or gapples, 3 totems or pearls", true));
     private final BoolSetting hideEmpty = add(new BoolSetting("Hide empty", "Skip items you have none of", false));
     private final BoolSetting crystals = add(new BoolSetting("Crystals", "End crystals", true).group("Items"));
     private final BoolSetting obsidian = add(new BoolSetting("Obsidian", "Obsidian blocks", true).group("Items"));
@@ -110,7 +120,8 @@ public final class ItemCounterModule extends HudModule {
             int y = row ? pad : pad + i * (cellH + 2);
             g.renderItem(new ItemStack(shown.get(i)), x, y + (cellH - icon) / 2);
             String label = String.valueOf(counts.get(i));
-            int color = counts.get(i) == 0 ? Theme.danger() : st.value();
+            int c = counts.get(i);
+            int color = c == 0 ? Theme.danger() : lowWarnings.get() && c < lowAt(shown.get(i)) ? Theme.warning() : st.value();
             text(g, st, label, x + icon + 4, y + (cellH - lineH()) / 2, color);
         }
         size(w, h);

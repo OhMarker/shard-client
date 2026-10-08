@@ -80,6 +80,34 @@
 - **Settings in a side panel.** A click without a drag opens the element's settings next to the HUD. It is the menu's own detail column in an "embedded" mode (`ClickGuiScreen.embedded`), so every control, popover and keybind capture behaves exactly as in the menu; the editor forwards input to it while the pointer is over it or it is capturing keys, and the toolbar centres itself in the space left over (icon-only title when tight).
 - **Presets.** Built in: Crystal PvP minimal (FPS, ping, totems left of the offhand slot, armour right of the hotbar, kit counter above the hearts, cooldown under the crosshair), Crystal PvP full (adds CPS, coordinates, keystrokes, effects, session, clock) and Streamer (full without coordinates or server). Positions are tuned for GUI scale 2 at 1080p. Players save their own from the Presets menu (stored in the config's `gui.hudPresets`); applying any preset is one undo step.
 
+### Module audit (step 5)
+
+| Module (0.4.0 name, key) | What was weak in 0.3.0 | Changed in step 5 | Left for step 6/7 |
+|---|---|---|---|
+| FPS (`fps`) | Average only; stutters invisible | 1% low (yellow when under half the average), optional frame-time graph, numbers update 4x a second so they are readable | — |
+| Ping (`ping`) | Number only | Spike warning (1.5x and 40 ms over the last 30 s), optional 30 s graph | — |
+| CPS (`cps`) | Fine | — | small graph (7) |
+| Coords (`coordinates`) | Long name | Renamed | biome option (7) |
+| Keystrokes (`keystrokes`) | Labels read "Wasd"; mouse keys only said LMB/RMB; presses snapped | WASD label; CPS on the mouse keys (number only when the key is too narrow); presses fade over 120 ms | styles (6, HUD looks) |
+| Armor (`armor-status`) | Grey placeholders for empty slots; no bars; long name | Hides empty slots, durability bars, low pieces pulse; renamed | — |
+| Totem Counter (`totem-counter`) | Fixed thresholds, no warning | "Warn at" count with a red flash and a bell when you drop to it; offhand dot (green: totem in offhand, red: none) | — |
+| Item Counter (`item-counter`) | Only zero was highlighted | Low-stock yellow per item (16 crystals/obsidian/XP, 8 glowstone, 4 anchors/gapples, 3 totems/pearls) | — |
+| Effects (`potion-effects`) | Colour bar instead of the effect icon; blinked only under 5 s | Vanilla effect icons, blink under 10 s; renamed | compact mode (7) |
+| Attack Cooldown (`hit-delay`) | Name said "Hit Delay"; colours fixed | Renamed; charging and ready colours | ring style (7) |
+| Server (`server-address`), Session (`session-stats`) | Long names | Renamed | — |
+| Clock, Memory | Fine | — | — |
+| Crystal Optimizer (`crystal-optimizer`) | No way to see whether the prediction matches the server | Prediction readout (off by default): predicted vs confirmed breaks, missed breaks, average confirm time, from the server's own remove packets | — |
+| Anchor Optimizer, Explosion Optimizer, Toggle Sprint | Fine | — | — |
+| Totem Pops (`totem-pop-tweaks`) | Counts never reset in a session; long name | "Reset on death" (default on) so counts mean this fight; renamed | animation size (6) |
+| Nametags (`nametags`) | No ping | Optional ping from the tab list, coloured by latency | — |
+| Crystal Visuals (`crystal-size`) | Scale only | Renamed ahead of step 6 | colours, glow, spin, bounce (6) |
+| Low Fire, Low Shield, Crosshair, Hit Color | — | — | rebuilt in step 6 (owner's must-have list) |
+| Fullbright, Hitboxes, No Hurt Cam, No Death Animation, Zoom | Fine | — | — |
+
+- **Renames keep their keys.** `Module.key()` was derived from the display name, so renaming would have orphaned configs, keybinds, server rules, favorites and HUD presets. `Module.legacyKey()` pins the old key for every renamed module (`MigrationTest.renamedModuleKeepsItsSettingsKeybindAndServerRules`).
+- **Enum labels.** Enums can implement `Labeled` to show "WASD" instead of the derived "Wasd".
+- **1% low** comes from `FrameStats` (tested): the HUD layer records every frame's time; the 1% low is the frame rate of the slowest 1% of the last 1000 frames. It includes hitches from opening screens; in the smoke test it reads low because of the screenshot captures themselves.
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.

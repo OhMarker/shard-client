@@ -1,5 +1,7 @@
 package gg.shard.client.modules.hud;
 
+import gg.shard.client.util.Colors;
+import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.event.ShardEvents;
 import gg.shard.client.gui.Render2D;
 import gg.shard.client.gui.Theme;
@@ -16,6 +18,11 @@ import net.minecraft.world.item.Items;
 public final class TotemCounterModule extends HudModule {
     private final BoolSetting pops = add(new BoolSetting("Pop count", "Show how many totems you have popped this session", true));
     private final BoolSetting flash = add(new BoolSetting("Flash on pop", "Briefly highlight the counter when you pop", true));
+    private final IntSetting warnAt = add(new IntSetting("Warn at", "Turn red and warn when you are down to this many totems", 2, 0, 8, 1, ""));
+    private final BoolSetting warnSound = add(new BoolSetting("Warning sound", "Play a short alert when you drop to the warning count", true));
+    private final BoolSetting offhandMarker = add(new BoolSetting("Offhand marker", "Green dot when a totem is in your offhand, red when it is not", true));
+    private int lastCount = -1;
+    private long warnedMs;
 
     private int sessionPops;
     private long lastPopMs;
@@ -54,6 +61,15 @@ public final class TotemCounterModule extends HudModule {
         LocalPlayer p = mc().player;
         if (p == null) return;
         int count = countTotems(p.getInventory());
+        // Warn once when the count drops to the threshold (not on join, not while it stays there).
+        if (lastCount > warnAt.get() && count <= warnAt.get() && count < lastCount) {
+            warnedMs = System.currentTimeMillis();
+            if (warnSound.get()) {
+                mc().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                        net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BELL.value(), 1.4f, 0.8f));
+            }
+        }
+        lastCount = count;
         String main = String.valueOf(count);
         String sub = pops.get() ? sessionPops + " popped" : "";
         HudStyle.Resolved st = style();
@@ -61,11 +77,18 @@ public final class TotemCounterModule extends HudModule {
         int icon = 16;
         int w = pad * 2 + Math.max(icon + 6 + textW(main), textW(sub));
         int h = pad * 2 + Math.max(icon, lineH()) + (pops.get() ? lineH() + 2 : 0);
-        boolean flashing = flash.get() && System.currentTimeMillis() - lastPopMs < 700;
-        if (flashing) Render2D.roundedRect(g, 0, 0, w, h, st.radius(), Theme.accentAlpha(0x99));
+        long now = System.currentTimeMillis();
+        boolean flashing = flash.get() && now - lastPopMs < 700;
+        boolean warning = now - warnedMs < 1200 && (now / 150) % 2 == 0;
+        if (warning) Render2D.roundedRect(g, 0, 0, w, h, st.radius(), Colors.withAlpha(Theme.danger(), 0xA0));
+        else if (flashing) Render2D.roundedRect(g, 0, 0, w, h, st.radius(), Theme.accentAlpha(0x99));
         else box(g, st, w, h);
         g.renderItem(new ItemStack(Items.TOTEM_OF_UNDYING), pad, pad);
-        int color = count == 0 ? Theme.danger() : count <= 2 ? Theme.warning() : st.value();
+        if (offhandMarker.get()) {
+            boolean ready = p.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
+            Render2D.circle(g, pad + icon - 2, pad + icon - 2, 2, ready ? Theme.success() : Theme.danger());
+        }
+        int color = count <= warnAt.get() ? Theme.danger() : count <= warnAt.get() + 2 ? Theme.warning() : st.value();
         text(g, st, main, pad + icon + 6, pad + (icon - lineH()) / 2, color);
         if (pops.get()) text(g, st, sub, pad, pad + Math.max(icon, lineH()) + 2, st.text());
         size(w, h);

@@ -16,10 +16,16 @@ import java.util.List;
 
 public final class PotionEffectsModule extends HudModule {
     private final BoolSetting hideAmbient = add(new BoolSetting("Hide beacon effects", "Skip ambient effects from beacons and conduits", false));
-    private final BoolSetting blink = add(new BoolSetting("Blink when ending", "Flash effects with under 5 seconds left", true));
+    private final BoolSetting blink = add(new BoolSetting("Blink when ending", "Flash effects with under 10 seconds left", true));
+    private final BoolSetting icons = add(new BoolSetting("Icons", "Show each effect's icon instead of a colour bar", true));
+
+    @Override
+    protected String legacyKey() {
+        return "potion-effects";
+    }
 
     public PotionEffectsModule() {
-        super("Potion Effects", "Active effects with amplifier and remaining time.", 0.86, 0.02);
+        super("Effects", "Active effects with amplifier and remaining time.", 0.86, 0.02);
     }
 
     @Override
@@ -60,12 +66,12 @@ public final class PotionEffectsModule extends HudModule {
             String time = e.isInfiniteDuration() ? "∞" : formatTicks(e.getDuration());
             String line = name + amp + "  " + time;
             lines.add(line);
-            boolean ending = blink.get() && !e.isInfiniteDuration() && e.getDuration() < 100;
+            boolean ending = blink.get() && !e.isInfiniteDuration() && e.getDuration() < 200;
             boolean hide = ending && (now / 300) % 2 == 0;
             colors.add(hide ? Theme.danger() : st.value());
             widest = Math.max(widest, textW(line));
         }
-        int barW = 3;
+        int barW = icons.get() ? 9 : 3;
         int innerW = barW + 6 + widest;
         int w = pad * 2 + innerW;
         int h = pad * 2 + lines.size() * lineH();
@@ -74,7 +80,10 @@ public final class PotionEffectsModule extends HudModule {
             int lineY = pad + i * lineH();
             int tint = 0xFF000000 | (effects.get(i).getEffect().value().getColor() & 0xFFFFFF);
             int x = alignX(st, pad, innerW, barW + 6 + textW(lines.get(i)));
-            Render2D.fill(g, x, lineY + 2, barW, lineH() - 4, tint);
+            if (icons.get()) {
+                g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                        net.minecraft.client.gui.Gui.getMobEffectSprite(effects.get(i).getEffect()), x, lineY + (lineH() - 9) / 2, 9, 9);
+            } else Render2D.fill(g, x, lineY + 2, barW, lineH() - 4, tint);
             text(g, st, lines.get(i), x + barW + 6, lineY, colors.get(i));
         }
         size(w, h);

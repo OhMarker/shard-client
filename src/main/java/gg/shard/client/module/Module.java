@@ -43,9 +43,18 @@ public abstract class Module {
         return name;
     }
 
-    /** Stable config/command key, e.g. "armor-status". */
+    /** Stable config/command key, e.g. "armor-status". Renamed modules keep their old key via {@link #legacyKey}. */
     public String key() {
-        return name.toLowerCase().replace(' ', '-');
+        String legacy = legacyKey();
+        return legacy != null ? legacy : name.toLowerCase().replace(' ', '-');
+    }
+
+    /**
+     * The key from before a rename (0.4.0 shortened several names), so configs, keybinds, server
+     * rules, favorites and HUD presets keep pointing at the module. Null for modules never renamed.
+     */
+    protected String legacyKey() {
+        return null;
     }
 
     public String description() {

@@ -32,6 +32,7 @@ public final class NametagsModule extends Module {
     private final BoolSetting colorByHealth = add(new BoolSetting("Colour by health", "Green when healthy, red when low", true).group("Health"));
     private final BoolSetting armor = add(new BoolSetting("Show armour", "Append armour points from the pieces they wear", false).group("Extras"));
     private final BoolSetting pops = add(new BoolSetting("Show pops", "Append totems popped this session", true).group("Extras"));
+    private final BoolSetting ping = add(new BoolSetting("Show ping", "Append the player's ping from the tab list", false).group("Extras"));
     private final DoubleSetting scale = add(new DoubleSetting("Scale", "Size of every name tag (vanilla is 1.0x)", 1.0, 0.5, 2.0, 0.05, "x").group("Look")
             .details("Applies to all name tags while the module is on, since they share one renderer."));
     private final IntSetting background = add(new IntSetting("Background opacity", "Darkness of the box behind name tags (vanilla is 25%)", 25, 0, 100, 5, "%").group("Look"));
@@ -97,6 +98,15 @@ public final class NametagsModule extends Module {
         if (armor.get()) {
             out.append(Component.literal(" " + living.getArmorValue() + "🛡").withColor(0xA7B4C8));
             any = true;
+        }
+        if (ping.get() && entity instanceof Player pinged) {
+            var connection = net.minecraft.client.Minecraft.getInstance().getConnection();
+            var info = connection == null ? null : connection.getPlayerInfo(pinged.getUUID());
+            if (info != null && info.getLatency() > 0) {
+                int ms = info.getLatency();
+                int c = ms < 60 ? Theme.success() : ms < 150 ? Theme.warning() : Theme.danger();
+                out.append(Component.literal(" " + ms + "ms").withColor(c & 0xFFFFFF));
+            }
         }
         if (pops.get() && entity instanceof Player player) {
             int n = ShardClient.modules().get(TotemPopModule.class).popsFor(player.getUUID());

@@ -162,4 +162,37 @@ class MigrationTest {
         assertEquals("", infos.get(0).description());
         assertEquals("Crystal fights on the main server", infos.get(1).description());
     }
+
+    /** A module renamed in 0.4.0 ("Armor Status" became "Armor") keeps its config key. */
+    static final class Armor extends Module {
+        final IntSetting warn = add(new IntSetting("Warn below", "", 20, 5, 60));
+
+        Armor() {
+            super("Armor", "test", ModuleCategory.HUD);
+        }
+
+        @Override
+        protected String legacyKey() {
+            return "armor-status";
+        }
+    }
+
+    @Test
+    void renamedModuleKeepsItsSettingsKeybindAndServerRules() throws Exception {
+        Path dir = Files.createTempDirectory("shard-rename");
+        Files.createDirectories(dir.resolve("shard"));
+        Files.writeString(dir.resolve("shard").resolve("config.json"),
+                "{\"version\":3,\"modules\":{\"armor-status\":{\"enabled\":true,\"keybind\":71,\"settings\":{\"warn-below\":35}}},"
+                        + "\"servers\":[{\"address\":\"play.example.net\",\"modules\":[\"armor-status\"]}]}");
+        ModuleManager modules = new ModuleManager();
+        Armor armor = new Armor();
+        modules.register(armor);
+        new ConfigManager(dir, modules).load();
+        assertEquals("armor-status", armor.key());
+        assertEquals("Armor", armor.name());
+        assertTrue(armor.isToggledOn());
+        assertEquals(71, armor.keybind());
+        assertEquals(35, armor.warn.get());
+        assertTrue(modules.blacklist().isDisabled("play.example.net", "armor-status"));
+    }
 }

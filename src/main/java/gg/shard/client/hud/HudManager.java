@@ -27,6 +27,9 @@ import java.util.List;
 public final class HudManager {
     public static final Identifier LAYER = Identifier.fromNamespaceAndPath(ShardClient.MOD_ID, "hud");
     private static double hudScale = 1.0;
+    /** Every frame's time while the HUD layer draws (FPS 1% low and graph). */
+    public static final gg.shard.client.util.FrameStats FRAMES = new gg.shard.client.util.FrameStats(1000);
+    private static long lastFrameNs;
     private final ModuleManager modules;
 
     public HudManager(ModuleManager modules) {
@@ -58,6 +61,9 @@ public final class HudManager {
 
     private void renderLayer(GuiGraphics g, DeltaTracker delta) {
         SmokeTest.onFrame();
+        long now = System.nanoTime();
+        if (lastFrameNs != 0) FRAMES.add((now - lastFrameNs) / 1_000_000f);
+        lastFrameNs = now;
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.screen instanceof HudEditorScreen) return;
         updateScale(mc);
@@ -69,6 +75,7 @@ public final class HudManager {
         if (mc.player != null) {
             modules.get(CrosshairModule.class).render(g);
             modules.get(TotemPopModule.class).renderFlash(g);
+            modules.get(gg.shard.client.modules.combat.CrystalOptimizerModule.class).renderReadout(g);
         }
     }
 

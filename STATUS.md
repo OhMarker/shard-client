@@ -10,9 +10,13 @@ Work follows `docs/PROMPT-ui-overhaul-0.4.0.md` step by step, stopping for the o
   layout only appears from 1640 px. Owner approved.
 - Step 4 done: HUD editor (snapping + guides, multi-select, align/distribute, 1 px nudge, undo/redo,
   grid, settings side panel) and layout presets; HUD positions are now anchor + offset.
-  Screenshots `docs/screenshots/0.4.0/step4-*`. Waiting for the owner's OK on step 4.
-- Next: step 5 (module audit + upgrades; keep module keys stable when renaming, `Module.key()`
-  is derived from the name), then steps 6-8.
+  Screenshots `docs/screenshots/0.4.0/step4-*`. Owner approved.
+- Step 5 done: module audit (table in DECISIONS.md), renames with `legacyKey()`, upgrades to FPS,
+  Ping, Keystrokes, Armor, Totem Counter, Item Counter, Effects, Attack Cooldown, Totem Pops,
+  Nametags and the Crystal Optimizer readout. Waiting for the owner's OK on step 5.
+- Next: step 6, the owner's must-have list (Low Fire incl. ground fire + colours, Crosshair
+  preview, Shield, Anchor Glow, Crystal visuals, separate GUI scales, borderless fullscreen, HUD
+  styles), then steps 7-8.
 - The 0.3.0 notes below still describe the released build.
 
 Last updated 2026-10-07 (0.3.0).

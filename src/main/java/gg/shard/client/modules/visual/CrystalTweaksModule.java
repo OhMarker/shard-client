@@ -9,7 +9,12 @@ public final class CrystalTweaksModule extends Module {
     private final DoubleSetting scale = add(new DoubleSetting("Scale", "Crystal model size", 0.65, 0.25, 1.0, 0.05, "x"));
 
     public CrystalTweaksModule() {
-        super("Crystal Size", "Smaller end crystals so you can see through the fight.", ModuleCategory.VISUALS);
+        super("Crystal Visuals", "Smaller end crystals so you can see through the fight.", ModuleCategory.VISUALS);
+    }
+
+    @Override
+    protected String legacyKey() {
+        return "crystal-size";
     }
 
     @Override

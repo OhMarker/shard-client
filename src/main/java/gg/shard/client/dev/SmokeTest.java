@@ -261,6 +261,13 @@ public final class SmokeTest {
         throw new IllegalStateException("no HUD module " + key);
     }
 
+    private static void setSetting(String moduleKey, String settingKey, String value) {
+        for (var m : ShardClient.modules().all()) {
+            if (!m.key().equals(moduleKey)) continue;
+            for (var st : m.settings()) if (st.key().equals(settingKey)) st.parse(value);
+        }
+    }
+
     private static HudEditorScreen editor(Minecraft mc) {
         return mc.screen instanceof HudEditorScreen e ? e : null;
     }
@@ -304,9 +311,21 @@ public final class SmokeTest {
                 gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.MINIMAL);
             }
             case 110 -> shot(mc, "smoke-hud-preset-minimal.png", null);
-            case 115 -> gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.FULL);
+            case 115 -> {
+                gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.FULL);
+                setSetting("fps", "frame-time-graph", "true");
+                setSetting("ping", "graph", "true");
+                // Room for the graphs.
+                hudModule("ping").applyLayout(new double[]{0, 0, 4, 40, 1});
+                hudModule("cps").applyLayout(new double[]{0, 0, 4, 76, 1});
+                hudModule("coordinates").applyLayout(new double[]{0, 0, 4, 92, 1});
+            }
             case 135 -> shot(mc, "smoke-hud-preset-full.png", null);
-            case 140 -> gg.shard.client.hud.HudPresets.restore(ShardClient.hud(), layoutBefore);
+            case 140 -> {
+                setSetting("fps", "frame-time-graph", "false");
+                setSetting("ping", "graph", "false");
+                gg.shard.client.hud.HudPresets.restore(ShardClient.hud(), layoutBefore);
+            }
             default -> {
             }
         }

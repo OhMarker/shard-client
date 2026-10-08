@@ -74,6 +74,15 @@ abstract class ClientPacketListenerMixin {
         original.call(renderer, stack);
     }
 
+    // ---- crystal prediction readout ------------------------------------------------------------
+
+    @Inject(method = "handleRemoveEntities", at = @At(value = "INVOKE", target = SAME_THREAD, shift = At.Shift.AFTER), require = 0)
+    private void shard$onRemoveEntities(net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket packet, CallbackInfo ci) {
+        if (!ShardClient.isReady()) return;
+        CrystalOptimizerModule crystals = ShardClient.modules().get(CrystalOptimizerModule.class);
+        packet.getEntityIds().forEach(crystals::onServerRemoved);
+    }
+
     // ---- explosions --------------------------------------------------------------------------
 
     @Inject(method = "handleExplosion", at = @At(value = "INVOKE", target = SAME_THREAD, shift = At.Shift.AFTER))

@@ -40,12 +40,19 @@ public final class TotemPopModule extends Module {
     private final BoolSetting ping = add(new BoolSetting("Ping sound", "Play a ping when someone pops", true).group("Messages"));
     private final DoubleSetting pingPitch = add(new DoubleSetting("Ping pitch", "Ping sound pitch", 1.4, 0.5, 2.0, 0.1).group("Messages"));
 
+    private final BoolSetting resetOnDeath = add(new BoolSetting("Reset on death", "Start a player's count again when they die, so it counts this fight", true).group("Messages"));
+
     private final Map<UUID, Integer> popsByPlayer = new HashMap<>();
     private long flashAt;
 
     public TotemPopModule() {
-        super("Totem Pop Tweaks", "Tame the totem animation, sound and particles, and announce pops in chat.", ModuleCategory.VISUALS);
+        super("Totem Pops", "Tame the totem animation, sound and particles, and announce pops in chat.", ModuleCategory.VISUALS);
         ShardEvents.onTotemPop(this::onPop);
+    }
+
+    @Override
+    protected String legacyKey() {
+        return "totem-pop-tweaks";
     }
 
     @Override
@@ -88,6 +95,16 @@ public final class TotemPopModule extends Module {
 
     public void resetSession() {
         popsByPlayer.clear();
+    }
+
+    @Override
+    public void onTick() {
+        if (!resetOnDeath.get() || popsByPlayer.isEmpty()) return;
+        var level = Minecraft.getInstance().level;
+        if (level == null) return;
+        for (Player p : level.players()) {
+            if (p.isDeadOrDying()) popsByPlayer.remove(p.getUUID());
+        }
     }
 
     private void onPop(LivingEntity entity) {

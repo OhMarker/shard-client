@@ -7,7 +7,12 @@ import net.minecraft.client.multiplayer.ServerData;
 
 public final class ServerAddressModule extends HudModule {
     public ServerAddressModule() {
-        super("Server Address", "The server you are connected to.", 0.01, 0.18);
+        super("Server", "The server you are connected to.", 0.01, 0.18);
+    }
+
+    @Override
+    protected String legacyKey() {
+        return "server-address";
     }
 
     @Override

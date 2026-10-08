@@ -16,7 +16,12 @@ public final class CoordinatesModule extends HudModule {
     private final BoolSetting decimals = add(new BoolSetting("Decimals", "One decimal place instead of whole block coordinates", false));
 
     public CoordinatesModule() {
-        super("Coordinates", "Your position and facing direction.", 0.01, 0.10);
+        super("Coords", "Your position and facing direction.", 0.01, 0.10);
+    }
+
+    @Override
+    protected String legacyKey() {
+        return "coordinates";
     }
 
     @Override

@@ -172,6 +172,22 @@ public abstract class HudModule extends Module {
         size(w, h);
     }
 
+    /**
+     * A small bar graph: {@code values[0]} is the newest sample and is drawn on the right. Bars
+     * over {@code warnAbove} use the warning colour; the scale tops out at {@code max}.
+     */
+    protected static void graph(GuiGraphics g, int x, int y, int w, int h, float[] values, int count, float max, float warnAbove,
+                                int color, int warnColor, int background) {
+        Render2D.roundedRect(g, x, y, w, h, 2, background);
+        int bars = Math.min(count, w);
+        for (int i = 0; i < bars; i++) {
+            float v = values[i];
+            int bh = Math.max(1, Math.min(h, Math.round(v / Math.max(0.001f, max) * h)));
+            int bx = x + w - 1 - i;
+            g.fill(bx, y + h - bh, bx + 1, y + h, v > warnAbove ? warnColor : color);
+        }
+    }
+
     protected static int alignX(HudStyle.Resolved st, int pad, int innerW, int textW) {
         return switch (st.align()) {
             case LEFT -> pad;

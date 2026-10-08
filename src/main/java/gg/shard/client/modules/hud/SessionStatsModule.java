@@ -23,7 +23,7 @@ public final class SessionStatsModule extends HudModule {
     private boolean wasDead;
 
     public SessionStatsModule() {
-        super("Session Stats", "Totems you popped, totems others popped near you, deaths and playtime.", 0.86, 0.30);
+        super("Session", "Totems you popped, totems others popped near you, deaths and playtime.", 0.86, 0.30);
         ShardEvents.onTotemPop(entity -> {
             LocalPlayer p = mc().player;
             if (p == null) return;
@@ -31,6 +31,11 @@ public final class SessionStatsModule extends HudModule {
             else if (entity instanceof Player) popsGiven++;
         });
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> reset());
+    }
+
+    @Override
+    protected String legacyKey() {
+        return "session-stats";
     }
 
     @Override

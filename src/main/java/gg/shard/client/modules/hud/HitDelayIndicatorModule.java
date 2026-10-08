@@ -5,6 +5,7 @@ import gg.shard.client.gui.Theme;
 import gg.shard.client.hud.HudManager;
 import gg.shard.client.hud.HudModule;
 import gg.shard.client.module.setting.BoolSetting;
+import gg.shard.client.module.setting.ColorSetting;
 import gg.shard.client.module.setting.IntSetting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
@@ -18,9 +19,16 @@ public final class HitDelayIndicatorModule extends HudModule {
     private final IntSetting width = add(new IntSetting("Width", "Bar width", 40, 16, 120, 2, ""));
     private final BoolSetting hideWhenReady = add(new BoolSetting("Hide when ready", "Only show while the attack is recharging", true));
     private final BoolSetting center = add(new BoolSetting("Follow crosshair", "Ignore the saved position and sit under the crosshair", true));
+    private final ColorSetting charging = add(new ColorSetting("Charging colour", "Bar colour while the hit is recharging", 0xFF3DD6F5));
+    private final ColorSetting ready = add(new ColorSetting("Ready colour", "Bar colour when the next hit is at full strength", 0xFF4ADE80));
 
     public HitDelayIndicatorModule() {
-        super("Hit Delay", "Attack cooldown bar under the crosshair.", 0.47, 0.56);
+        super("Attack Cooldown", "A bar under the crosshair that fills as your next hit charges.", 0.47, 0.56);
+    }
+
+    @Override
+    protected String legacyKey() {
+        return "hit-delay";
     }
 
     @Override
@@ -41,7 +49,7 @@ public final class HitDelayIndicatorModule extends HudModule {
         boolean ready = strength >= 1f;
         int w = width.get();
         int h = 3;
-        int color = ready ? Theme.success() : Theme.accent();
+        int color = ready ? this.ready.get() : charging.get();
         if (center.get()) {
             // Undo the manager's translation and scale so the bar always hugs the crosshair.
             double s = HudManager.hudScale() * scale();

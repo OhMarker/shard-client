@@ -59,6 +59,7 @@ public final class EnumSetting<E extends Enum<E>> extends Setting<E> {
     }
 
     public static String pretty(Enum<?> value) {
+        if (value instanceof Labeled labeled) return labeled.label();
         String[] parts = value.name().toLowerCase(Locale.ROOT).split("_");
         StringBuilder out = new StringBuilder();
         for (String part : parts) {

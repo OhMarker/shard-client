@@ -1,5 +1,6 @@
 package gg.shard.client.modules.combat;
 
+import gg.shard.client.gui.Theme;
 import gg.shard.client.ShardClient;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
@@ -47,6 +48,13 @@ public final class CrystalOptimizerModule extends Module {
     private final BoolSetting highlight = add(new BoolSetting("Highlight my crystals", "Pulse crystals you just placed so you can tell them apart", false).group("Placing"));
     private final ColorSetting highlightColor = add(new ColorSetting("Highlight colour", "Outline colour on crystals you just placed (alpha 0 turns the outline off)", 0xFF22D3EE, true).group("Placing"));
     private final IntSetting highlightMs = add(new IntSetting("Highlight time", "How long the pulse lasts", 400, 100, 1000, 50, " ms").group("Placing"));
+    private final BoolSetting readout = add(new BoolSetting("Prediction readout", "Under the crosshair: breaks predicted, how many the server confirmed, and how long it took", false)
+            .group("Feedback").details("For checking the prediction on a new server. A break the server never confirms within two seconds counts as missed."));
+    private final java.util.Map<Integer, Long> awaiting = new java.util.HashMap<>();
+    private int predictedCount;
+    private int confirmedCount;
+    private int missedCount;
+    private double avgConfirmMs = -1;
     private final BoolSetting hitSound = add(new BoolSetting("Hit sound", "Play a short glass sound when a crystal is dropped", true).group("Feedback"));
     private final BoolSetting hitParticles = add(new BoolSetting("Hit particles", "Show a small burst where the crystal was", true).group("Feedback"));
 
@@ -107,6 +115,8 @@ public final class CrystalOptimizerModule extends Module {
         }
         if (!predictor.markRemoved(crystal.getId(), now)) return;
         level.removeEntity(crystal.getId(), Entity.RemovalReason.DISCARDED);
+        awaiting.put(crystal.getId(), now);
+        predictedCount++;
         feedback(level, crystal.getX(), crystal.getY() + 1.0, crystal.getZ());
         ShardClient.LOGGER.debug("Crystal {} removed client-side on hit", crystal.getId());
     }
@@ -178,8 +188,38 @@ public final class CrystalOptimizerModule extends Module {
         }
     }
 
+    /** The server removed an entity; if it is a crystal we predicted, that confirms it. */
+    public void onServerRemoved(int id) {
+        Long at = awaiting.remove(id);
+        if (at == null) return;
+        confirmedCount++;
+        long ms = System.currentTimeMillis() - at;
+        avgConfirmMs = avgConfirmMs < 0 ? ms : avgConfirmMs * 0.8 + ms * 0.2;
+    }
+
+    /** Draws the readout under the crosshair; called from the HUD layer. */
+    public void renderReadout(net.minecraft.client.gui.GuiGraphics g) {
+        if (!isEnabled() || !readout.get()) return;
+        String text = "Crystals " + confirmedCount + "/" + predictedCount + " confirmed"
+                + (missedCount > 0 ? " · " + missedCount + " missed" : "")
+                + (avgConfirmMs >= 0 ? " · " + Math.round(avgConfirmMs) + " ms" : "");
+        int w = gg.shard.client.gui.Fonts.widthInt(text, gg.shard.client.gui.Fonts.Weight.MEDIUM, 10);
+        int x = g.guiWidth() / 2 - w / 2;
+        int y = g.guiHeight() / 2 + 20;
+        gg.shard.client.gui.Render2D.roundedRect(g, x - 4, y - 2, w + 8, 14, 3, 0x80000000);
+        gg.shard.client.gui.Fonts.draw(g, text, gg.shard.client.gui.Fonts.Weight.MEDIUM, 10, x, y, missedCount > 0 ? Theme.warning() : 0xFFE5E7EB);
+    }
+
     @Override
     public void onTick() {
+        long cutoff = System.currentTimeMillis() - 2000;
+        var waiting = awaiting.entrySet().iterator();
+        while (waiting.hasNext()) {
+            if (waiting.next().getValue() < cutoff) {
+                waiting.remove();
+                missedCount++;
+            }
+        }
         long now = System.currentTimeMillis();
         predictor.prune(now);
         if (fakes.isEmpty()) return;
