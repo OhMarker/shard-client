@@ -20,7 +20,7 @@ public final class LowShieldModule extends Module {
 
     @Override
     public String icon() {
-        return "item:shield";
+        return "shield";
     }
 
     /** Vertical offset to apply to the hand holding {@code stack}, or 0. */

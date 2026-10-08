@@ -122,7 +122,9 @@ at every GUI scale; the 4x crops show the anti-aliased text.
 ```
 
 Requires JDK 21 or newer. The bundled Inter font (`assets/shard/font`) is © The Inter Project
-Authors under the SIL Open Font License 1.1; the licence ships next to the font files. Versions of Minecraft, Fabric and the companion mods are pinned in
+Authors under the SIL Open Font License 1.1; the licence ships next to the font files. The
+icons are rendered from [Lucide](https://lucide.dev) (ISC licence, `assets/shard/textures/gui/LICENSE-Lucide.txt`)
+by `tools/icons/build_icons.py`. Versions of Minecraft, Fabric and the companion mods are pinned in
 `gradle.properties`.
 
 ### In-game verification

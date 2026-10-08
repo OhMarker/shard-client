@@ -38,7 +38,7 @@ public final class FpsModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:fps";
+        return "fps";
     }
 
     // 0.2.0: "Color" was the text colour and "Label" a switch for the FPS prefix.

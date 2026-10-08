@@ -19,7 +19,7 @@ public final class HitboxModule extends Module {
 
     @Override
     public String icon() {
-        return "glyph:box";
+        return "hitbox";
     }
 
     @Override

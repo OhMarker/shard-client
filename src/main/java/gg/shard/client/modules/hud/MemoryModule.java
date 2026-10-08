@@ -60,6 +60,6 @@ public final class MemoryModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:memory";
+        return "memory";
     }
 }

@@ -16,7 +16,7 @@ public final class NoHurtCamModule extends Module {
 
     @Override
     public String icon() {
-        return "glyph:camera";
+        return "camera";
     }
 
     @Override

@@ -70,4 +70,14 @@ public final class Scale {
     public static double hudScale(int guiScale, int hudSizePercent) {
         return pageScale(guiScale, Math.max(25, Math.min(300, hudSizePercent)) / 100.0);
     }
+
+    /**
+     * Smallest of {@code available} (ascending) at or above {@code needed}, allowing {@code slack}
+     * below; the largest when none is. Picks font raster densities and icon atlas sizes so
+     * nothing is ever stretched up by more than the slack.
+     */
+    public static int atLeast(double needed, int[] available, double slack) {
+        for (int v : available) if (v >= needed - slack) return v;
+        return available[available.length - 1];
+    }
 }

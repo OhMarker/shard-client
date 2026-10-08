@@ -49,6 +49,6 @@ public final class PingModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:ping";
+        return "ping";
     }
 }

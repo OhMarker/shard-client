@@ -31,7 +31,7 @@ public final class LowFireModule extends Module implements PanelPreview {
 
     @Override
     public String icon() {
-        return "item:fire_charge";
+        return "fire";
     }
 
     @Override

@@ -59,7 +59,7 @@ final class DropdownPopover extends Popover {
             if (i == highlight) Render2D.roundedRect(g, x + PAD / 2, iy, w - PAD, ITEM_H, Theme.radiusSmall(), Colors.fade(Theme.controlHover(), a));
             int color = current ? Theme.accent() : Theme.text();
             Fonts.draw(g, EnumSetting.pretty(values[i]), WEIGHT, SIZE, x + PAD + 4, iy + (ITEM_H - lineH) / 2, Colors.fade(color, a));
-            if (current) Glyphs.draw(g, "check", x + w - PAD - 20, iy + (ITEM_H - 16) / 2, Colors.fade(Theme.accent(), a));
+            if (current) Icons.draw(g, "check", x + w - PAD - 20, iy + (ITEM_H - 16) / 2, Colors.fade(Theme.accent(), a));
         }
         g.disableScissor();
         if (values.length > MAX_VISIBLE) {

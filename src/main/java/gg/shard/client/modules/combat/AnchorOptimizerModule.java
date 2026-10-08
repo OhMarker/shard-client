@@ -50,7 +50,7 @@ public final class AnchorOptimizerModule extends Module {
 
     @Override
     public String icon() {
-        return "item:respawn_anchor";
+        return "anchor";
     }
 
     @Override

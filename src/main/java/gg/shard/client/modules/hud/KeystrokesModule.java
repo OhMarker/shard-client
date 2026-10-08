@@ -94,6 +94,6 @@ public final class KeystrokesModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:keys";
+        return "keystrokes";
     }
 }

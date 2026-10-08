@@ -68,6 +68,6 @@ public final class CoordinatesModule extends HudModule {
 
     @Override
     public String icon() {
-        return "item:compass";
+        return "compass";
     }
 }

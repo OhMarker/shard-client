@@ -23,7 +23,7 @@ public final class CrystalTweaksModule extends Module {
 
     @Override
     public String icon() {
-        return "item:end_crystal";
+        return "crystal";
     }
 
     @Override

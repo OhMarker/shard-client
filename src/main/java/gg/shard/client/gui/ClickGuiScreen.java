@@ -390,7 +390,7 @@ public final class ClickGuiScreen extends DesignScreen {
         hit("sidebar", x, y, w, h, false, b -> {});
 
         // Header block: logo, name, version.
-        Glyphs.draw(g, "logo", x + 16, y + 16, Theme.accent(), 2);
+        Icons.draw(g, "logo", x + 16, y + 16, 32, Theme.accent());
         Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, SECTION, x + 56, y + 14, Theme.text());
         Fonts.drawClipped(g, "v" + version(), Fonts.Weight.REGULAR, HINT, x + 56, y + 14 + Fonts.lineHeight(SECTION), w - 72, Theme.subtle());
 
@@ -444,7 +444,7 @@ public final class ClickGuiScreen extends DesignScreen {
         if (focused(key)) Render2D.roundedOutline(g, x, y, w, h, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
         int textColor = selected || hover ? Theme.text() : Theme.muted();
         int glyphColor = selected ? Theme.accent() : Theme.muted();
-        Glyphs.draw(g, glyph, x + 8, y + (h - 16) / 2, glyphColor);
+        Icons.draw(g, glyph, x + 8, y + (h - 16) / 2, glyphColor);
         int countW = count.isEmpty() ? 0 : Fonts.widthInt(count, Fonts.Weight.MEDIUM, HINT) + 12;
         Fonts.drawClipped(g, label, Fonts.Weight.MEDIUM, LABEL, x + 32, y + (h - Fonts.lineHeight(LABEL)) / 2, w - 32 - countW - 8, textColor);
         if (!count.isEmpty()) Fonts.drawRight(g, count, Fonts.Weight.MEDIUM, HINT, x + w - 8, y + (h - Fonts.lineHeight(HINT)) / 2, Theme.subtle());
@@ -457,7 +457,7 @@ public final class ClickGuiScreen extends DesignScreen {
         int r = Theme.radiusLarge();
         Render2D.panel(g, x, y, w, TOPBAR_H, r, Theme.surface(), Theme.line());
         hit("topbar", x, y, w, TOPBAR_H, false, b -> {});
-        Glyphs.draw(g, "logo", x + 16, y + 12, Theme.accent(), 2);
+        Icons.draw(g, "logo", x + 16, y + 12, 32, Theme.accent());
         Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, SECTION, x + 56, y + 12 + (32 - Fonts.lineHeight(SECTION)) / 2, Theme.text());
         int searchX = x + 56 + Fonts.widthInt("Shard", Fonts.Weight.SEMIBOLD, SECTION) + 16;
         renderSearch(g, searchX, y + 12, x + w - 16 - searchX, FIELD_H);
@@ -507,7 +507,7 @@ public final class ClickGuiScreen extends DesignScreen {
     private void renderSearch(GuiGraphics g, int x, int y, int w, int h) {
         boolean isFocused = activeInput == search;
         search.render(g, x, y, w, h, isFocused);
-        Glyphs.draw(g, "search", x + w - 12 - 16, y + (h - 16) / 2, isFocused ? Theme.accent() : Theme.subtle());
+        Icons.draw(g, "search", x + w - 12 - 16, y + (h - 16) / 2, isFocused ? Theme.accent() : Theme.subtle());
         if (focused(KEY_SEARCH) && !isFocused) Render2D.roundedOutline(g, x, y, w, h, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
         textHit(KEY_SEARCH, search, x, y, w, h, null);
     }
@@ -572,7 +572,7 @@ public final class ClickGuiScreen extends DesignScreen {
         gridScroll = Math.max(0, Math.min(gridScroll, contentHeight - gridH));
 
         if (modules.isEmpty()) {
-            Glyphs.draw(g, "search", contentX + contentW / 2 - 16, gridY + 40, Theme.subtle(), 2);
+            Icons.draw(g, "search", contentX + contentW / 2 - 16, gridY + 40, 32, Theme.subtle());
             Fonts.drawCentered(g, "Nothing matches", Fonts.Weight.MEDIUM, LABEL, contentX + contentW / 2, gridY + 88, Theme.muted());
             return;
         }
@@ -624,7 +624,7 @@ public final class ClickGuiScreen extends DesignScreen {
         int descY = nameY + Fonts.lineHeight(SECTION) + 2;
         String notice = notice(m);
         if (notice != null) {
-            Glyphs.draw(g, "warning", textX, descY, Theme.warning());
+            Icons.draw(g, "warning", textX, descY, Theme.warning());
             Fonts.drawClipped(g, notice, Fonts.Weight.REGULAR, DESC, textX + 20, descY, textW - 20, Theme.warning());
         } else {
             List<String> lines = Fonts.wrap(m.description(), Fonts.Weight.REGULAR, DESC, textW);
@@ -738,7 +738,7 @@ public final class ClickGuiScreen extends DesignScreen {
         String backGlyph = panelReplacesGrid ? "back" : "close";
         int bx = panelReplacesGrid ? innerX : x + w - PANEL_PAD - 32;
         button(g, "panel-close", bx, y + 16, 32, 32, "", false, true, b -> closePanel());
-        Glyphs.draw(g, backGlyph, bx + 8, y + 24, Theme.muted());
+        Icons.draw(g, backGlyph, bx + 8, y + 24, Theme.muted());
         int wellX = panelReplacesGrid ? innerX + 32 + 12 : innerX;
         Render2D.roundedRect(g, wellX, y + 12, ICON_WELL, ICON_WELL, Theme.radiusSmall() + 2, m.isEnabled() ? Theme.accentAlpha(0x22) : Theme.iconWell());
         Icons.draw(g, m, wellX + 4, y + 16, 32, m.isEnabled() ? Theme.accent() : Theme.muted());
@@ -754,7 +754,7 @@ public final class ClickGuiScreen extends DesignScreen {
         String notice = notice(m);
         if (notice != null) {
             cy += 4;
-            Glyphs.draw(g, "warning", innerX, cy, Theme.warning());
+            Icons.draw(g, "warning", innerX, cy, Theme.warning());
             for (String line : Fonts.wrap(notice, Fonts.Weight.REGULAR, DESC, innerW - 24)) {
                 Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, innerX + 24, cy, Theme.warning());
                 cy += Fonts.lineHeight(DESC);
@@ -925,7 +925,7 @@ public final class ClickGuiScreen extends DesignScreen {
                     else popover = new DropdownPopover(e, cx, by + BUTTON_H, by, cw, designW, designH);
                 });
                 Fonts.drawClipped(g, e.display(), Fonts.Weight.MEDIUM, LABEL, cx + 12, by + (BUTTON_H - Fonts.lineHeight(LABEL)) / 2, cw - 44, Theme.text());
-                Glyphs.draw(g, "chevron-down", cx + cw - 12 - 16, by + (BUTTON_H - 16) / 2, Theme.muted());
+                Icons.draw(g, "chevron-down", cx + cw - 12 - 16, by + (BUTTON_H - 16) / 2, Theme.muted());
             });
         }
         if (s instanceof ColorSetting c) {
@@ -1014,7 +1014,7 @@ public final class ClickGuiScreen extends DesignScreen {
         int cachedH = Math.round(anims.getOrDefault(cacheKey, (float) (headerH + 40)));
         Render2D.panel(g, x, y, w, cachedH, Theme.radius(), Theme.surfaceRaised(), Theme.line());
         Render2D.roundedRect(g, innerX, y + pad, ICON_WELL, ICON_WELL, Theme.radiusSmall() + 2, Theme.accentAlpha(0x22));
-        Glyphs.draw(g, glyph, innerX + 4, y + pad + 4, Theme.accent(), 2);
+        Icons.draw(g, glyph, innerX + 4, y + pad + 4, 32, Theme.accent());
         Fonts.drawClipped(g, title, Fonts.Weight.SEMIBOLD, SECTION, innerX + ICON_WELL + 12, y + pad + 2, innerW - ICON_WELL - 12, Theme.text());
         Fonts.drawClipped(g, sub, Fonts.Weight.REGULAR, DESC, innerX + ICON_WELL + 12, y + pad + 2 + Fonts.lineHeight(SECTION), innerW - ICON_WELL - 12, Theme.muted());
         int end = body.render(innerX, y + headerH, innerW);
@@ -1065,7 +1065,7 @@ public final class ClickGuiScreen extends DesignScreen {
                 // Repaint the description in the warning colour.
                 int labelW = w - Math.min(w / 2, CONTROL_W) - 12;
                 Render2D.fill(g, x, rowY + 6 + Fonts.lineHeight(LABEL) + 2, labelW, Fonts.lineHeight(DESC), Theme.surfaceRaised());
-                Glyphs.draw(g, "warning", x, rowY + 6 + Fonts.lineHeight(LABEL), Theme.warning());
+                Icons.draw(g, "warning", x, rowY + 6 + Fonts.lineHeight(LABEL), Theme.warning());
                 Fonts.drawClipped(g, conflict, Fonts.Weight.REGULAR, DESC, x + 20, rowY + 6 + Fonts.lineHeight(LABEL) + 2, labelW - 20, Theme.warning());
             }
         }
@@ -1156,7 +1156,7 @@ public final class ClickGuiScreen extends DesignScreen {
             button(g, ek + ":expand", x, y, 28, FIELD_H, "", false, true, b -> {
                 if (!expandedRules.remove(e)) expandedRules.add(e);
             });
-            Glyphs.draw(g, expanded ? "chevron-down" : "chevron-right", x + 6, y + (FIELD_H - 16) / 2, Theme.muted());
+            Icons.draw(g, expanded ? "chevron-down" : "chevron-right", x + 6, y + (FIELD_H - 16) / 2, Theme.muted());
             field.render(g, x + 36, y, fieldW, FIELD_H, activeInput == field);
             textHit(ek + ":pattern", field, x + 36, y, fieldW, FIELD_H, () -> {
                 String typed = field.value().trim();

@@ -55,7 +55,7 @@ public final class TotemPopModule extends Module {
 
     @Override
     public String icon() {
-        return "item:totem_of_undying";
+        return "totem-pop";
     }
 
     @Override

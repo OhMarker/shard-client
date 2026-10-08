@@ -49,7 +49,7 @@ public final class ExplosionOptimizerModule extends Module {
 
     @Override
     public String icon() {
-        return "item:tnt";
+        return "explosion";
     }
 
     public boolean skipsEmitter() {

@@ -127,6 +127,6 @@ public final class ItemCounterModule extends HudModule {
 
     @Override
     public String icon() {
-        return "item:end_crystal";
+        return "item-counter";
     }
 }

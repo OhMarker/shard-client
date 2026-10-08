@@ -49,7 +49,7 @@ public final class NametagsModule extends Module {
 
     @Override
     public String icon() {
-        return "item:name_tag";
+        return "nametag";
     }
 
     @Override

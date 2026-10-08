@@ -62,7 +62,7 @@ public final class CrosshairModule extends Module {
 
     @Override
     public String icon() {
-        return "glyph:crosshair";
+        return "crosshair";
     }
 
     @Override

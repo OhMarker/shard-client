@@ -90,7 +90,7 @@ public final class ZoomModule extends Module {
 
     @Override
     public String icon() {
-        return "item:spyglass";
+        return "zoom";
     }
 
     @Override

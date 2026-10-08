@@ -28,7 +28,7 @@ public final class FullbrightModule extends Module {
 
     @Override
     public String icon() {
-        return "item:glowstone_dust";
+        return "fullbright";
     }
 
     @Override

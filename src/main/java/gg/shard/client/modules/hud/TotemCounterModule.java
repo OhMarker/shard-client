@@ -82,7 +82,7 @@ public final class TotemCounterModule extends HudModule {
 
     @Override
     public String icon() {
-        return "item:totem_of_undying";
+        return "totem";
     }
 
     @Override

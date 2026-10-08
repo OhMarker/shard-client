@@ -77,6 +77,6 @@ public final class SessionStatsModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:stats";
+        return "session";
     }
 }

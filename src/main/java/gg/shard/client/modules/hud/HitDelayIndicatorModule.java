@@ -57,6 +57,6 @@ public final class HitDelayIndicatorModule extends HudModule {
 
     @Override
     public String icon() {
-        return "item:netherite_sword";
+        return "cooldown";
     }
 }

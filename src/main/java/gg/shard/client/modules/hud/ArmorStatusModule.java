@@ -86,6 +86,6 @@ public final class ArmorStatusModule extends HudModule {
 
     @Override
     public String icon() {
-        return "item:diamond_chestplate";
+        return "armor";
     }
 }

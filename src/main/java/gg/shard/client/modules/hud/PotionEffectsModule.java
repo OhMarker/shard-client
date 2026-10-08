@@ -99,6 +99,6 @@ public final class PotionEffectsModule extends HudModule {
 
     @Override
     public String icon() {
-        return "item:potion";
+        return "effects";
     }
 }

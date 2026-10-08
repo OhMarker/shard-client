@@ -154,7 +154,11 @@ public final class SmokeTest {
             return;
         }
         int after = t - SCALES.length * STEP_TICKS;
-        switch (after) {
+        if (after < DENSITY_TICKS) {
+            densityBlock(mc, after);
+            return;
+        }
+        switch (after - DENSITY_TICKS) {
             case 0 -> {
                 mc.setScreen(null);
                 setScale(mc, 2);
@@ -203,6 +207,40 @@ public final class SmokeTest {
             case 120 -> mc.setScreen(new HudEditorScreen(null, ShardClient.hud()));
             case 135 -> shot(mc, "smoke-editor-scale" + tag + ".png", null);
             case 140 -> mc.setScreen(null);
+            default -> {
+            }
+        }
+    }
+
+    private static final int DENSITY_TICKS = 80;
+
+    /**
+     * Sharp-text pass: the settings page at 125% and 150% interface size and a HUD element at a
+     * non-integer scale, the cases that used to stair-step. Crops are made from these offline.
+     */
+    private static void densityBlock(Minecraft mc, int local) {
+        var appearance = ShardClient.appearance();
+        var fps = ShardClient.modules().get(gg.shard.client.modules.hud.FpsModule.class);
+        switch (local) {
+            case 0 -> {
+                setScale(mc, 2);
+                appearance.interfaceSize.set(125);
+                openGui(mc);
+            }
+            case 2, 27 -> parkCursor(mc);
+            case 20 -> shot(mc, "smoke-density-gui-125.png", null);
+            case 25 -> {
+                appearance.interfaceSize.set(150);
+                openGui(mc);
+            }
+            case 45 -> shot(mc, "smoke-density-gui-150.png", null);
+            case 50 -> {
+                appearance.interfaceSize.set(100);
+                mc.setScreen(null);
+                fps.setScale(1.65);
+            }
+            case 65 -> shot(mc, "smoke-density-hud-fps165.png", null);
+            case 70 -> fps.setScale(1.0);
             default -> {
             }
         }

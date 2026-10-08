@@ -30,7 +30,7 @@ public final class DeathAnimationModule extends Module {
 
     @Override
     public String icon() {
-        return "glyph:skull";
+        return "skull";
     }
 
     @Override

@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  #grid { display: grid; }
+  #grid > div { display: flex; }
+  #report { display: none; }
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<pre id="report"></pre>
+<script>
+// White icons on black, one per cell, cell size ?s= px, 16 columns. build_icons.py turns
+// luminance into alpha so the game can tint them.
+const q = new URLSearchParams(location.search);
+const S = +q.get('s') || 64, COLS = 16, STROKE = q.get('w') || '1.75';
+const pascal = n => n.split('-').map(p => p[0].toUpperCase() + p.slice(1)).join('');
+// lucide@0.460 icons are ['svg', attrs, children]; the Shard logo uses the same shape.
+const LOGO = ['svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+  [['path', { d: 'M12 2 19.5 9 12 22 4.5 9Z' }], ['path', { d: 'M4.5 9h15M12 2 9 9l3 13 3-13Z', opacity: '.55' }]]];
+(async () => {
+  const lines = (await (await fetch('icons.txt')).text()).split('\n')
+    .map(l => l.trim()).filter(l => l && !l.startsWith('#')).map(l => l.split(/\s+/));
+  const grid = document.getElementById('grid');
+  grid.style.gridTemplateColumns = `repeat(${COLS}, ${S}px)`;
+  grid.style.gridAutoRows = `${S}px`;
+  const missing = [];
+  for (const [name, lucideName] of lines) {
+    let node, fill = 'none';
+    if (lucideName === 'logo') node = LOGO;
+    else if (lucideName === 'star-filled') { node = lucide.icons.Star; fill = '#fff'; }
+    else node = lucide.icons[pascal(lucideName)];
+    const cell = document.createElement('div');
+    if (!node) { missing.push(name + ' ' + lucideName); grid.append(cell); continue; }
+    const svg = lucide.createElement(node);
+    svg.setAttribute('width', S); svg.setAttribute('height', S);
+    svg.setAttribute('stroke', '#fff'); svg.setAttribute('stroke-width', STROKE);
+    svg.setAttribute('fill', fill);
+    cell.append(svg);
+    grid.append(cell);
+  }
+  const rows = Math.ceil(lines.length / COLS);
+  document.getElementById('report').textContent = JSON.stringify({ count: lines.length, rows, missing });
+})();
+</script>
+</body>
+</html>

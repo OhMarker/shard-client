@@ -81,12 +81,16 @@ public final class HudManager {
         pose.translate(x, y);
         float s = (float) (hudScale * m.scale());
         pose.scale(s, s);
+        // Text and icons pick their raster density from this, so a scaled-up element stays sharp.
+        double before = Render2D.pixelsPerUnit();
+        Render2D.setPixelsPerUnit(s * Minecraft.getInstance().getWindow().getGuiScale());
         try {
             m.render(g, delta);
         } catch (RuntimeException e) {
             ShardClient.LOGGER.error("HUD module {} failed to render; disabling it", m.name(), e);
             m.setEnabled(false);
         } finally {
+            Render2D.setPixelsPerUnit(before);
             pose.popMatrix();
         }
     }

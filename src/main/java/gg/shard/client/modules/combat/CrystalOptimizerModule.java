@@ -72,7 +72,7 @@ public final class CrystalOptimizerModule extends Module {
 
     @Override
     public String icon() {
-        return "item:end_crystal";
+        return "crystal";
     }
 
     @Override

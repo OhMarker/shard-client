@@ -40,6 +40,6 @@ public final class ClockModule extends HudModule {
 
     @Override
     public String icon() {
-        return "item:clock";
+        return "clock";
     }
 }

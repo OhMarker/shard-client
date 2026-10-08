@@ -29,6 +29,6 @@ public final class ServerAddressModule extends HudModule {
 
     @Override
     public String icon() {
-        return "glyph:server";
+        return "server";
     }
 }
