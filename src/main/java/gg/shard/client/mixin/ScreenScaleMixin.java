@@ -36,6 +36,9 @@ abstract class ScreenScaleMixin implements ScaledScreen {
         return shard$factor == 1.0 ? height : ScreenScale.virtualSize(height, shard$factor);
     }
 
+    // Before 1.21.9 the HUD (and Fabric's layers) is drawn by Gui before the screen, not from
+    // renderBackground, so there is nothing to unscale.
+    //? if >=1.21.9 {
     /**
      * 1.21.11 draws the deferred subtitles, and with them Fabric's mod HUD layers (Shard's HUD),
      * from inside Screen.renderBackground; they must not get the screen's scale.
@@ -53,4 +56,5 @@ abstract class ScreenScaleMixin implements ScaledScreen {
         original.call(gui);
         g.pose().popMatrix();
     }
+    //?}
 }

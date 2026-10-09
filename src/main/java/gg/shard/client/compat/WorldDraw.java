@@ -14,7 +14,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 /**
  * What Shard's world overlays need to draw: the camera-relative pose, the buffers and the camera
  * position. Fabric's WorldRenderContext provides it from 1.21.10; 1.21.9's Fabric API has no
- * world render events, so LevelRendererEventsMixin builds it there. From 26.2 the level pass has
+ * world render events, so LevelRendererEventsMixin builds it there; before 1.21.9 Fabric's older
+ * rendering.v1.WorldRenderContext provides it. From 26.2 the level pass has
  * no immediate buffers: shapes are submitted to the frame's SubmitNodeCollector instead.
  */
 //? if >=26.2 {
@@ -44,7 +45,11 @@ public record WorldDraw(PoseStack matrices, MultiBufferSource consumers, Vec3 ca
     public static WorldDraw of(net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext ctx) {
         return new WorldDraw(ctx.matrices(), ctx.consumers(), ctx.worldState().cameraRenderState.pos);
     }
-    //?}
+    //?} else if <1.21.9 {
+    /*public static WorldDraw of(net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext ctx) {
+        return new WorldDraw(ctx.matrixStack(), ctx.consumers(), ctx.camera().getPosition());
+    }
+    *///?}
 
     public boolean ready() {
         return consumers != null;

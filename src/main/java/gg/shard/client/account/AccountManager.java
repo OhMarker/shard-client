@@ -220,12 +220,22 @@ public final class AccountManager {
      */
     static void apply(Minecraft mc, AccountBridge.Session session) {
         MinecraftSessionAccessor access = (MinecraftSessionAccessor) mc;
+        //? if >=1.21.9 {
         User user = new User(session.name(), session.profileId(), session.accessToken(),
                 Optional.ofNullable(session.xuid()), Optional.ofNullable(session.clientId()));
+        //?} else {
+        /*User user = new User(session.name(), session.profileId(), session.accessToken(),
+                Optional.ofNullable(session.xuid()), Optional.ofNullable(session.clientId()), User.Type.MSA);
+        *///?}
         access.shard$setUser(user);
+        //? if >=1.21.9 {
+        boolean offline = access.shard$offlineDeveloperMode();
+        //?} else {
+        /*boolean offline = false;
+        *///?}
 
         UserApiService api;
-        if (access.shard$offlineDeveloperMode()) {
+        if (offline) {
             api = UserApiService.OFFLINE;
         } else {
             try {
@@ -249,17 +259,21 @@ public final class AccountManager {
                 return UserApiService.OFFLINE_PROPERTIES;
             }
         }, Util.nonCriticalIoPool()));
-        if (access.shard$offlineDeveloperMode()) {
+        if (offline) {
             access.shard$setProfileFuture(CompletableFuture.completedFuture(null));
         } else {
             UUID id = user.getProfileId();
+            //? if >=1.21.9 {
             access.shard$setProfileFuture(CompletableFuture.supplyAsync(() -> mc.services().sessionService().fetchProfile(id, true), Util.nonCriticalIoPool()));
+            //?} else {
+            /*access.shard$setProfileFuture(CompletableFuture.supplyAsync(() -> mc.getMinecraftSessionService().fetchProfile(id, true), Util.nonCriticalIoPool()));
+            *///?}
         }
         //? if >=26.2 {
         /*// 26.2 added the friends list: the social manager also takes the account's friends service
         // and the background updater that polls it (replaced here, the old one stopped).
         //? if >=26.3 {
-        /^var friends = MinecraftServicesDiscoveryService.create(access.shard$proxy(), !access.shard$offlineDeveloperMode())
+        /^var friends = MinecraftServicesDiscoveryService.create(access.shard$proxy(), !offline)
                 .createFriendsService(user.getAccessToken());
         ^///?} else {
         var friends = new YggdrasilAuthenticationService(access.shard$proxy()).createFriendsService(user.getAccessToken());

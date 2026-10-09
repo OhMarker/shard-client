@@ -15,7 +15,9 @@ import gg.shard.client.module.setting.StringSetting;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+//? if >=1.21.9 {
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
+//?}
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -169,7 +171,12 @@ public final class CrosshairModule extends Module implements PanelPreview {
         if (!isEnabled()) return false;
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null) return false;
+        //? if >=1.21.9 {
         if (mc.debugEntries != null && mc.debugEntries.isCurrentlyEnabled(DebugScreenEntries.THREE_DIMENSIONAL_CROSSHAIR)) return false;
+        //?} else {
+        /*// Before 1.21.9 the F3 screen always brings the 3D crosshair (first person, full debug info).
+        if (mc.gui.shouldRenderDebugCrosshair()) return false;
+        *///?}
         return true;
     }
 
@@ -326,7 +333,7 @@ public final class CrosshairModule extends Module implements PanelPreview {
             Render2D.gradientV(g, x, y, w, h, 0xFF6FA0F0, 0xFFBFD6FF);
         } else {
             try {
-                TextureAtlasSprite sprite = Minecraft.getInstance().getAtlasManager().get(BG_SPRITES[background]);
+                TextureAtlasSprite sprite = gg.shard.client.compat.Atlases.sprite(BG_SPRITES[background]);
                 int tint = background == 1 ? 0xFF79C05A : 0xFFFFFFFF;
                 for (int ty = y; ty < y + h; ty += 32) for (int tx = x; tx < x + w; tx += 32) g.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, tx, ty, 32, 32, tint);
             } catch (RuntimeException e) {

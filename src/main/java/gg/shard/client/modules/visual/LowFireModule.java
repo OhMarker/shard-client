@@ -88,7 +88,7 @@ public final class LowFireModule extends Module implements PanelPreview {
             String name = vanilla.contents().name().getPath();
             Material custom = name.endsWith("fire_0") ? CUSTOM_FIRE_0 : name.endsWith("fire_1") ? CUSTOM_FIRE_1 : null;
             if (custom == null || !vanilla.contents().name().getNamespace().equals("minecraft") || name.contains("soul")) return vanilla;
-            return Minecraft.getInstance().getAtlasManager().get(custom);
+            return gg.shard.client.compat.Atlases.sprite(custom);
         } catch (RuntimeException e) {
             return vanilla;
         }
@@ -161,8 +161,8 @@ public final class LowFireModule extends Module implements PanelPreview {
         TextureAtlasSprite fire;
         TextureAtlasSprite soul;
         try {
-            fire = Minecraft.getInstance().getAtlasManager().get(fireMaterial(ModelBakery.FIRE_1));
-            soul = Minecraft.getInstance().getAtlasManager().get(SOUL_FIRE);
+            fire = gg.shard.client.compat.Atlases.sprite(fireMaterial(ModelBakery.FIRE_1));
+            soul = gg.shard.client.compat.Atlases.sprite(SOUL_FIRE);
         } catch (RuntimeException e) {
             return 0;
         }

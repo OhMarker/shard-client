@@ -162,8 +162,17 @@ final class AccountSwitcher {
         PlayerSkin skin;
         try {
             if (uuid == null) uuid = mc.getUser().getProfileId();
+            //? if >=1.21.9 {
             ResolvableProfile profile = profiles.computeIfAbsent(uuid, ResolvableProfile::createUnresolved);
             skin = mc.playerSkinRenderCache().getOrDefault(profile).playerSkin();
+            //?} else {
+            /*// Before 1.21.9: resolve the profile (textures) through the skull cache, then the skin manager.
+            ResolvableProfile profile = profiles.computeIfAbsent(uuid, id -> new ResolvableProfile(java.util.Optional.empty(), java.util.Optional.of(id),
+                    new com.mojang.authlib.properties.PropertyMap()));
+            ResolvableProfile resolved = profile.pollResolve();
+            if (resolved != null && resolved != profile) profiles.put(uuid, resolved);
+            skin = resolved == null ? net.minecraft.client.resources.DefaultPlayerSkin.get(uuid) : mc.getSkinManager().getInsecureSkin(resolved.gameProfile());
+            *///?}
         } catch (RuntimeException e) {
             skin = net.minecraft.client.resources.DefaultPlayerSkin.get(uuid);
         }

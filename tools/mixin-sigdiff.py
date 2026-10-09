@@ -1,10 +1,16 @@
-# Lists every mixin target method (by name) whose descriptor differs between two 26.x versions:
+# Lists every mixin target method (by name) whose descriptor differs between two versions:
 # handler signatures (@Inject arguments, @ModifyReturnValue types) that need a versioned block.
 # Usage: python tools/mixin-sigdiff.py <older mc> <newer mc>   (after compiling the newer node)
 import os, re, subprocess, sys, json
 old, new = sys.argv[1], sys.argv[2]
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-def jar(v): return os.path.expanduser(rf"~\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged-deobf\{v}\minecraft-merged-deobf-{v}.jar")
+def jar(v):
+    p = os.path.expanduser(rf"~\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged-deobf\{v}\minecraft-merged-deobf-{v}.jar")
+    if os.path.exists(p): return p
+    # 1.21.x: the Mojang-mapped (named) jar Loom remapped for that version.
+    import glob
+    found = glob.glob(os.path.expanduser(rf"~\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged\{v}-loom.mappings*\*.jar"))
+    return found[0] if found else p
 def descs(v, cls):
     r = subprocess.run(["javap", "-p", "-s", "-cp", jar(v), cls], capture_output=True, text=True)
     if r.returncode: return None

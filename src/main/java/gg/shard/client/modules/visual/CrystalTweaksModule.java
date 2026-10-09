@@ -81,8 +81,24 @@ public final class CrystalTweaksModule extends Module implements PanelPreview {
     public void adjustState(EndCrystal crystal, EndCrystalRenderState state) {
         if (!isEnabled()) return;
         if (!base.get()) state.showsBottom = false;
+        //? if >=1.21.9 {
         if (aimOutline.get() && Minecraft.getInstance().crosshairPickEntity == crystal) state.outlineColor = aimColor.get();
+        //?}
     }
+
+    //? if <1.21.9 {
+    /*/^*
+     * Before 1.21.9 the glow outline belongs to the entity (LevelRenderer asks Minecraft whether it
+     * glows and takes its team colour): the outline colour Shard gives this crystal, or 0. The
+     * Crystal Optimizer's placed highlight wins over the aim outline, as on later versions.
+     ^/
+    public int outline(EndCrystal crystal) {
+        int placed = gg.shard.client.ShardClient.modules().get(gg.shard.client.modules.combat.CrystalOptimizerModule.class)
+                .highlightOutline(crystal.getX(), crystal.getY(), crystal.getZ());
+        if (placed != 0) return placed;
+        return isEnabled() && aimOutline.get() && Minecraft.getInstance().crosshairPickEntity == crystal ? aimColor.get() : 0;
+    }
+    *///?}
 
     /** True when colours or opacity differ from vanilla, so the crystal is drawn as two tinted models. */
     public boolean recolours() {

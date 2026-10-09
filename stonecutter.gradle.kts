@@ -27,8 +27,8 @@ stonecutter parameters {
     replacements.regex(current.parsed >= "1.21.11") {
         replace("""\.getLocation\(\)""", ".getIdentifier()", """\.getIdentifier\(\)""", ".getLocation()")
     }
-    // ...and GuiGraphics.submitOutline() back to renderOutline().
-    replacements.regex(current.parsed >= "1.21.11") {
+    // ...and GuiGraphics.submitOutline() back to renderOutline() (1.21.9 and 1.21.10 only had submitOutline).
+    replacements.regex(current.parsed >= "1.21.11" || current.parsed < "1.21.9") {
         replace("""\.submitOutline\(""", ".renderOutline(", """\.renderOutline\(""", ".submitOutline(")
     }
     // Screen.init(Minecraft, int, int) lost its Minecraft parameter in 1.21.11 (mixin descriptors).
@@ -49,6 +49,39 @@ stonecutter parameters {
     moved("1.21.11", "RenderTypes", "gg.shard.client.compat", "net.minecraft.client.renderer.rendertype")
     // JSpecify is only on the classpath from 1.21.11; JetBrains annotations (TYPE_USE too) before.
     moved("1.21.11", "Nullable", "org.jetbrains.annotations", "org.jspecify.annotations")
+    // ---- 1.21.9 ------------------------------------------------------------------------------
+    // Before 1.21.9 the GLFW window handle is Window.getWindow(), InputConstants.isKeyDown takes
+    // that handle, and the modifier-key checks are static on Screen.
+    replacements.regex(current.parsed >= "1.21.9") {
+        replace("""\.getWindow\(\)\.getWindow\(\)""", ".getWindow().handle()", """\.getWindow\(\)\.handle\(\)""", ".getWindow().getWindow()")
+    }
+    replacements.regex(current.parsed >= "1.21.9") {
+        replace("""\bisKeyDown\(mc\.getWindow\(\)\.getWindow\(\), """, "isKeyDown(mc.getWindow(), ", """\bisKeyDown\(mc\.getWindow\(\), """, "isKeyDown(mc.getWindow().getWindow(), ")
+    }
+    replacements.regex(current.parsed >= "1.21.9") {
+        replace("""\bnet\.minecraft\.client\.gui\.screens\.Screen\.has(Shift|Alt|Control)Down\(\)""", "minecraft.has\$1Down()",
+            """\bminecraft\.has(Shift|Alt|Control)Down\(\)""", "net.minecraft.client.gui.screens.Screen.has\$1Down()")
+    }
+    // Screen input events arrived in 1.21.9; older versions use same-named stand-ins in
+    // gg.shard.client.compat (DesignScreen extends compat.InputScreen there).
+    moved("1.21.9", "MouseButtonEvent", "gg.shard.client.compat", "net.minecraft.client.input")
+    moved("1.21.9", "KeyEvent", "gg.shard.client.compat", "net.minecraft.client.input")
+    moved("1.21.9", "CharacterEvent", "gg.shard.client.compat", "net.minecraft.client.input")
+    // PlayerSkin moved to world.entity.player in 1.21.9 (and names its textures by ClientAsset;
+    // compat.ClientAsset stands in before).
+    moved("1.21.9", "PlayerSkin", "net.minecraft.client.resources", "net.minecraft.world.entity.player")
+    moved("1.21.9", "ClientAsset", "gg.shard.client.compat", "net.minecraft.core")
+    // No block outline render state before 1.21.9 (compat stand-in built from Fabric's BLOCK_OUTLINE).
+    moved("1.21.9", "BlockOutlineRenderState", "gg.shard.client.compat", "net.minecraft.client.renderer.state")
+    // Screen.renderWithTooltip became renderWithTooltipAndSubtitles in 1.21.9 (mixin target).
+    replacements.regex(current.parsed >= "1.21.9") {
+        replace("""\brenderWithTooltip\b""", "renderWithTooltipAndSubtitles", """\brenderWithTooltipAndSubtitles\b""", "renderWithTooltip")
+    }
+    // Before 1.21.9 (no mannequins) the player data fields are on Player, not Avatar.
+    replacements.regex(current.parsed >= "1.21.9") {
+        replace("""\bnet\.minecraft\.world\.entity\.player\.Player\.class\b""", "net.minecraft.world.entity.Avatar.class",
+            """\bnet\.minecraft\.world\.entity\.Avatar\.class\b""", "net.minecraft.world.entity.player.Player.class")
+    }
     // ---- 26.1 (unobfuscated; Mojang's own names) ------------------------------------------------
     // GUI drawing became render-state extraction: GuiGraphics is GuiGraphicsExtractor and the
     // drawing calls Shard uses lost their render/draw prefixes.

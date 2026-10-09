@@ -307,3 +307,71 @@ features, screens (`-PfakeBridge`), cosmetics and drop2 give the same summaries 
 taller window's layout numbers differ); screenshots compared side by side. After the 26.2/26.3
 changes, 1.21.11 (default pass), 1.21.10 and 26.1 (default pass, `-PcountInjections`) were run
 again: same summaries, no injection failures, same screenshots.
+
+### 1.21.8 (also 1.21.7 and 1.21.6)
+- 1.21.6, 1.21.7 and 1.21.8 have the same classes and the same descriptors for every Shard mixin
+  target (`tools/mixin-sigdiff.py 1.21.6 1.21.8` is empty; 1.21.7 only adds
+  `TrackingItemStackRenderState`, 1.21.8 `GraphicsWorkarounds`). Same source, no code between them.
+  GUI is already the render-state GuiGraphics (Matrix3x2fStack, pipelines), so screens and HUD
+  needed almost nothing.
+- **No submit API**: entities, layers, items, banners, shields and crystals draw straight into a
+  `MultiBufferSource` (`render(state, pose, buffers, light)` instead of `submit`). Every mixin
+  that wraps a `submitModel`/`submitModelPart` has a `<1.21.9` block wrapping `Model.renderToBuffer`
+  / `ModelPart.render` (the 4-int overload has no colour: call the 5-int one to tint), and
+  `Material.buffer` / `ShieldModel.renderType` for the translucent shield. BandanaLayer overrides
+  `render(PoseStack, MultiBufferSource, ...)`; EndCrystalRendererMixin draws the two tinted models
+  into the same (or a translucent) buffer; armour Hit Color reads the wearer's hurt state from
+  `ItemTints.wearerHurt()` (set around `LivingEntityRenderer.render`), since `renderLayers` gets
+  no render state.
+- **Glow outlines belong to the entity**, not the render state (`EntityRenderState.outlineColor`
+  is 1.21.9+): LevelRendererEntitiesMixin wraps `Minecraft.shouldEntityAppearGlowing` and
+  `Entity.getTeamColor` in `collectVisibleEntities`/`renderEntities` for crystals with a Shard
+  outline (`CrystalTweaksModule.outline`). `extractVisibleEntities` is `collectVisibleEntities`.
+- **Players**: `PlayerRenderer`/`PlayerRenderState`/`AbstractClientPlayer` (no Avatar);
+  `PlayerSkin` is `client.resources.PlayerSkin(texture, textureUrl, capeTexture, elytraTexture,
+  model, secure)` with ids (global `moved` rule; `compat.ClientAsset` stands in for
+  `ClientAsset.Texture` so CapeLibrary is unchanged); `ItemOwner` is `LivingEntity`. No
+  `PlayerSkinRenderCache`: the account switcher resolves the profile with
+  `ResolvableProfile.pollResolve()` and asks the `SkinManager`.
+- **Input events** (`MouseButtonEvent`, `KeyEvent`, `CharacterEvent`) are 1.21.9: compat records
+  of the same names (global `moved` rules) and `compat.InputScreen`, which DesignScreen extends
+  before 1.21.9, turn vanilla's loose `mouseClicked(x, y, button)`/`keyPressed(key, scan, mods)`
+  into the event methods (double click = same button within 250 ms, as 1.21.9's MouseHandler).
+  `minecraft.hasShiftDown()` is static `Screen.hasShiftDown()`; `Window.handle()` is
+  `getWindow()`; `InputConstants.isKeyDown` takes the handle (all global rules).
+- **World events**: Fabric API 0.128-0.136 has the old `rendering.v1.WorldRenderEvents`:
+  AFTER_ENTITIES and BLOCK_OUTLINE (`BlockOutlineContext`: pos, state, entity). No
+  `BlockOutlineRenderState`: `compat.BlockOutlineRenderState` (pos, shape for the camera entity,
+  translucent pass) is built from it. LevelRendererEventsMixin is now `>=1.21.9 <1.21.10`.
+  `HudElementRegistry` exists (the HUD is unchanged). `KeyMapping.Category` is a translation key.
+- **Smaller ones**: no `AtlasManager` (`compat.Atlases.sprite(material)` = `material.sprite()`);
+  no `SkyRenderState` (SkyRendererMixin wraps `ClientLevel.getSkyColor` and
+  `getSunriseOrSunsetColor` in LevelRenderer's sky-pass lambda with `method = "*"`); flames are
+  `EntityRenderDispatcher.renderFlame` (`PoseStack.scale`, `Material.sprite()`); the screen fire
+  looks its sprite up itself; no `debugEntries` (F3+B is `EntityRenderDispatcher.setRenderHitBoxes`,
+  3D crosshair `Gui.shouldRenderDebugCrosshair`); `ShapeRenderer.renderLineBox` takes the PoseStack;
+  `RenderType.pipeline()` does not exist; `FontDescription` does not exist (`Style.withFont(id)`);
+  `FontManager.createFontSet` does not exist (`new FontSet(textureManager, id)` + `reload`);
+  `Screen.renderWithTooltip` (was renamed AndSubtitles in 1.21.9) and `renderBackground` does not
+  draw the HUD/subtitles (the unscale wrap is 1.21.9+); `ManageServerScreen` is
+  `EditServerScreen(parent, callback, data)` without a title; `User` takes a `User.Type` (MSA);
+  no offline developer mode and no `Minecraft.services()` (`getMinecraftSessionService()`);
+  `PacketUtils.ensureRunningOnSameThread` takes a `BlockableEventLoop`.
+- Static checks: `tools/mixin-targets.py` now finds the 1.21.x mapped jar, fully qualified
+  annotations (`@com.llamalad7...WrapOperation`) and `target = CONSTANT` strings. It still does not
+  check @Shadow members or @Accessor names: the FontManager shadow and `offlineDeveloperMode`
+  accessor only failed at start-up, so run `-PcountInjections` early.
+- Vanilla differences in the screenshots: different title panorama; with no world clouds at FOV 70
+  the horizon sits slightly higher than on 1.21.10. FOV 26 (drop2) is out of range here and on
+  1.21.10 (the smoke pass logs "Illegal option value"; harmless).
+
+Verified (2026-10-09): build + all JUnit tests on every node 1.21.6 to 26.3. 1.21.8: default
+(`-PcountInjections`), features, screens (`-PfakeBridge`), cosmetics and drop2 give the same
+summaries as 1.21.10, screenshots compared side by side. 1.21.7: default pass; 1.21.6: default
+pass and drop2 (oldest Fabric API), all with `-PcountInjections`, same summaries as 1.21.8. After
+the changes, 1.21.11 (default), 1.21.9 and 26.3 (default, `-PcountInjections`) were run again:
+same summaries and screenshots.
+For 1.21.5 and older: re-run `tools/mixin-sigdiff.py 1.21.5 1.21.6` and the static check first;
+1.21.5 still has the pre-1.21.6 GUI (PoseStack GuiGraphics, no render pipelines in GUI, Fabric
+`HudLayerRegistrationCallback`/`HudRenderCallback` instead of `HudElementRegistry`), so expect the
+HUD, screens and the GUI-scale mixins to need the most work there.

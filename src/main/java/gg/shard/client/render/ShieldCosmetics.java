@@ -6,7 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -34,8 +33,8 @@ public final class ShieldCosmetics {
     private static final Set<ItemDisplayContext> HELD = Set.of(ItemDisplayContext.FIRST_PERSON_LEFT_HAND, ItemDisplayContext.FIRST_PERSON_RIGHT_HAND,
             ItemDisplayContext.THIRD_PERSON_LEFT_HAND, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND);
 
-    public static void push(@Nullable ItemOwner owner, ItemDisplayContext context) {
-        STACK.push(new Frame(owner == null ? null : owner.asLivingEntity(), context));
+    public static void push(@Nullable LivingEntity owner, ItemDisplayContext context) {
+        STACK.push(new Frame(owner, context));
     }
 
     public static void pop() {

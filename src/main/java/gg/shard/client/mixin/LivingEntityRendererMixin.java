@@ -22,4 +22,22 @@ abstract class LivingEntityRendererMixin {
         if (state.hasRedOverlay && module.skipsTint(entity)) state.hasRedOverlay = false;
         if (state.hasRedOverlay && !ShardClient.modules().get(gg.shard.client.modules.visual.HitColorModule.class).showsOverlay(entity)) state.hasRedOverlay = false;
     }
+
+    //? if <1.21.9 {
+    /*// Before 1.21.9 the armour layers draw during render without the wearer's state; Hit Color on
+    // armour reads whether the wearer shows the hurt overlay from ItemTints.
+    @Inject(method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("HEAD"))
+    private void shard$wearer(LivingEntityRenderState state, com.mojang.blaze3d.vertex.PoseStack pose, net.minecraft.client.renderer.MultiBufferSource buffers,
+                              int light, CallbackInfo ci) {
+        gg.shard.client.render.ItemTints.setWearerHurt(state.hasRedOverlay);
+    }
+
+    @Inject(method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("RETURN"))
+    private void shard$wearerEnd(LivingEntityRenderState state, com.mojang.blaze3d.vertex.PoseStack pose, net.minecraft.client.renderer.MultiBufferSource buffers,
+                                 int light, CallbackInfo ci) {
+        gg.shard.client.render.ItemTints.setWearerHurt(false);
+    }
+    *///?}
 }

@@ -179,7 +179,7 @@ public final class DisplayModule extends Module {
     public void setBorderless(boolean on) {
         Minecraft mc = Minecraft.getInstance();
         Window window = mc.getWindow();
-        long handle = window.handle();
+        long handle = mc.getWindow().handle();
         if (on == borderless) return;
         if (on) {
             //? if >=26.3 {

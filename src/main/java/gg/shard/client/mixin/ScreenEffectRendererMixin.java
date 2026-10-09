@@ -45,10 +45,21 @@ abstract class ScreenEffectRendererMixin {
     }
     *///?} else {
     /** Custom fire texture on your screen. */
+    //? if >=1.21.9 {
     @org.spongepowered.asm.mixin.injection.ModifyVariable(method = "renderFire", at = @At("HEAD"), argsOnly = true, require = 0)
     private static net.minecraft.client.renderer.texture.TextureAtlasSprite shard$fireSprite(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite) {
         return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).screenSprite(sprite) : sprite;
     }
+    //?} else {
+    /*// Before 1.21.9 renderFire looks the sprite up itself (FIRE_1).
+    @WrapOperation(method = "renderFire", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/resources/model/Material;sprite()Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;"), require = 0)
+    private static net.minecraft.client.renderer.texture.TextureAtlasSprite shard$fireSprite(net.minecraft.client.resources.model.Material material,
+            Operation<net.minecraft.client.renderer.texture.TextureAtlasSprite> original) {
+        net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = original.call(material);
+        return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).screenSprite(sprite) : sprite;
+    }
+    *///?}
 
     @ModifyArg(method = "renderFire", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(FFF)V"), index = 1, require = 0)
     private static float shard$fireHeight(float y) {

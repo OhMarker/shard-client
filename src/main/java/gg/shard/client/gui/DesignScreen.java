@@ -19,7 +19,12 @@ import org.joml.Matrix3x2fStack;
  * <p>While a design screen is open, vanilla's menu blur radius follows Settings → Appearance →
  * Blur strength; the user's own value is restored when the screen goes away.
  */
+//? if >=1.21.9 {
 public abstract class DesignScreen extends Screen {
+//?} else {
+/*// Before 1.21.9 Screen input took loose arguments; InputScreen turns them into the event methods below.
+public abstract class DesignScreen extends gg.shard.client.compat.InputScreen {
+*///?}
     protected double pageScale = 1.0;
     protected int designW = 1;
     protected int designH = 1;

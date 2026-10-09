@@ -28,6 +28,20 @@ public final class ItemTints {
         return shield;
     }
 
+    /**
+     * Before 1.21.9 armour is drawn while its wearer renders, without the wearer's render state:
+     * LivingEntityRendererMixin marks a wearer with the hurt overlay here for EquipmentLayerRendererMixin.
+     */
+    private static boolean wearerHurt;
+
+    public static void setWearerHurt(boolean hurt) {
+        wearerHurt = hurt;
+    }
+
+    public static boolean wearerHurt() {
+        return wearerHurt;
+    }
+
     /** True while a see-through shield is being drawn (needs a translucent render type). */
     public static boolean shieldTranslucent() {
         return alpha(shield) < 255;

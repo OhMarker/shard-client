@@ -140,8 +140,15 @@ public final class CosmeticsModule extends Module {
         if (texture == null) return skin;
         boolean elytra = onElytra.get();
         PlayerSkin cached = patched.get(skin);
+        //? if >=1.21.9 {
         if (cached != null && cached.cape() == texture && (cached.elytra() == texture) == elytra) return cached;
         PlayerSkin out = new PlayerSkin(skin.body(), texture, elytra ? texture : skin.elytra(), skin.model(), skin.secure());
+        //?} else {
+        /*// Before 1.21.9 a skin names its cape and elytra textures by id.
+        Identifier cape = texture.texturePath();
+        if (cached != null && cached.capeTexture() == cape && (cached.elytraTexture() == cape) == elytra) return cached;
+        PlayerSkin out = new PlayerSkin(skin.texture(), skin.textureUrl(), cape, elytra ? cape : skin.elytraTexture(), skin.model(), skin.secure());
+        *///?}
         patched.put(skin, out);
         return out;
     }
