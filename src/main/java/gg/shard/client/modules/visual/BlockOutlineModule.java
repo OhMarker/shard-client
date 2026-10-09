@@ -1,7 +1,5 @@
 package gg.shard.client.modules.visual;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import gg.shard.client.compat.Lines;
 import gg.shard.client.compat.WorldDraw;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
@@ -47,14 +45,13 @@ public final class BlockOutlineModule extends Module {
 
     /** Returns false to cancel vanilla's outline after drawing ours. */
     public boolean render(WorldDraw ctx, BlockOutlineRenderState state) {
-        if (!isEnabled() || ctx.consumers() == null) return true;
+        if (!isEnabled() || !ctx.ready()) return true;
         Minecraft mc = Minecraft.getInstance();
         Vec3 cam = ctx.camera();
         BlockPos pos = state.pos();
         int c = color.get();
         if (crystalSpot.get() && mc.level != null && freeCrystalSpot(mc, pos)) c = spotColor.get();
-        VertexConsumer lines = ctx.consumers().getBuffer(Lines.type(width.get()));
-        Lines.shape(ctx.matrices(), lines, state.shape(), pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, c, width.get());
+        ctx.outline(state.shape(), pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, c, width.get(), state.isTranslucent());
         return false;
     }
 

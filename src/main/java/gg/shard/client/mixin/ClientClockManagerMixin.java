@@ -13,9 +13,16 @@ import org.spongepowered.asm.mixin.injection.At;
  * (Level.getDayTime is gone), so the client's clocks report the pinned time. The server's clocks
  * (and so mobs, crops and everything else) are untouched.
  ^/
+// 26.3: each clock instance answers totalTicks() itself.
+//? if >=26.3 {
+/^@Mixin(ClientClockManager.ClientClockInstance.class)
+abstract class ClientClockManagerMixin {
+    @ModifyReturnValue(method = "totalTicks", at = @At("RETURN"), require = 0)
+^///?} else {
 @Mixin(ClientClockManager.class)
 abstract class ClientClockManagerMixin {
     @ModifyReturnValue(method = "getTotalTicks", at = @At("RETURN"), require = 0)
+//?}
     private long shard$time(long original) {
         if (!ShardClient.isReady()) return original;
         long fixed = ShardClient.modules().get(WeatherTimeModule.class).fixedTime();

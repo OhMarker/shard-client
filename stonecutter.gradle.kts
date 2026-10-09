@@ -146,4 +146,109 @@ stonecutter parameters {
     replacements.regex(current.parsed >= "26.1") {
         replace("""method = "submitEntityRenderState"""", "method = \"entity\"", """method = "entity"""", "method = \"submitEntityRenderState\"")
     }
+    // ---- 26.2 --------------------------------------------------------------------------------
+    // The in-game HUD class Gui is Hud (same package), and a new Gui (Minecraft.gui) owns the
+    // screen, overlay and toasts; the HUD is Minecraft.gui.hud. In src/ "Gui" always means the HUD;
+    // a quoted "net.minecraft.client.gui.Gui" (mixin targets = ...) is the new class and is kept.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bGui\b(?!")""", "Hud", """\bHud\b(?!")""", "Gui")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        // Lookaheads: the 26.1 getChat().addMessage rule matches the same text.
+        replace("""\.gui(?=\.getChat\()""", ".gui.hud", """\.gui\.hud(?=\.getChat\()""", ".gui")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.setScreen\(""", "\$1.gui.setScreen(",
+            """\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.gui\.setScreen\(""", "\$1.setScreen(")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.screen\b""", "\$1.gui.screen()",
+            """\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.gui\.screen\(\)""", "\$1.screen")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.getOverlay\(\)""", ".gui.overlay()", """\.gui\.overlay\(\)""", ".getOverlay()")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.getToastManager\(\)""", ".gui.toastManager()", """\.gui\.toastManager\(\)""", ".getToastManager()")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.getMainRenderTarget\(\)""", ".gameRenderer.mainRenderTarget()", """\.gameRenderer\.mainRenderTarget\(\)""", ".getMainRenderTarget()")
+    }
+    // Section rebuilds moved from LevelRenderer to the new LevelExtractor.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.levelRenderer\.allChanged\(\)""", ".levelExtractor.allChanged()", """\.levelExtractor\.allChanged\(\)""", ".levelRenderer.allChanged()")
+    }
+    // F1 (Options.hideGui) is Hud's own flag (isHidden/toggle). Writes first; the read rule skips them.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""mc\.options\.hideGui = (true|false);""", "if (mc.gui.hud.isHidden() != \$1) mc.gui.hud.toggle();",
+            """if \(mc\.gui\.hud\.isHidden\(\) != (true|false)\) mc\.gui\.hud\.toggle\(\);""", "mc.options.hideGui = \$1;")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""mc\.options\.hideGui(?! =)""", "mc.gui.hud.isHidden()", """mc\.gui\.hud\.isHidden\(\)(?! !=)""", "mc.options.hideGui")
+    }
+    // Mixin target renames (ItemInHandRenderer itself is gone in 26.3).
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""method = "renderArmWithItem"""", "method = \"submitArmWithItem\"", """method = "submitArmWithItem"""", "method = \"renderArmWithItem\"")
+    }
+    // Entity type constants moved to EntityTypes.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bEntityType\.(?=[A-Z_]+\b)""", "net.minecraft.world.entity.EntityTypes.", """\bnet\.minecraft\.world\.entity\.EntityTypes\.""", "EntityType.")
+    }
+    // TextureFormat is GpuFormat (top-level blaze3d package on 26.2, renderpearl.api on 26.3; RGBA8
+    // is RGBA8_UNORM). One rule per name: replacements never chain.
+    val gpuFormatPkg = if (current.parsed >= "26.3") "renderpearl\$1api" else "blaze3d"
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bmojang([./])blaze3d\1textures\1TextureFormat\b""", "mojang\$1$gpuFormatPkg\$1GpuFormat",
+            """\bmojang([./])(blaze3d|renderpearl\1api)\1GpuFormat\b""", "mojang\$1blaze3d\$1textures\$1TextureFormat")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bTextureFormat\.RGBA8\b""", "GpuFormat.RGBA8_UNORM", """\bGpuFormat\.RGBA8_UNORM\b""", "TextureFormat.RGBA8")
+    }
+    // ---- 26.3 --------------------------------------------------------------------------------
+    // The GPU abstraction moved from com.mojang.blaze3d to com.mojang.renderpearl.api.
+    moved("26.3", "RenderPipeline", "com.mojang.blaze3d.pipeline", "com.mojang.renderpearl.api.pipeline")
+    moved("26.3", "CommandEncoder", "com.mojang.blaze3d.systems", "com.mojang.renderpearl.api.commands")
+    moved("26.3", "GpuDevice", "com.mojang.blaze3d.systems", "com.mojang.renderpearl.api.device")
+    moved("26.3", "AddressMode", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "FilterMode", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "GpuSampler", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "GpuTexture", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "VertexFormat", "com.mojang.blaze3d.vertex", "com.mojang.renderpearl.api.vertex")
+    // authlib 10: profile results moved to authlib.services (YggdrasilAuthenticationService is gone;
+    // AccountManager uses MinecraftServicesDiscoveryService in place).
+    moved("26.3", "ProfileResult", "com.mojang.authlib.yggdrasil", "com.mojang.authlib.services")
+    // 26.3 runs on SDL3 instead of GLFW. gg.shard.client.compat.GLFW stands in for the parts of
+    // LWJGL's GLFW class Shard uses (key, button and modifier constants carry Minecraft's SDL
+    // values; window and monitor calls go to SDL). Keys and saved keybinds stay in GLFW codes
+    // (compat.KeyCodes converts), so a config works on every version.
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\borg\.lwjgl\.glfw\.GLFWVidMode\b""", "gg.shard.client.compat.GLFW.GLFWVidMode",
+            """\bgg\.shard\.client\.compat\.GLFW\.GLFWVidMode\b""", "org.lwjgl.glfw.GLFWVidMode")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\borg\.lwjgl\.glfw\.GLFW\b""", "gg.shard.client.compat.GLFW", """\bgg\.shard\.client\.compat\.GLFW\b(?!\.GLFWVidMode)""", "org.lwjgl.glfw.GLFW")
+    }
+    // InputConstants: keys are KEYBOARD (scancodes), isKeyDown reads SDL's keyboard state.
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\bInputConstants\.Type\.KEYSYM\b""", "InputConstants.Type.KEYBOARD", """\bInputConstants\.Type\.KEYBOARD\b""", "InputConstants.Type.KEYSYM")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\bInputConstants\.isKeyDown\(mc\.getWindow\(\), """, "InputConstants.isKeyDown(", """\bInputConstants\.isKeyDown\((?!mc\.getWindow)""", "InputConstants.isKeyDown(mc.getWindow(), ")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\.getWindow\(\)\.isMinimized\(\)""", ".getWindow().isIconified()", """\.getWindow\(\)\.isIconified\(\)""", ".getWindow().isMinimized()")
+    }
+    // A swing names its animation and whether the swinging player is told (the server drives swings).
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\.swing\(((?:net\.minecraft\.world\.)?InteractionHand\.MAIN_HAND)\)""", ".swing(\$1, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false)",
+            """\.swing\(((?:net\.minecraft\.world\.)?InteractionHand\.MAIN_HAND), net\.minecraft\.world\.item\.component\.SwingAnimation\.DEFAULT, false\)""", ".swing(\$1)")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        // MouseHandlerInvoker.shard$onMove(window, x, y) callers ('.' stands for the '$').
+        replace("""(?<=\.shard.)onMove\(([^;]+)\);""", "onMove(\$1, 0, 0);", """(?<=\.shard.)onMove\(([^;]+), 0, 0\);""", "onMove(\$1);")
+    }
+    // The remove-entities packet is a record.
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\bpacket\.getEntityIds\(\)""", "packet.entityIds()", """\bpacket\.entityIds\(\)""", "packet.getEntityIds()")
+    }
 }

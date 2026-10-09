@@ -9,9 +9,14 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 /**
  * Swaps vanilla's title screen and server list for Shard's while "Shard title screen" is on
- * (only the exact vanilla classes, so other mods' subclasses are left alone).
+ * (only the exact vanilla classes, so other mods' subclasses are left alone). From 26.2 screens
+ * belong to the new Gui (Minecraft.gui), not to Minecraft.
  */
+//? if >=26.2 {
+/*@Mixin(targets = "net.minecraft.client.gui.Gui")
+*///?} else {
 @Mixin(Minecraft.class)
+//?}
 abstract class MinecraftScreenSwapMixin {
     @ModifyVariable(method = "setScreen", at = @At("HEAD"), argsOnly = true, require = 0)
     private Screen shard$swapScreen(Screen screen) {

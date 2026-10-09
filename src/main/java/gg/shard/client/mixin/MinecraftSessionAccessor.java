@@ -45,6 +45,15 @@ public interface MinecraftSessionAccessor {
     @Accessor("playerSocialManager")
     void shard$setPlayerSocialManager(PlayerSocialManager manager);
 
+    //? if >=26.2 {
+    /*@Accessor("remoteFriendListUpdateHandler")
+    net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler shard$remoteFriendListUpdateHandler();
+
+    @Mutable
+    @Accessor("remoteFriendListUpdateHandler")
+    void shard$setRemoteFriendListUpdateHandler(net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler handler);
+    *///?}
+
     @Mutable
     @Accessor("profileKeyPairManager")
     void shard$setProfileKeyPairManager(ProfileKeyPairManager manager);

@@ -193,7 +193,7 @@ public abstract class Module {
     public JsonObject save() {
         JsonObject out = new JsonObject();
         out.addProperty("enabled", enabled);
-        out.addProperty("keybind", keybind);
+        out.addProperty("keybind", gg.shard.client.compat.KeyCodes.save(keybind));
         JsonObject values = new JsonObject();
         for (Setting<?> s : settings) {
             if (!s.isDefault()) values.add(s.key(), s.toJson());
@@ -215,7 +215,7 @@ public abstract class Module {
      * not know are offered to {@link #migrateSetting} so renamed settings keep their values.
      */
     public void load(JsonObject in, int version) {
-        if (in.has("keybind") && in.get("keybind").isJsonPrimitive()) keybind = in.get("keybind").getAsInt();
+        if (in.has("keybind") && in.get("keybind").isJsonPrimitive()) keybind = gg.shard.client.compat.KeyCodes.load(in.get("keybind").getAsInt());
         if (in.has("settings") && in.get("settings").isJsonObject()) {
             JsonObject values = in.getAsJsonObject("settings");
             for (Map.Entry<String, JsonElement> e : values.entrySet()) {

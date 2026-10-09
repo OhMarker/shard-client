@@ -25,7 +25,14 @@ abstract class SkyRendererMixin {
     *///?}
         SkyModule sky = ShardClient.modules().get(SkyModule.class);
         if (!sky.active(level)) return;
+        //? if >=26.3 {
+        /*// 26.3 keeps the colours as float vectors.
+        int colour = sky.sky(net.minecraft.util.ARGB.colorFromVector3f(state.skyColor), state.sunAngle, level.getRainLevel(partialTick), level.getThunderLevel(partialTick));
+        state.skyColor = net.minecraft.util.ARGB.vector3fFromRGB24(colour);
+        if (!sky.keepsSunriseGlow()) state.sunriseAndSunsetColor = new org.joml.Vector4f();
+        *///?} else {
         state.skyColor = sky.sky(state.skyColor, state.sunAngle, level.getRainLevel(partialTick), level.getThunderLevel(partialTick));
         if (!sky.keepsSunriseGlow()) state.sunriseAndSunsetColor = 0;
+        //?}
     }
 }

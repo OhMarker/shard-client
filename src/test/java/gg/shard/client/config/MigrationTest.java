@@ -90,7 +90,8 @@ class MigrationTest {
 
         assertEquals(2, config.loadedVersion());
         assertFalse(fps.isToggledOn(), "enabled state kept");
-        assertEquals(70, fps.keybind(), "keybind kept");
+        // Saved as GLFW codes; the game's codes differ on 26.3 (SDL).
+        assertEquals(gg.shard.client.compat.KeyCodes.load(70), fps.keybind(), "keybind kept");
         assertEquals(42, fps.size.get(), "unchanged keys load normally");
         assertTrue(fps.custom.get(), "show-background=false became a custom Minimal style");
         assertEquals(Preset.MINIMAL, fps.preset.get());
@@ -191,7 +192,7 @@ class MigrationTest {
         assertEquals("armor-status", armor.key());
         assertEquals("Armor", armor.name());
         assertTrue(armor.isToggledOn());
-        assertEquals(71, armor.keybind());
+        assertEquals(gg.shard.client.compat.KeyCodes.load(71), armor.keybind());
         assertEquals(35, armor.warn.get());
         assertTrue(modules.blacklist().isDisabled("play.example.net", "armor-status"));
     }

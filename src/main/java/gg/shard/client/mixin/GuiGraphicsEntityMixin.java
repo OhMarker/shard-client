@@ -21,12 +21,22 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(GuiGraphics.class)
 abstract class GuiGraphicsEntityMixin {
+    // 26.2 passes the read-only JOML views (Vector3fc, Quaternionfc).
+    //? if >=26.2 {
+    /*@WrapOperation(method = "submitEntityRenderState", at = @At(value = "NEW",
+            target = "(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lorg/joml/Vector3fc;Lorg/joml/Quaternionfc;Lorg/joml/Quaternionfc;IIIIFLnet/minecraft/client/gui/navigation/ScreenRectangle;)Lnet/minecraft/client/gui/render/state/pip/GuiEntityRenderState;"),
+            require = 0)
+    private GuiEntityRenderState shard$followPose(EntityRenderState state, org.joml.Vector3fc translation, org.joml.Quaternionfc rotation, org.joml.Quaternionfc camera,
+                                                  int x0, int y0, int x1, int y1, float scale, ScreenRectangle scissor,
+                                                  Operation<GuiEntityRenderState> original) {
+    *///?} else {
     @WrapOperation(method = "submitEntityRenderState", at = @At(value = "NEW",
             target = "(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lorg/joml/Vector3f;Lorg/joml/Quaternionf;Lorg/joml/Quaternionf;IIIIFLnet/minecraft/client/gui/navigation/ScreenRectangle;)Lnet/minecraft/client/gui/render/state/pip/GuiEntityRenderState;"),
             require = 0)
     private GuiEntityRenderState shard$followPose(EntityRenderState state, Vector3f translation, Quaternionf rotation, Quaternionf camera,
                                                   int x0, int y0, int x1, int y1, float scale, ScreenRectangle scissor,
                                                   Operation<GuiEntityRenderState> original) {
+    //?}
         Matrix3x2f pose = ((GuiGraphics) (Object) this).pose();
         if (pose.m00 == 1f && pose.m11 == 1f && pose.m20 == 0f && pose.m21 == 0f) {
             return original.call(state, translation, rotation, camera, x0, y0, x1, y1, scale, scissor);

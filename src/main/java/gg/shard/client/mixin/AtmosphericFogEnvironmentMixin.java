@@ -32,8 +32,23 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(AirBasedFogEnvironment.class)
 *///?}
 abstract class AtmosphericFogEnvironmentMixin {
+    // 26.3 returns the colour as a float vector.
+    //? if >=26.3 {
+    /*@ModifyReturnValue(method = "getBaseColor", at = @At("RETURN"), require = 0)
+    private Vector3fc shard$fogColour(Vector3fc original, ClientLevel level, Camera camera, int renderDistance, float partialTick) {
+        int vanilla = net.minecraft.util.ARGB.colorFromVector3f(original);
+        int colour = shard$fog(vanilla, level, camera, renderDistance, partialTick);
+        return colour == vanilla ? original : net.minecraft.util.ARGB.vector3fFromRGB24(colour);
+    }
+    *///?} else {
     @ModifyReturnValue(method = "getBaseColor", at = @At("RETURN"), require = 0)
     private int shard$fogColour(int original, ClientLevel level, Camera camera, int renderDistance, float partialTick) {
+        return shard$fog(original, level, camera, renderDistance, partialTick);
+    }
+    //?}
+
+    @org.spongepowered.asm.mixin.Unique
+    private int shard$fog(int original, ClientLevel level, Camera camera, int renderDistance, float partialTick) {
         if (!ShardClient.isReady() || !((Object) this instanceof AtmosphericFogEnvironment)) return original;
         SkyModule sky = ShardClient.modules().get(SkyModule.class);
         if (!sky.active(level) || !sky.tintsFog()) return original;
@@ -58,7 +73,9 @@ abstract class AtmosphericFogEnvironmentMixin {
             *///?}
             float facing = forward.dot(side, 0f, 0f);
             if (facing > 0) {
-                //? if >=1.21.11 {
+                //? if >=26.3 {
+                /*int glow = net.minecraft.util.ARGB.colorFromVector4f(camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, partialTick));
+                *///?} else if >=1.21.11 {
                 int glow = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, partialTick);
                 //?} else {
                 /*float time = level.getTimeOfDay(partialTick);

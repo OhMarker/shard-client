@@ -25,6 +25,22 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(EquipmentLayerRenderer.class)
 abstract class EquipmentLayerRendererMixin {
+    //? if >=26.3 {
+    /*// 26.3: no crumbling argument, a UvMapping, and the glint is part of the armour type itself
+    // (only the trim glint is still a separate pass).
+    @WrapOperation(method = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;II)V",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/OrderedSubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/UvMapping;I)V"),
+            require = 0)
+    private void shard$hitTintArmor(OrderedSubmitNodeCollector collector, Model<?> model, Object state, PoseStack pose, RenderType type, int light, int overlay,
+                                    int color, net.minecraft.client.renderer.texture.UvMapping uv, int outline, Operation<Void> original) {
+        if (ShardClient.isReady() && state instanceof LivingEntityRenderState living && living.hasRedOverlay && type != RenderTypes.trimmedArmorGlint()) {
+            int tint = ShardClient.modules().get(HitColorModule.class).armorTint();
+            if (tint != ItemTints.NONE) color = ItemTints.multiply(color, tint);
+        }
+        original.call(collector, model, state, pose, type, light, overlay, color, uv, outline);
+    }
+    *///?} else {
     @WrapOperation(method = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;II)V",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/OrderedSubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
@@ -37,4 +53,5 @@ abstract class EquipmentLayerRendererMixin {
         }
         original.call(collector, model, state, pose, type, light, overlay, color, sprite, outline, crumbling);
     }
+    //?}
 }

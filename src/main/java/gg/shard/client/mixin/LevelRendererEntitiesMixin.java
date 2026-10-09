@@ -12,8 +12,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Entity Optimizer: start a fresh per-frame count before vanilla walks the entities to draw. */
+/**
+ * Entity Optimizer: start a fresh per-frame count before vanilla walks the entities to draw
+ * (LevelRenderer up to 26.1, the new LevelExtractor from 26.2).
+ */
+//? if >=26.2 {
+/*@Mixin(net.minecraft.client.renderer.extract.LevelExtractor.class)
+*///?} else {
 @Mixin(LevelRenderer.class)
+//?}
 abstract class LevelRendererEntitiesMixin {
     @Inject(method = "extractVisibleEntities", at = @At("HEAD"), require = 0)
     private void shard$beginEntityFrame(Camera camera, Frustum frustum, DeltaTracker delta, LevelRenderState state, CallbackInfo ci) {

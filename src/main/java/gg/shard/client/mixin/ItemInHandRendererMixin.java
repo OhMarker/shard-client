@@ -1,5 +1,7 @@
 package gg.shard.client.mixin;
 
+// 26.3 replaced ItemInHandRenderer with FirstPersonHandsAndItemsRenderer (FirstPersonHandsMixin).
+//? if <26.3 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -99,3 +101,4 @@ abstract class ItemInHandRendererMixin {
         }
     }
 }
+//?}
