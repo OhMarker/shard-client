@@ -155,7 +155,7 @@ Requires JDK 21 or newer. Versions of Minecraft, Fabric and the companion mods a
 
 - **Inter** 4.1 by Rasmus Andersson and The Inter Project Authors
   ([rsms.me/inter](https://rsms.me/inter/)), SIL Open Font License 1.1. The fonts and the
-  licence ship in `assets/shard/font`; `tools/fonts/gen_fonts.py` writes the font definitions.
+  licence ship in `assets/shard/font`; fonts are built on first use (`gui/LazyFonts.java`).
 - **Lucide** icons ([lucide.dev](https://lucide.dev)) 0.460.0, ISC licence
   (`assets/shard/textures/gui/LICENSE-Lucide.txt`), rendered into atlases by
   `tools/icons/build_icons.py`.

@@ -181,6 +181,16 @@ public final class SmokeTest {
             if (!auditBlock(mc, t)) finish(mc);
             return;
         }
+        if ("fire".equals(only)) {
+            if (t < FIRE_TICKS) fireBlock(mc, t);
+            else finish(mc);
+            return;
+        }
+        if ("hudscale".equals(only)) {
+            if (t < HudScaleSmoke.TICKS) HudScaleSmoke.block(mc, t);
+            else finish(mc);
+            return;
+        }
         if ("menu".equals(only)) {
             if (t < MENU07_TICKS) menu07Block(mc, t);
             else finish(mc);
@@ -466,7 +476,11 @@ public final class SmokeTest {
                 p.setXRot(32f);
                 module("low-fire").setEnabled(false);
             }
-            case 50 -> shot(mc, "smoke-fire-vanilla.png", null);
+            // Custom fire texture off then on (a sprite swap since 0.7.2: no resource reload).
+            case 15 -> setSetting("low-fire", "custom-fire-texture", "false");
+            case 35 -> shot(mc, "smoke-fire-texture-off.png", null);
+            case 37 -> setSetting("low-fire", "custom-fire-texture", "true");
+            case 52 -> shot(mc, "smoke-fire-vanilla.png", null);
             case 55 -> module("low-fire").setEnabled(true);
             case 100 -> shot(mc, "smoke-fire-low.png", null);
             case 105 -> {
@@ -1109,26 +1123,31 @@ public final class SmokeTest {
                 module("hitboxes").setEnabled(featuresEnabledBefore.get("hitboxes"));
                 cmd(mc, "tp @e[type=minecraft:zombie,tag=shardfeat] -5 -200 2");
             }
-            // ---- Small Items: a sword and a totem at 100% and 50%.
+            // ---- Small Items: a sword and a totem in vanilla, in the Small Items mod look (60%) and Custom at 50%.
             case 165 -> {
                 p.getInventory().setSelectedSlot(0);
                 cmd(mc, "item replace entity @s hotbar.0 with minecraft:diamond_sword");
                 cmd(mc, "item replace entity @s weapon.offhand with minecraft:totem_of_undying");
                 p.setXRot(10f);
-                module("small-items").setEnabled(true);
-                setSetting("small-items", "main-hand-size", "100");
-                setSetting("small-items", "offhand-size", "100");
+                module("small-items").setEnabled(false);
             }
-            case 185 -> fshot(mc, "features-smallitems-100.png", null);
-            case 187 -> {
+            case 182 -> fshot(mc, "features-smallitems-vanilla.png", null);
+            case 184 -> {
+                module("small-items").setEnabled(true);
+                setSetting("small-items", "look", "small_items");
+            }
+            case 192 -> fshot(mc, "features-smallitems-mod.png", null);
+            case 194 -> {
+                setSetting("small-items", "look", "custom");
                 setSetting("small-items", "main-hand-size", "50");
                 setSetting("small-items", "offhand-size", "50");
             }
-            case 200 -> fshot(mc, "features-smallitems-50.png", null);
+            case 200 -> fshot(mc, "features-smallitems-custom50.png", null);
             // ---- Shield: vanilla, then 50% opacity with the Ice tint, holding and blocking.
             case 202 -> {
                 setSetting("small-items", "main-hand-size", "75");
                 setSetting("small-items", "offhand-size", "75");
+                setSetting("small-items", "look", "small_items");
                 module("small-items").setEnabled(featuresEnabledBefore.get("small-items"));
                 cmd(mc, "item replace entity @s hotbar.0 with minecraft:air");
                 cmd(mc, "item replace entity @s weapon.offhand with minecraft:shield");

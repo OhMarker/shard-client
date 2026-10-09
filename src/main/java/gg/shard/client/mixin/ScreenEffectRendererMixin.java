@@ -20,6 +20,12 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
  */
 @Mixin(ScreenEffectRenderer.class)
 abstract class ScreenEffectRendererMixin {
+    /** Custom fire texture on your screen. */
+    @org.spongepowered.asm.mixin.injection.ModifyVariable(method = "renderFire", at = @At("HEAD"), argsOnly = true, require = 0)
+    private static net.minecraft.client.renderer.texture.TextureAtlasSprite shard$fireSprite(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite) {
+        return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).screenSprite(sprite) : sprite;
+    }
+
     @ModifyArg(method = "renderFire", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(FFF)V"), index = 1, require = 0)
     private static float shard$fireHeight(float y) {
         return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).fireY(y) : y;

@@ -12,12 +12,7 @@ import gg.shard.client.module.setting.DoubleSetting;
 import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.module.setting.Setting;
 import gg.shard.client.render.LowFireModels;
-import gg.shard.client.ShardClient;
 import gg.shard.client.util.Colors;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
-import net.fabricmc.fabric.api.resource.v1.pack.PackActivationType;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -25,26 +20,23 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelBakery;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.repository.PackRepository;
 
 /**
- * Fire (key "low-fire" from its 0.3.0 name "Low Fire"): Shard's own animated fire texture (a
- * built-in resource pack), and the first-person fire overlay, fire and soul fire blocks on the ground, and flames on
+ * Fire (key "low-fire" from its 0.3.0 name "Low Fire"): Shard's own animated fire texture (two
+ * block-atlas sprites), and the first-person fire overlay, fire and soul fire blocks on the ground, and flames on
  * burning players and mobs, each with its own height, opacity and colour. Purely how things look:
  * burning, fire blocks, hitboxes and damage are untouched, and nothing hidden is revealed.
  */
 public final class LowFireModule extends Module implements PanelPreview {
-    /** Built-in pack under resources/resourcepacks/shard_fire; Fabric names it "namespace:path". */
-    private static final Identifier FIRE_PACK = Identifier.fromNamespaceAndPath("shard", "shard_fire");
-    private static final String FIRE_PACK_ID = FIRE_PACK.toString();
-    private static boolean clientStarted;
+    /** Shard's animated fire frames (assets/shard/textures/block), stitched into the block atlas with vanilla's. */
+    public static final Material CUSTOM_FIRE_0 = new Material(TextureAtlas.LOCATION_BLOCKS, Identifier.fromNamespaceAndPath("shard", "block/fire_0"));
+    public static final Material CUSTOM_FIRE_1 = new Material(TextureAtlas.LOCATION_BLOCKS, Identifier.fromNamespaceAndPath("shard", "block/fire_1"));
 
     private static final Material SOUL_FIRE = new Material(TextureAtlas.LOCATION_BLOCKS, Identifier.withDefaultNamespace("block/soul_fire_0"));
 
     private final BoolSetting customTexture = add(new BoolSetting("Custom fire texture", "Use Shard's animated fire texture instead of the resource pack's (applies even while Fire is off)", true).group("Texture")
-            .details("Switching this reloads resources once. It is the \"Shard fire\" pack in Options > Resource Packs."));
+            .details("Swaps the sprite fire is drawn with; nothing is reloaded, so switching it is instant."));
     // Your screen (keys kept from 0.3.0: "lower-by", "opacity").
     private final DoubleSetting height = add(new DoubleSetting("Lower by", "How far down to move the flames on your screen", 0.5, 0.0, 1.0, 0.05).group("Your screen"));
     private final IntSetting opacity = add(new IntSetting("Opacity", "Opacity of the flames on your screen (0 hides them)", 80, 0, 100, 5, "%").group("Your screen"));
@@ -64,7 +56,6 @@ public final class LowFireModule extends Module implements PanelPreview {
     public LowFireModule() {
         super("Fire", "Custom fire texture, and lower, see-through, recoloured fire on your screen, on the ground and on players.", ModuleCategory.VISUALS);
         for (Setting<?> s : new Setting<?>[]{groundHeight, groundOpacity, fireColor, soulColor}) s.visibleWhen(ground::get);
-        customTexture.onChange(v -> syncFirePack());
     }
 
     @Override
@@ -73,35 +64,34 @@ public final class LowFireModule extends Module implements PanelPreview {
     }
 
     /**
-     * Registers the built-in fire texture pack (on by default) and syncs it with the setting once
-     * the client has started. Called once from {@code onInitializeClient}, before the game scans packs.
+     * The custom fire texture is two sprites in the block atlas (shipped with the mod, so they are
+     * stitched by the normal start-up reload); the setting only chooses which sprite is drawn. 0.7.1
+     * shipped it as a built-in resource pack and synced the pack selection after start-up, which
+     * reloaded every resource a second time on some launches.
      */
-    public static void registerFirePack() {
-        FabricLoader.getInstance().getModContainer("shard").ifPresent(mod ->
-                ResourceLoader.registerBuiltinPack(FIRE_PACK, mod, Component.literal("Shard fire"), PackActivationType.DEFAULT_ENABLED));
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-            clientStarted = true;
-            if (ShardClient.isReady()) ShardClient.modules().get(LowFireModule.class).syncFirePack();
-        });
+    public boolean customTexture() {
+        return customTexture.get();
     }
 
-    /**
-     * Selects or deselects the fire pack to match the setting. Only called when the setting changes
-     * (and once at start-up); vanilla saves options.txt and reloads only if the selection changed.
-     * The module switch does not touch the pack: toggling Fire must never reload every resource.
-     */
-    private void syncFirePack() {
-        if (!clientStarted) return;
-        Minecraft mc = Minecraft.getInstance();
-        mc.execute(() -> {
-            PackRepository repo = mc.getResourcePackRepository();
-            if (!repo.isAvailable(FIRE_PACK_ID)) return;
-            boolean want = customTexture.get();
-            if (want == repo.getSelectedIds().contains(FIRE_PACK_ID)) return;
-            if (want) repo.addPack(FIRE_PACK_ID);
-            else repo.removePack(FIRE_PACK_ID);
-            mc.options.updateResourcePacks(repo);
-        });
+    /** The fire material to draw instead of vanilla's {@code material} (FIRE_0 / FIRE_1), or {@code material} itself. */
+    public Material fireMaterial(Material material) {
+        if (!customTexture.get()) return material;
+        if (material == ModelBakery.FIRE_0 || ModelBakery.FIRE_0.equals(material)) return CUSTOM_FIRE_0;
+        if (material == ModelBakery.FIRE_1 || ModelBakery.FIRE_1.equals(material)) return CUSTOM_FIRE_1;
+        return material;
+    }
+
+    /** The sprite for the first-person flames: Shard's frame when the custom texture is on. */
+    public TextureAtlasSprite screenSprite(TextureAtlasSprite vanilla) {
+        if (!customTexture.get() || vanilla == null) return vanilla;
+        try {
+            String name = vanilla.contents().name().getPath();
+            Material custom = name.endsWith("fire_0") ? CUSTOM_FIRE_0 : name.endsWith("fire_1") ? CUSTOM_FIRE_1 : null;
+            if (custom == null || !vanilla.contents().name().getNamespace().equals("minecraft") || name.contains("soul")) return vanilla;
+            return Minecraft.getInstance().getAtlasManager().get(custom);
+        } catch (RuntimeException e) {
+            return vanilla;
+        }
     }
 
     @Override
@@ -137,9 +127,10 @@ public final class LowFireModule extends Module implements PanelPreview {
     // ---- on the ground (LowFireModels) -----------------------------------------------------------
 
     public LowFireModels.Ground groundSnapshot() {
-        if (!isEnabled() || !ground.get()) return new LowFireModels.Ground(false, 1f, 0xFFFFFFFF, 0xFFFFFFFF);
+        boolean custom = customTexture.get();
+        if (!isEnabled() || !ground.get()) return new LowFireModels.Ground(false, 1f, 0xFFFFFFFF, 0xFFFFFFFF, custom);
         int a = Math.round(255 * groundOpacity.get() / 100f);
-        return new LowFireModels.Ground(true, groundHeight.get() / 100f, Colors.withAlpha(fireColor.get(), a), Colors.withAlpha(soulColor.get(), a));
+        return new LowFireModels.Ground(true, groundHeight.get() / 100f, Colors.withAlpha(fireColor.get(), a), Colors.withAlpha(soulColor.get(), a), custom);
     }
 
     // ---- burning players and mobs (FlameFeatureRendererMixin) ------------------------------------
@@ -170,7 +161,7 @@ public final class LowFireModule extends Module implements PanelPreview {
         TextureAtlasSprite fire;
         TextureAtlasSprite soul;
         try {
-            fire = Minecraft.getInstance().getAtlasManager().get(ModelBakery.FIRE_1);
+            fire = Minecraft.getInstance().getAtlasManager().get(fireMaterial(ModelBakery.FIRE_1));
             soul = Minecraft.getInstance().getAtlasManager().get(SOUL_FIRE);
         } catch (RuntimeException e) {
             return 0;

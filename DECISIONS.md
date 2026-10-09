@@ -242,6 +242,38 @@
   Entity Optimizer details: CHANGELOG.md 0.7.0. New mixins use `require = 0` and were checked with
   javap against the 1.21.11 jar; the full smoke run logs no injection failures.
 
+## Fonts, fire and Small Items (branch `fonts`, after 0.7.1)
+
+- **Why launches hung.** 0.7.1 shipped 330 Inter font definitions. While resources load, Minecraft
+  opens every TTF provider (a 400 KB face each) and then, on the render thread, builds every font
+  set's width table by loading the metrics of every Inter glyph and every fallback glyph (the
+  `minecraft:default` reference pulls in unifont). Measured with the new "Shard: resource reload
+  took N ms" / "fonts loaded in N ms" log lines at 1920x1080: 12.3 s and 10.0 s reloads, fonts 4.2 s.
+  Now there are no definitions: `LazyFonts` + `FontManagerMixin` build `shard:ui-<weight>-<size>-d<density x 100>`
+  on first use (1.5-3 ms; the very first one about 40 ms while FreeType warms up), register it in
+  the font manager so `updateOptions` and the next reload treat it like any font, and
+  `FontSetMixin` skips the width table for these sets (only obfuscated text uses it). After: 1.2-1.7 s
+  reloads, fonts 0.35-0.5 s. `tools/fonts/gen_fonts.py` is gone.
+- **Exact densities.** With fonts free until used, `Fonts.densityFor` returns the on-screen density
+  rounded to 0.01 (0.5..12). 0.7.1 rounded up to the next of 11 densities: a 0.5 px/unit HUD drew a
+  0.75 raster downsampled by bilinear filtering, which drops thin strokes (the "cut off" letters).
+  `Fonts.draw` also snaps the baseline origin to a whole physical pixel (`Fonts.pixelSnap`): FreeType's
+  hinted advances and bearings are whole raster pixels, so the whole line is pixel-exact. The menu's
+  4-unit grid at 1.25 px/unit was already aligned for most text; tabs and previews moved.
+- **Fire without a resource pack.** The built-in pack was not in the first reload's list on some
+  launches; `syncFirePack` then selected it and reloaded everything a second time. The frames now
+  ship as `shard:block/fire_0/1` (the block atlas's `block/` directory source stitches every
+  namespace) and "Custom fire texture" swaps sprites: ground fire UVs are remapped in
+  `LowFireModels` (re-mesh on change), burning entities through `AtlasManager.get` in
+  `FlameFeatureRendererMixin`, the first-person overlay through `ScreenEffectRendererMixin`. One
+  "Reloading ResourceManager" per launch with the setting on and off.
+- **Small Items = Smallhands 1.0.0.** The owner's `Small-Items-1.21.11.jar` is a code mod, not a
+  resource pack: javap shows `@Inject(HEAD)` into `ItemInHandRenderer.renderItem` and `renderPlayerArm`
+  that push and `scale(0.6, 0.6, 0.6)` (config defaults: scale 0.6, offsets 0, affectItem and affectArm
+  true; the owner's `config/smallhands.json` has exactly those). No item model or per-item transforms.
+  Look "Small Items mod" (default) reproduces that: 0.6 around the hand's pivot for every item,
+  shields included, and the empty arm; Look "Custom" keeps the 0.7.1 sliders.
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.

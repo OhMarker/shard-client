@@ -4,6 +4,7 @@ import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
 import gg.shard.client.module.setting.DoubleSetting;
+import gg.shard.client.module.setting.EnumSetting;
 import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.render.ItemTints;
 import net.minecraft.world.InteractionHand;
@@ -12,11 +13,42 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /**
- * Small Items: shrinks (never below 50 %) and nudges the items in your first-person hands so
- * they cover less of the screen. Applied just before vanilla draws the held item
+ * Small Items: by default exactly the Small Items mod's look (everything in your first-person
+ * hands at 60 %, see {@link #PACK_SCALE}); Custom shrinks (never below 50 %) and nudges the items
+ * so they cover less of the screen. Applied just before vanilla draws the held item
  * (ItemInHandRendererMixin); the arm, swing, timing and what others see are untouched.
  */
 public final class SmallItemsModule extends Module {
+    /**
+     * The look: the Small Items mod (Smallhands 1.0.0 by Sallylabs, {@code Small-Items-1.21.11.jar})
+     * with its default settings, or Shard's own sliders.
+     */
+    public enum Look implements gg.shard.client.module.setting.Labeled {
+        SMALL_ITEMS("Small Items mod"), CUSTOM("Custom");
+
+        private final String label;
+
+        Look(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String label() {
+            return label;
+        }
+    }
+
+    /**
+     * What the Small Items mod does (read from its classes with javap; its config defaults are
+     * scale 0.6, offsets 0, affectItem and affectArm on): at the start of
+     * {@code ItemInHandRenderer.renderItem} and {@code renderPlayerArm} it scales the pose by 0.6 on
+     * every axis, around the hand's pivot, for every item (shields included) and for the empty
+     * arm. No per-item model transforms, no resource pack.
+     */
+    public static final float PACK_SCALE = 0.6f;
+
+    private final EnumSetting<Look> look = add(new EnumSetting<>("Look", "Small Items mod: exactly that mod's look (60%, items and empty hand). Custom: your own sizes and offsets", Look.SMALL_ITEMS)
+            .details("The Small Items mod shrinks everything in your first-person hands to 60% around the hand, including shields and your empty arm."));
     private final IntSetting mainSize = add(new IntSetting("Main hand size", "Size of the item in your main hand", 75, 50, 100, 5, "%").group("Size"));
     private final IntSetting offSize = add(new IntSetting("Offhand size", "Size of the item in your offhand", 75, 50, 100, 5, "%").group("Size"));
     private final DoubleSetting offsetX = add(new DoubleSetting("X offset", "Move the items towards the screen edge (+) or the centre (-)", 0.0, -0.3, 0.3, 0.02).group("Position"));
@@ -26,6 +58,9 @@ public final class SmallItemsModule extends Module {
 
     public SmallItemsModule() {
         super("Small Items", "Smaller, movable items in your first-person hands.", ModuleCategory.VISUALS);
+        for (gg.shard.client.module.setting.Setting<?> st : new gg.shard.client.module.setting.Setting<?>[]{mainSize, offSize, offsetX, offsetY, offsetZ, skipShields}) {
+            st.visibleWhen(() -> look.get() == Look.CUSTOM);
+        }
     }
 
     @Override
@@ -35,13 +70,20 @@ public final class SmallItemsModule extends Module {
 
     @Override
     public String about() {
-        return "Shrinks the items you hold in first person (never below half size) and lets you nudge them sideways, up or forward, with separate sizes for each hand, "
+        return "By default it looks exactly like the Small Items mod: everything in your first-person hands, and your empty hand, at 60%. "
+                + "Custom shrinks the items you hold (never below half size) and lets you nudge them sideways, up or forward, with separate sizes for each hand, "
                 + "so swords, crystals and totems block less of the fight. Only your own first-person view changes; swings, timing and what others see are vanilla.";
     }
 
     private boolean applies(ItemStack stack) {
         if (!isEnabled() || stack == null || stack.isEmpty()) return false;
+        if (look.get() == Look.SMALL_ITEMS) return true;
         return !(skipShields.get() && stack.is(Items.SHIELD));
+    }
+
+    /** Scale for the empty first-person arm (the Small Items mod shrinks it too), or 1. */
+    public float armScale() {
+        return isEnabled() && look.get() == Look.SMALL_ITEMS ? PACK_SCALE : 1f;
     }
 
     /**
@@ -53,6 +95,7 @@ public final class SmallItemsModule extends Module {
 
     public float[] transformFor(InteractionHand hand, HumanoidArm arm, ItemStack stack) {
         if (!applies(stack)) return null;
+        if (look.get() == Look.SMALL_ITEMS) return new float[]{PACK_SCALE, 0f, 0f, 0f};
         float scale = ItemTints.itemScale(hand == InteractionHand.MAIN_HAND ? mainSize.get() : offSize.get());
         float side = arm == HumanoidArm.RIGHT ? 1f : -1f;
         // Shrinking pivots on the grip at the bottom corner, which would sink the item off-screen;

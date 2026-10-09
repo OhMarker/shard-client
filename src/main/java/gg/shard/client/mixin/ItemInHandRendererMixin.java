@@ -32,6 +32,29 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(ItemInHandRenderer.class)
 abstract class ItemInHandRendererMixin {
+    @org.spongepowered.asm.mixin.Unique private boolean shard$armScaled;
+
+    /** Small Items (Small Items mod look): the empty arm is drawn at 60% too, like that mod. */
+    @Inject(method = "renderPlayerArm", at = @At("HEAD"), require = 0)
+    private void shard$smallArm(PoseStack poseStack, SubmitNodeCollector collector, int light, float equipProgress, float swingProgress,
+                                HumanoidArm arm, CallbackInfo ci) {
+        shard$armScaled = false;
+        if (!ShardClient.isReady()) return;
+        float s = ShardClient.modules().get(SmallItemsModule.class).armScale();
+        if (s == 1f) return;
+        poseStack.pushPose();
+        poseStack.scale(s, s, s);
+        shard$armScaled = true;
+    }
+
+    @Inject(method = "renderPlayerArm", at = @At("RETURN"), require = 0)
+    private void shard$smallArmEnd(PoseStack poseStack, SubmitNodeCollector collector, int light, float equipProgress, float swingProgress,
+                                   HumanoidArm arm, CallbackInfo ci) {
+        if (!shard$armScaled) return;
+        shard$armScaled = false;
+        poseStack.popPose();
+    }
+
     @Inject(method = "renderArmWithItem",
             at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V", ordinal = 0, shift = At.Shift.AFTER),
             require = 0)
