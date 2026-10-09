@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased (branch `fonts`)
+## 0.8.0
+
+- **New title screen and server list** in Shard's look (switch back to vanilla in Settings → Menus).
+  The server list keeps everything vanilla does: ping, players, LAN, add/edit/delete, direct connect.
+- **In-game account switcher** on both screens: pick any account signed in to Shard Launcher, or add
+  one. Needs Shard Launcher 0.4.0; tokens stay in memory and are never written to disk.
+- **Mod menu:** Shard logo, a Profiles tab for your own saved setups, credits ("Made by OhMarker with
+  the help of swxyzx2") and the MIT License in Settings → About.
+- **Accent colour works again:** it colours switches, enabled mods, sliders and the main buttons.
+- **Fixed settings you could not click:** the two- and three-option switches (like WASD / Arrows).
+- **New menu options:** click sounds, mod descriptions on hover, open where you left off.
 
 - **Faster start-up and resource pack changes:** the start-up resource reload went from about 10-12 s
   to about 1.5 s on the dev machine (fonts 4.2 s to 0.4 s), so the Mojang screen no longer hangs

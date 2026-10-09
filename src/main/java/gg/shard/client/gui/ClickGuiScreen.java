@@ -1521,6 +1521,9 @@ public final class ClickGuiScreen extends DesignScreen {
         y += section(g, "favorites", "Quick setup", "One click to a setup made for crystal PvP; change anything afterwards", x, y, sectionW, this::renderQuickSetupBody) + GRID_GAP;
         y += section(g, "appearance", "Appearance", "Accent, interface size, font, blur and motion", x, y, sectionW,
                 (ix, iy, iw) -> renderSettingRows(g, ShardClient.appearance(), ShardClient.appearance().settings(), ix, iy, iw)) + GRID_GAP;
+        var screens = ShardClient.modules().get(gg.shard.client.modules.settings.MenuScreensModule.class);
+        y += section(g, "window", "Menus", "Shard's title screen and server list, or vanilla's", x, y, sectionW,
+                (ix, iy, iw) -> renderSettingRows(g, screens, screens.settings(), ix, iy, iw)) + GRID_GAP;
         var display = ShardClient.modules().get(gg.shard.client.modules.utility.DisplayModule.class);
         y += section(g, "window", "Window", "Borderless fullscreen, frame caps, window title, raw input and VSync", x, y, sectionW,
                 (ix, iy, iw) -> renderSettingRows(g, display, display.settings(), ix, iy, iw)) + GRID_GAP;

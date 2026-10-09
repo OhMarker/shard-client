@@ -1,5 +1,17 @@
 # Status (handoff for a new session)
 
+## 0.8.0: title screen, server list, account switcher, faster start-up (2026-10-09, released)
+- Shard title screen + server list (`gui/menu/`, `MinecraftScreenSwapMixin`, hidden
+  `MenuScreensModule`, Settings → Menus); account switcher via the launcher bridge
+  (`launcher/AccountBridge`, `account/AccountManager`, docs/ACCOUNT-SWITCH-API.md; launcher 0.4.0).
+  Only tested with `-PfakeBridge`, not a real Microsoft account.
+- Fonts are built lazily (`gui/LazyFonts`, `FontManagerMixin`, `FontSetMixin`; no font JSONs) at
+  the exact on-screen density, baselines snapped to pixels; start-up reload ~1.2 s, one reload per
+  launch. Fire texture is sprites `shard:block/fire_0/1`, no resource pack.
+- Small Items default "Small Items mod" look (uniform 0.6, items + empty arm).
+- Smoke passes: full, menu, audit (click every switch/segment; 0 dead), screens (-PfakeBridge),
+  features, hudscale, fire — all run at 1920x1080 on 2026-10-09. 124 JUnit tests.
+
 ## 0.7.1: bigger menu, inventory model, Settings → Window (2026-10-08, released)
 - Menu density: `Scale.menuPixelsPerUnit` (1.25 px/unit at 1080p, quarter steps, capped to fit);
   font rasters in quarter steps (`tools/fonts/gen_fonts.py`, 330 definitions).
