@@ -49,4 +49,28 @@ abstract class FontSetMixin implements LazyFonts.Hook {
         for (GlyphProvider.Conditional c : providers) if (c.filter().apply(options)) out.add(c.provider());
         cir.setReturnValue(out);
     }
+
+    //? if <1.21.5 {
+    /*@Shadow @org.spongepowered.asm.mixin.Final private net.minecraft.resources.Identifier name;
+
+    /^*
+     * Sharp text before 1.21.5 (FontTextureMixin's job on newer versions): glyph atlases are plain
+     * GL textures whose filter the text render types reset through AbstractTexture's cache, and
+     * 1.21.2/1.21.3 glyph uploads set NEAREST on every upload. After a glyph lands on one of
+     * Shard's atlases, set LINEAR on the GL texture directly (the cache keeps saying NEAREST, so
+     * nothing resets it).
+     ^/
+    @com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(method = "stitch", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/font/FontTexture;add(Lcom/mojang/blaze3d/font/SheetGlyphInfo;)Lnet/minecraft/client/gui/font/glyphs/BakedGlyph;"))
+    private net.minecraft.client.gui.font.glyphs.BakedGlyph shard$linearForShardFonts(net.minecraft.client.gui.font.FontTexture texture,
+            com.mojang.blaze3d.font.SheetGlyphInfo glyph, com.llamalad7.mixinextras.injector.wrapoperation.Operation<net.minecraft.client.gui.font.glyphs.BakedGlyph> original) {
+        net.minecraft.client.gui.font.glyphs.BakedGlyph baked = original.call(texture, glyph);
+        if (baked != null && "shard".equals(name.getNamespace()) && name.getPath().startsWith("ui")) {
+            com.mojang.blaze3d.platform.GlStateManager._bindTexture(texture.getId());
+            com.mojang.blaze3d.platform.GlStateManager._texParameter(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, org.lwjgl.opengl.GL11.GL_TEXTURE_MIN_FILTER, org.lwjgl.opengl.GL11.GL_LINEAR);
+            com.mojang.blaze3d.platform.GlStateManager._texParameter(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, org.lwjgl.opengl.GL11.GL_TEXTURE_MAG_FILTER, org.lwjgl.opengl.GL11.GL_LINEAR);
+        }
+        return baked;
+    }
+    *///?}
 }

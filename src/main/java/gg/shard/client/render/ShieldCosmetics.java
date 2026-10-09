@@ -57,6 +57,16 @@ public final class ShieldCosmetics {
     }
 
     /**
+     * Before 1.21.4 (no ItemModelResolver) a third-person held item is drawn from the render state,
+     * which carries its holder for this (LivingEntityRenderStateMixin); ItemInHandLayerMixin pushes it.
+     */
+    public interface Holder {
+        @Nullable LivingEntity shard$holder();
+
+        void shard$setHolder(@Nullable LivingEntity holder);
+    }
+
+    /**
      * A shield's components plus the cosmetic texture to draw it with. Equality covers both, so
      * vanilla's model identity (used to cache item pictures) changes with the texture.
      */

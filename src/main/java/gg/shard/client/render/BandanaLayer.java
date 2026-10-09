@@ -49,7 +49,12 @@ public final class BandanaLayer extends RenderLayer<AvatarRenderState, PlayerMod
     *///?}
         Identifier texture = ((BandanaState) state).shard$bandana();
         if (texture == null || state.isInvisible) return;
+        //? if >=1.21.4 {
         if (!state.headEquipment.isEmpty() || !state.headItem.isEmpty() || state.wornHeadType != null) return;
+        //?} else {
+        /*// Before 1.21.4 headItem is the head slot's stack (helmets, skulls and blocks alike).
+        if (!state.headItem.isEmpty()) return;
+        *///?}
         int overlay = LivingEntityRenderer.getOverlayCoords(state, 0.0F);
         pose.pushPose();
         PlayerModel model = getParentModel();

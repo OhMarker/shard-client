@@ -442,3 +442,70 @@ arguments), `RenderType.getRenderPipeline` (1.21.5 only: RenderPipeline is new i
 world rendering is shader-instance based and Lines/LineStateShardMixin, CapeTexture, FontTextureMixin
 and every world mixin need a fresh look), and Fabric's HUD API (`HudLayerRegistrationCallback` exists
 from 1.21.2; 1.21/1.21.1 only have `HudRenderCallback`).
+
+### 1.21.4, 1.21.3 and 1.21.2
+- The 1.21.5 GUI layer carries over unchanged (PoseStack GuiGraphics, `compat.Matrix3x2fStack`,
+  `GuiDraw`, `RenderType::guiTextured` blits with the same argument order, `processBlurEffect()`).
+  `GuiDraw.nextStratum` clears depth with `RenderSystem.clear(GL_DEPTH_BUFFER_BIT)`; `GuiDraw.blur`
+  rebinds the main target afterwards (`bindWrite(false)`, as vanilla's `renderBlurredBackground`).
+- **No RenderPipeline / GpuDevice** (1.21.5): the `RenderPipelines` import becomes a duplicate
+  `RenderType` import (rule); `WideLines` uses the old `RenderType(name, format, mode, size, ...)`
+  constructor and LineStateShardMixin (`method_23554`, same intermediary name) still swaps the width.
+  Textures are GL names: CapeTexture `TextureUtil.prepareImage(id, maxLevel, w, h)` + one
+  `NativeImage.upload` per level, and overrides `AbstractTexture.setFilter`, because every entity
+  render type's TextureStateShard sets NEAREST on each draw. `DynamicTexture(image)` has no label;
+  `Screenshot.takeScreenshot(target)` returns the image (`compat.Screenshots`, rule).
+- **Fonts**: `FontTexture` has no label and no `GpuTexture`; FontTextureMixin is `>=1.21.5` and
+  FontSetMixin (`<1.21.5`) wraps `FontTexture.add` in `FontSet.stitch` and sets GL_LINEAR on the atlas
+  straight through GlStateManager (the text render types keep resetting the AbstractTexture's cached
+  filter to NEAREST; 1.21.2/1.21.3 glyph uploads also set NEAREST on every upload).
+- **1.21.4**: hitboxes are drawn by `EntityRenderDispatcher.renderHitbox` inside the private
+  `render(Entity, DDDF, PoseStack, MultiBufferSource, I, EntityRenderer)`; a bare `method = "render"`
+  picks the public overload (Mixin selects the first match), so the descriptor is spelled out.
+  `Inventory.setSelectedSlot/getSelectedItem` are `setSelectedHotbarSlot/getSelected` (rules);
+  RealmsClient has no cached instance (RealmsClientAccessor `>=1.21.5`, `RealmsClient.create(mc)`);
+  Low Fire wraps vanilla's `DelegateBakedModel` (Fabric `emitBlockQuads(QuadEmitter, ...)`, model
+  loading 4.x names block models by `ModelResourceLocation`, not BlockState); `ItemInHandRenderer.renderItem`
+  takes a `boolean leftHand` (before 1.21.5). Mob equipment in smoke commands is `ArmorItems`.
+- **1.21.3 and 1.21.2** (Fabric API 0.114.1 / 0.106.1; the two Minecraft jars differ only in
+  `SharedConstants`/`ReportEnvironment` for Shard):
+  - No `HudLayerRegistrationCallback`/`IdentifiedLayer` (only `HudRenderCallback`, drawn after Gui's
+    layer stack at z 0). GuiLayersMixin adds Shard's HUD as the last root layer of `Gui.layers`
+    (what Fabric's `addLayer` does on 1.21.4) and wraps `renderHotbarAndDecorations`,
+    `renderExperienceLevel`, `renderScoreboardSidebar`, `renderTabList`, `renderTitle`,
+    `renderOverlayMessage` (`@WrapMethod`); BossHealthOverlayMixin wraps `render`. GuiScalesModule's
+    scaling is `drawPart(Part, g, draw)`.
+  - `GuiGraphics.enableScissor` does not transform by the pose (1.21.4 added
+    `ScreenRectangle.transformAxisAligned`): `g.enableScissor` -> `GuiDraw.enableScissor(g, ...)` (rule).
+    Without it the menu's scrolled lists were cut off and the compass was empty.
+  - No item model system: shields are drawn by `BlockEntityWithoutLevelRenderer.renderByItem`
+    (ShieldItemRendererMixin: cosmetic, tint, translucency; ShieldSpecialRendererMixin and
+    ItemModelResolverMixin are `>=1.21.4`). The holder is not known at draw time: first person pushes
+    it in ItemInHandRendererMixin, third person keeps it on `LivingEntityRenderState`
+    (LivingEntityRenderStateMixin, set in LivingEntityRendererMixin) and ItemInHandLayerMixin pushes it.
+  - `LivingEntityRenderState.headItem` is the head slot's stack (no `headEquipment`/`wornHeadType`);
+    `EquipmentLayerRenderer.renderLayers(EquipmentModel.LayerType, ResourceLocation, ...)` (constant);
+    `ARGB.redFloat` etc. arrived in 1.21.4 (`compat.Argb`, rule); no `Window.isMinimized`;
+    Fabric's BLOCK_OUTLINE context has no `translucentBlockOutline()` (computed from the block's
+    chunk layer); model loading 3.x: `modifyModelAfterBake` with `topLevelId()`, `ForwardingBakedModel`,
+    `emitBlockQuads(..., RenderContext)` and `RendererAccess.INSTANCE.getRenderer()`.
+  - Vanilla 1.21.2 logs "Missing sound for event: minecraft:block.spawner.fall" at start-up.
+- Vanilla differences in the screenshots: title panorama (pale garden on 1.21.4, trial chambers on
+  1.21.2/1.21.3), the window gets its full 1080 px height (as on 26.3), so the HUD editor's mouse
+  hover label shows on the FPS element as it does on 26.3.
+
+Verified (2026-10-09): build + all JUnit tests on every node 1.21.2 to 26.3 (1.21 and 1.21.1 are
+not ported yet and do not compile). 1.21.4 and 1.21.2: default (`-PcountInjections`), features,
+screens (`-PfakeBridge`), cosmetics and drop2 give the same summaries as 1.21.5 (only the taller
+window's layout heights differ), no injection failures; screenshots compared side by side.
+1.21.3: default and drop2 with `-PcountInjections`, same summaries as 1.21.2. After the shared
+changes, 1.21.11 (default), 1.21.5 and 26.3 (default, `-PcountInjections`) were run again: same
+summaries and screenshots.
+For 1.21.1 and 1.21: there are no render states (EntityRenderState arrived in 1.21.2): every entity,
+layer, player and crystal mixin needs a pre-render-state block (render(entity, yaw, partialTick,
+pose, buffers, light)), `GuiGraphics.blit`/`blitSprite` take a texture id and no RenderType function
+(the `RenderType::guiTextured` rule has to become another helper), Fabric API has only
+`HudRenderCallback` (GuiLayersMixin's approach should work, check `Gui.layers` exists on 1.21),
+the blur is `processBlurEffect(float)`, and `NativeImage.setPixel` is ABGR (`setPixelRGBA`).
+Start with `-PcountInjections`, `tools/mixin-targets.py` and `tools/mixin-sigdiff.py 1.21.1 1.21.2`;
+bare `method = "name"` selectors that become ambiguous only show at run time.

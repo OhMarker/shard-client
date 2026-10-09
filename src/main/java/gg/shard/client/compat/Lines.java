@@ -11,7 +11,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 //? if <1.21.11 {
 /*import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
+//? if >=1.21.5 {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+//?}
 import java.util.HashMap;
 import java.util.Map;
 *///?}
@@ -61,7 +63,11 @@ public final class Lines {
         private final float width;
 
         WideLines(float width) {
+            //? if >=1.21.5 {
             super("shard_lines_" + width, 1536, false, false, () -> {}, () -> {});
+            //?} else {
+            /^super("shard_lines_" + width, RenderType.lines().format(), RenderType.lines().mode(), 1536, false, false, () -> {}, () -> {});
+            ^///?}
             this.width = width;
         }
 
@@ -90,7 +96,7 @@ public final class Lines {
         public RenderPipeline pipeline() {
             return base.pipeline();
         }
-        //?} else if <1.21.6 {
+        //?} else if >=1.21.5 <1.21.6 {
         /^@Override
         public RenderPipeline getRenderPipeline() {
             return base.getRenderPipeline();

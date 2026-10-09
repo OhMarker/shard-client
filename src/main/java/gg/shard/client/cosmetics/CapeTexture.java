@@ -1,6 +1,7 @@
 package gg.shard.client.cosmetics;
 
 import com.mojang.blaze3d.platform.NativeImage;
+//? if >=1.21.5 {
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -8,6 +9,9 @@ import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
+//?} else {
+/*import com.mojang.blaze3d.platform.TextureUtil;
+*///?}
 import net.minecraft.client.renderer.texture.AbstractTexture;
 
 import java.util.List;
@@ -20,6 +24,48 @@ import java.util.List;
  */
 public final class CapeTexture extends AbstractTexture {
 
+    //? if <1.21.5 {
+    /*// Before 1.21.5 textures are plain GL names: allocate the mip chain, upload each level, and
+    // set trilinear filtering and clamping (1.21.2/1.21.3 set both per upload).
+    public CapeTexture(String label, List<MipChain.Level> levels) {
+        MipChain.Level base = levels.get(0);
+        TextureUtil.prepareImage(getId(), levels.size() - 1, base.width(), base.height());
+        for (int level = 0; level < levels.size(); level++) {
+            MipChain.Level l = levels.get(level);
+            try (NativeImage image = new NativeImage(l.width(), l.height(), false)) {
+                int[] px = l.argb();
+                for (int y = 0; y < l.height(); y++) {
+                    int row = y * l.width();
+                    for (int x = 0; x < l.width(); x++) image.setPixel(x, y, px[row + x]);
+                }
+                //? if >=1.21.4 {
+                image.upload(level, 0, 0, 0, 0, l.width(), l.height(), false);
+                //?} else {
+                /^image.upload(level, 0, 0, 0, 0, l.width(), l.height(), true, true, levels.size() > 1, false);
+                ^///?}
+            }
+        }
+        this.mipmapped = levels.size() > 1;
+        //? if >=1.21.4 {
+        setClamp(true);
+        //?}
+        setFilter(true, mipmapped);
+    }
+
+    private final boolean mipmapped;
+
+    /^* Entity render types set NEAREST on every draw (TextureStateShard); this texture stays trilinear. ^/
+    @Override
+    public void setFilter(boolean blur, boolean mipmap) {
+        super.setFilter(true, mipmapped);
+    }
+
+    //? if <1.21.4 {
+    /^@Override
+    public void load(net.minecraft.server.packs.resources.ResourceManager manager) {
+    }
+    ^///?}
+    *///?} else {
     public CapeTexture(String label, List<MipChain.Level> levels) {
         GpuDevice device = RenderSystem.getDevice();
         MipChain.Level base = levels.get(0);
@@ -60,4 +106,5 @@ public final class CapeTexture extends AbstractTexture {
             }
         }
     }
+    //?}
 }

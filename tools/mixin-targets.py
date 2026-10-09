@@ -44,9 +44,9 @@ for f in sorted(os.listdir(gen)):
     if name not in active: continue
     code = open(os.path.join(gen, f), encoding="utf-8").read()
     code = re.sub(r"/\*.*?\*/", "", code, flags=re.S); code = re.sub(r"//[^\n]*", "", code)
-    # String constants used as targets (target = SAME_THREAD) are inlined first.
+    # String constants used as targets or methods (target = SAME_THREAD) are inlined first.
     for cn, cv in re.findall(r'static final String (\w+)\s*=\s*("[^"]*")\s*;', code):
-        code = re.sub(r'(target\s*=\s*)' + cn + r'\b', lambda mm: mm.group(1) + cv, code)
+        code = re.sub(r'((?:target|method)\s*=\s*)' + cn + r'\b', lambda mm: mm.group(1) + cv, code)
     imports = dict((m.group(1).split('.')[-1], m.group(1)) for m in re.finditer(r"import ([\w.]+);", code))
     tm = re.search(r"@Mixin\((?:value\s*=\s*)?\{?([\w.]+)\.class", code)
     targets = []

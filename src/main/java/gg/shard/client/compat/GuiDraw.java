@@ -16,13 +16,32 @@ public final class GuiDraw {
 
     public static void nextStratum(GuiGraphics graphics) {
         graphics.flush();
+        //? if >=1.21.5 {
         RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(Minecraft.getInstance().getMainRenderTarget().getDepthTexture(), 1.0);
+        //?} else {
+        /^RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        ^///?}
     }
 
     /^* Screen.renderBlurredBackground: the blur runs on the main target at once, so draw what is pending first. ^/
     public static void blur(GuiGraphics graphics) {
         graphics.flush();
         Minecraft.getInstance().gameRenderer.processBlurEffect();
+        //? if <1.21.5 {
+        /^Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
+        ^///?}
     }
+
+    //? if <1.21.4 {
+    /^// GuiGraphics.enableScissor before 1.21.4 ignores the pose; transform the rectangle as 1.21.4 does.
+    public static void enableScissor(GuiGraphics graphics, int x0, int y0, int x1, int y1) {
+        org.joml.Matrix4f m = graphics.pose().last().pose();
+        org.joml.Vector3f a = m.transformPosition(x0, y0, 0f, new org.joml.Vector3f());
+        org.joml.Vector3f b = m.transformPosition(x1, y1, 0f, new org.joml.Vector3f());
+        int left = net.minecraft.util.Mth.floor(a.x);
+        int top = net.minecraft.util.Mth.floor(a.y);
+        graphics.enableScissor(left, top, left + net.minecraft.util.Mth.floor(b.x - a.x), top + net.minecraft.util.Mth.floor(b.y - a.y));
+    }
+    ^///?}
 }
 *///?}

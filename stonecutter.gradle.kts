@@ -121,6 +121,39 @@ stonecutter parameters {
         replace("""\(\(int\) ((?:mc|minecraft|Minecraft\.getInstance\(\))\.getWindow\(\)|window)\.getGuiScale\(\)\)""", "\$1.getGuiScale()",
             """\b((?:mc|minecraft|Minecraft\.getInstance\(\))\.getWindow\(\)|window)\.getGuiScale\(\)""", "((int) \$1.getGuiScale())")
     }
+    // ---- 1.21.5 -------------------------------------------------------------------------------
+    // RenderPipelines (and the GPU device API) arrived in 1.21.5. GUI blits already name
+    // RenderType::guiTextured before 1.21.6 (rule above), so the import only has to go; a
+    // duplicate RenderType import compiles.
+    replacements.regex(current.parsed >= "1.21.5") {
+        replace("""import net\.minecraft\.client\.renderer\.RenderType; // no RenderPipelines before 1\.21\.5""", "import net.minecraft.client.renderer.RenderPipelines;",
+            """import net\.minecraft\.client\.renderer\.RenderPipelines;""", "import net.minecraft.client.renderer.RenderType; // no RenderPipelines before 1.21.5")
+    }
+    // Inventory's selected slot became private in 1.21.5 (setSelectedSlot / getSelectedItem).
+    replacements.regex(current.parsed >= "1.21.5") {
+        replace("""\.setSelectedHotbarSlot\(""", ".setSelectedSlot(", """\.setSelectedSlot\(""", ".setSelectedHotbarSlot(")
+    }
+    replacements.regex(current.parsed >= "1.21.5") {
+        replace("""\.getInventory\(\)\.getSelected\(\)""", ".getInventory().getSelectedItem()", """\.getInventory\(\)\.getSelectedItem\(\)""", ".getInventory().getSelected()")
+    }
+    // Screenshots are read back asynchronously (with a callback) from 1.21.5; compat.Screenshots
+    // calls back at once before.
+    replacements.regex(current.parsed >= "1.21.5") {
+        replace("""\bgg\.shard\.client\.compat\.Screenshots\.take\(""", "Screenshot.takeScreenshot(", """(?<!\.)\bScreenshot\.takeScreenshot\(""", "gg.shard.client.compat.Screenshots.take(")
+    }
+    // ---- 1.21.4 -------------------------------------------------------------------------------
+    // ARGB's float channel getters arrived in 1.21.4 (compat.Argb before).
+    replacements.regex(current.parsed >= "1.21.4") {
+        replace("""\bgg\.shard\.client\.compat\.Argb\.(red|green|blue|alpha)Float\(""", "net.minecraft.util.ARGB.\$1Float(",
+            """\b(?:net\.minecraft\.util\.)?ARGB\.(red|green|blue|alpha)Float\(""", "gg.shard.client.compat.Argb.\$1Float(")
+    }
+    // ---- 1.21.3 and older ---------------------------------------------------------------------
+    // GuiGraphics.enableScissor only transforms the rectangle by the pose from 1.21.4 on;
+    // compat.GuiDraw.enableScissor does it before.
+    replacements.regex(current.parsed >= "1.21.4") {
+        replace("""\bgg\.shard\.client\.compat\.GuiDraw\.enableScissor\((g), """, "\$1.enableScissor(",
+            """\b(g)\.enableScissor\(""", "gg.shard.client.compat.GuiDraw.enableScissor(\$1, ")
+    }
     // ---- 26.1 (unobfuscated; Mojang's own names) ------------------------------------------------
     // GUI drawing became render-state extraction: GuiGraphics is GuiGraphicsExtractor and the
     // drawing calls Shard uses lost their render/draw prefixes.
@@ -307,7 +340,8 @@ stonecutter parameters {
     replacements.regex(current.parsed >= "26.3") {
         replace("""\bInputConstants\.isKeyDown\(mc\.getWindow\(\), """, "InputConstants.isKeyDown(", """\bInputConstants\.isKeyDown\((?!mc\.getWindow)""", "InputConstants.isKeyDown(mc.getWindow(), ")
     }
-    replacements.regex(current.parsed >= "26.3") {
+    // (Window.isMinimized only exists from 1.21.4 to 26.2.)
+    replacements.regex(current.parsed >= "26.3" || current.parsed < "1.21.4") {
         replace("""\.getWindow\(\)\.isMinimized\(\)""", ".getWindow().isIconified()", """\.getWindow\(\)\.isIconified\(\)""", ".getWindow().isMinimized()")
     }
     // A swing names its animation and whether the swinging player is told (the server drives swings).

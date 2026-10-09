@@ -10,7 +10,7 @@ import gg.shard.client.modules.visual.CrosshairModule;
 import gg.shard.client.modules.visual.TotemPopModule;
 //? if >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-//?} else {
+//?} else if >=1.21.4 {
 /*import net.fabricmc.fabric.api.client.rendering.v1.HudLayerRegistrationCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.IdentifiedLayer;
 *///?}
@@ -49,11 +49,24 @@ public final class HudManager {
     public void start() {
         //? if >=1.21.6 {
         HudElementRegistry.addLast(LAYER, this::renderLayer);
-        //?} else {
+        //?} else if >=1.21.4 {
         /*// Before 1.21.6 Fabric wraps Gui's LayeredDraw; the last root layer draws after the subtitles.
         HudLayerRegistrationCallback.EVENT.register(drawer -> drawer.addLayer(IdentifiedLayer.of(LAYER, this::renderLayer)));
+        *///?} else {
+        /*// Before 1.21.4 Fabric has no HUD layer API: GuiLayersMixin adds legacyLayer as the last root layer of
+        // Gui's LayeredDraw (after the subtitles), where Fabric's addLayer puts it on newer versions.
+        legacy = this;
         *///?}
     }
+
+    //? if <1.21.4 {
+    /*private static HudManager legacy;
+
+    /^* Gui's last root layer before 1.21.4 (GuiLayersMixin). ^/
+    public static void legacyLayer(GuiGraphics g, DeltaTracker delta) {
+        if (legacy != null) legacy.renderLayer(g, delta);
+    }
+    *///?}
 
     public List<HudModule> hudModules() {
         List<HudModule> out = new ArrayList<>();

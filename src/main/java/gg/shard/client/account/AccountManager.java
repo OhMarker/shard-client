@@ -295,8 +295,13 @@ public final class AccountManager {
             // the old manager only flushes its log
         }
         access.shard$setTelemetryManager(new ClientTelemetryManager(mc, service, user));
+        //? if >=1.21.5 {
         RealmsClientAccessor.shard$setInstance(null);
         access.shard$setRealmsDataFetcher(new RealmsDataFetcher(RealmsClient.getOrCreate(mc)));
+        //?} else {
+        /*// Before 1.21.5 RealmsClient is not cached: create() reads the current user.
+        access.shard$setRealmsDataFetcher(new RealmsDataFetcher(RealmsClient.create(mc)));
+        *///?}
         ShardClient.LOGGER.info("Accounts: switched to {}", user.getName());
         if (ShardClient.modules() != null) ShardClient.modules().get(CosmeticsModule.class).onAccountChanged();
     }

@@ -3,11 +3,13 @@ package gg.shard.client.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+//? if >=1.21.5 {
 import com.mojang.blaze3d.textures.FilterMode;
+//?}
 //? if >=1.21.11 {
 import com.mojang.blaze3d.systems.SamplerCache;
 import com.mojang.blaze3d.textures.GpuSampler;
-//?} else {
+//?} else if >=1.21.5 {
 /*import com.mojang.blaze3d.textures.GpuTexture;
 *///?}
 import net.minecraft.client.gui.font.FontTexture;
@@ -22,7 +24,8 @@ import java.util.function.Supplier;
  * do not line up exactly (interface size, HUD scale, a HUD element's own scale). Shard's fonts
  * ({@code shard:ui-*}) get LINEAR filtering instead; {@code Fonts} also picks a raster density
  * close to the real one, so the filter only ever smooths small differences. The atlas packer
- * leaves a 1-texel gap between glyphs, so neighbours never bleed in.
+ * leaves a 1-texel gap between glyphs, so neighbours never bleed in. Before 1.21.5 (plain GL
+ * textures) FontSetMixin does this, and this mixin is not applied.
  */
 @Mixin(FontTexture.class)
 abstract class FontTextureMixin {
@@ -36,7 +39,7 @@ abstract class FontTextureMixin {
         if (name != null && name.startsWith("shard:ui")) return original.call(cache, FilterMode.LINEAR);
         return original.call(cache, mode);
     }
-    //?} else {
+    //?} else if >=1.21.5 {
     /*// Before 1.21.11 the filter is set on the texture itself (no sampler objects yet).
     @WrapOperation(method = "<init>", at = @At(value = "INVOKE",
             target = "Lcom/mojang/blaze3d/textures/GpuTexture;setTextureFilter(Lcom/mojang/blaze3d/textures/FilterMode;Z)V"),

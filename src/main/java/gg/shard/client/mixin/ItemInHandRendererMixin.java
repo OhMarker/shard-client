@@ -91,15 +91,39 @@ abstract class ItemInHandRendererMixin {
             require = 0)
     private void shard$scaleShield(ItemInHandRenderer self, LivingEntity entity, ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
                                    SubmitNodeCollector collector, int light, Operation<Void> original,
-    //?} else {
+    //?} else if >=1.21.5 {
     /*target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"),
             require = 0)
     private void shard$scaleShield(ItemInHandRenderer self, LivingEntity entity, ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
                                    MultiBufferSource collector, int light, Operation<Void> original,
+    *///?} else {
+    /*// Before 1.21.5 renderItem also takes whether it is the left hand.
+    target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;ZLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"),
+            require = 0)
+    private void shard$scaleShield(ItemInHandRenderer self, LivingEntity entity, ItemStack stack, ItemDisplayContext context, boolean leftHand,
+                                   PoseStack poseStack, MultiBufferSource collector, int light, Operation<Void> original,
     *///?}
                                    @Local(argsOnly = true) AbstractClientPlayer player, @Local(argsOnly = true) InteractionHand hand) {
+        //? if >=1.21.5 {
+        Runnable draw = () -> original.call(self, entity, stack, context, poseStack, collector, light);
+        //?} else {
+        /*// Before 1.21.4 the shield's holder is not known when it is drawn (no ItemModelResolver):
+        // ShieldCosmetics gets it here for the first-person shield.
+        Runnable draw = () -> {
+            //? if <1.21.4 {
+            gg.shard.client.render.ShieldCosmetics.push(entity, context);
+            //?}
+            try {
+                original.call(self, entity, stack, context, leftHand, poseStack, collector, light);
+            } finally {
+                //? if <1.21.4 {
+                gg.shard.client.render.ShieldCosmetics.pop();
+                //?}
+            }
+        };
+        *///?}
         if (!ShardClient.isReady()) {
-            original.call(self, entity, stack, context, poseStack, collector, light);
+            draw.run();
             return;
         }
         LowShieldModule shield = ShardClient.modules().get(LowShieldModule.class);
@@ -108,7 +132,7 @@ abstract class ItemInHandRendererMixin {
         HumanoidArm arm = hand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
         float[] small = ShardClient.modules().get(SmallItemsModule.class).transformFor(hand, arm, stack);
         if (scale == null && small == null && color == ItemTints.NONE) {
-            original.call(self, entity, stack, context, poseStack, collector, light);
+            draw.run();
             return;
         }
         poseStack.pushPose();
@@ -119,7 +143,7 @@ abstract class ItemInHandRendererMixin {
         if (scale != null) poseStack.scale(scale[0], scale[1], scale[2]);
         ItemTints.beginShield(color);
         try {
-            original.call(self, entity, stack, context, poseStack, collector, light);
+            draw.run();
         } finally {
             ItemTints.endShield();
             poseStack.popPose();

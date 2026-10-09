@@ -60,7 +60,14 @@ abstract class EquipmentLayerRendererMixin {
     //?} else {
     /*// Before 1.21.9 the layers are drawn straight into buffers (the glint rides on the armour's foil
     // buffer, so only the colour changes); the wearer's hurt state comes from ItemTints.
-    @WrapOperation(method = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/resources/Identifier;)V",
+    //? if >=1.21.4 {
+    private static final String RENDER_LAYERS = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/resources/Identifier;)V";
+    //?} else {
+    /^// 1.21.2/1.21.3: equipment models are named by id (EquipmentModel), not by asset key.
+    private static final String RENDER_LAYERS = "renderLayers(Lnet/minecraft/world/item/equipment/EquipmentModel$LayerType;Lnet/minecraft/resources/Identifier;Lnet/minecraft/client/model/Model;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/resources/Identifier;)V";
+    ^///?}
+
+    @WrapOperation(method = RENDER_LAYERS,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/Model;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"),
             require = 0)
     private void shard$hitTintArmor(Model model, PoseStack pose, VertexConsumer buffer, int light, int overlay, int color, Operation<Void> original) {
@@ -68,7 +75,7 @@ abstract class EquipmentLayerRendererMixin {
     }
 
     /^* Armour trims (drawn without a colour). ^/
-    @WrapOperation(method = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/resources/Identifier;)V",
+    @WrapOperation(method = RENDER_LAYERS,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/Model;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"),
             require = 0)
     private void shard$hitTintTrim(Model model, PoseStack pose, VertexConsumer buffer, int light, int overlay, Operation<Void> original) {

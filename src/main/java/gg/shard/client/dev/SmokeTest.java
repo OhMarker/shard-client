@@ -1201,9 +1201,15 @@ public final class SmokeTest {
                 cmd(mc, "item replace entity @s weapon.offhand with minecraft:air");
                 p.getInventory().setSelectedSlot(8);
                 int gy = groundY(mc, p.blockPosition());
+                //? if >=1.21.5 {
                 cmd(mc, "summon minecraft:zombie -4.5 %d -1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Rotation:[0f,0f],Tags:[\"shardfeat\"],"
                         + "equipment:{head:{id:\"minecraft:iron_helmet\",count:1},chest:{id:\"minecraft:iron_chestplate\",count:1},"
                         + "feet:{id:\"minecraft:iron_boots\",count:1}}}", gy);
+                //?} else {
+                /*// Before 1.21.5 mob equipment is ArmorItems (feet, legs, chest, head).
+                cmd(mc, "summon minecraft:zombie -4.5 %d -1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Rotation:[0f,0f],Tags:[\"shardfeat\"],"
+                        + "ArmorItems:[{id:\"minecraft:iron_boots\",count:1},{},{id:\"minecraft:iron_chestplate\",count:1},{id:\"minecraft:iron_helmet\",count:1}]}", gy);
+                *///?}
                 module("hit-color").setEnabled(true);
                 setSetting("hit-color", "tint-armor", "true");
             }
@@ -1270,8 +1276,13 @@ public final class SmokeTest {
             case 380 -> {
                 p.setXRot(2f);
                 int gy = groundY(mc, p.blockPosition());
+                //? if >=1.21.5 {
                 cmd(mc, "summon minecraft:zombie -4.5 %d -14.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"shardfeat\"],"
                         + "equipment:{head:{id:\"minecraft:diamond_helmet\",count:1},chest:{id:\"minecraft:diamond_chestplate\",count:1}}}", gy);
+                //?} else {
+                /*cmd(mc, "summon minecraft:zombie -4.5 %d -14.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"shardfeat\"],"
+                        + "ArmorItems:[{},{},{id:\"minecraft:diamond_chestplate\",count:1},{id:\"minecraft:diamond_helmet\",count:1}]}", gy);
+                *///?}
                 module("zoom").setEnabled(true);
             }
             case 400 -> fshot(mc, "features-zoom-off.png", null);

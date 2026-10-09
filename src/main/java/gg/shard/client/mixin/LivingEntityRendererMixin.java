@@ -16,6 +16,9 @@ abstract class LivingEntityRendererMixin {
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;F)V",
             at = @At("TAIL"))
     private void shard$deathState(LivingEntity entity, LivingEntityRenderState state, float partialTick, CallbackInfo ci) {
+        //? if <1.21.4 {
+        /*((gg.shard.client.render.ShieldCosmetics.Holder) state).shard$setHolder(entity);
+        *///?}
         if (!ShardClient.isReady()) return;
         DeathAnimationModule module = ShardClient.modules().get(DeathAnimationModule.class);
         if (state.deathTime > 0f && module.hidesTilt(entity)) state.deathTime = 0f;

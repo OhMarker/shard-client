@@ -5,11 +5,20 @@ import gg.shard.client.compat.Atlases;
 import gg.shard.client.modules.visual.LowFireModule;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
+//? if >=1.21.5 {
 import net.fabricmc.fabric.api.client.model.loading.v1.wrapper.WrapperBlockStateModel;
+//?}
 import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.minecraft.client.Minecraft;
+//? if >=1.21.5 {
 import net.minecraft.client.renderer.block.model.BlockStateModel;
+//?} else {
+/*import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import java.util.function.Supplier;
+*///?}
 //? if >=1.21.6 {
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 //?} else {
@@ -56,14 +65,31 @@ public final class LowFireModels {
     private static long pendingSince;
 
     public static void init() {
+        //? if >=1.21.5 {
         ModelLoadingPlugin.register(ctx -> ctx.modifyBlockModelAfterBake().register((model, context) -> {
             BlockState state = context.state();
             if (state.is(Blocks.FIRE)) return new FireModel(model, false);
             if (state.is(Blocks.SOUL_FIRE)) return new FireModel(model, true);
             return model;
         }));
+        //?} else if >=1.21.4 {
+        /*// Before 1.21.5 block models are BakedModels named by blockstate id (no BlockState in the context).
+        ModelLoadingPlugin.register(ctx -> ctx.modifyBlockModelAfterBake().register((model, context) -> wrapFire(model, context.id().id())));
+        *///?} else {
+        /*// 1.21.2/1.21.3: one after-bake event for every model; block models have a top-level id.
+        ModelLoadingPlugin.register(ctx -> ctx.modifyModelAfterBake().register((model, context) ->
+                model == null || context.topLevelId() == null ? model : wrapFire(model, context.topLevelId().id())));
+        *///?}
         ClientTickEvents.END_CLIENT_TICK.register(client -> tick());
     }
+
+    //? if <1.21.5 {
+    /*private static BakedModel wrapFire(BakedModel model, Identifier blockId) {
+        if (blockId.equals(BuiltInRegistries.BLOCK.getKey(Blocks.FIRE))) return new FireModel(model, false);
+        if (blockId.equals(BuiltInRegistries.BLOCK.getKey(Blocks.SOUL_FIRE))) return new FireModel(model, true);
+        return model;
+    }
+    *///?}
 
     private static void tick() {
         if (!ShardClient.isReady()) return;
@@ -128,38 +154,82 @@ public final class LowFireModels {
         return u >= s.getU0() && u <= s.getU1() && v >= s.getV0() && v <= s.getV1();
     }
 
+    //? if >=1.21.5 {
     private static final class FireModel extends WrapperBlockStateModel {
+    //?} else if >=1.21.4 {
+    /*private static final class FireModel extends net.minecraft.client.resources.model.DelegateBakedModel {
+    *///?} else {
+    /*private static final class FireModel extends net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel {
+    *///?}
         private final boolean soul;
 
+        //? if >=1.21.5 {
         FireModel(BlockStateModel wrapped, boolean soul) {
             super(wrapped);
             this.soul = soul;
         }
+        //?} else if >=1.21.4 {
+        /*FireModel(BakedModel wrapped, boolean soul) {
+            super(wrapped);
+            this.soul = soul;
+        }
+        *///?} else {
+        /*FireModel(BakedModel wrapped, boolean soul) {
+            this.wrapped = wrapped;
+            this.soul = soul;
+        }
+        *///?}
 
+        //? if >=1.21.5 {
         @Override
         public void emitQuads(QuadEmitter emitter, BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random,
                               Predicate<Direction> cullTest) {
+            Runnable parent = () -> super.emitQuads(emitter, level, pos, state, random, cullTest);
+            QuadEmitter t = emitter;
+        //?} else if >=1.21.4 {
+        /*@Override
+        public boolean isVanillaAdapter() {
+            return false;
+        }
+
+        @Override
+        public void emitBlockQuads(QuadEmitter emitter, BlockAndTintGetter level, BlockState state, BlockPos pos,
+                                   Supplier<RandomSource> random, Predicate<Direction> cullTest) {
+            Runnable parent = () -> this.parent.emitBlockQuads(emitter, level, state, pos, random, cullTest);
+            QuadEmitter t = emitter;
+        *///?} else {
+        /*@Override
+        public boolean isVanillaAdapter() {
+            return false;
+        }
+
+        @Override
+        public void emitBlockQuads(BlockAndTintGetter level, BlockState state, BlockPos pos, Supplier<RandomSource> random,
+                                   net.fabricmc.fabric.api.renderer.v1.render.RenderContext context) {
+            Runnable parent = () -> super.emitBlockQuads(level, state, pos, random, context);
+            net.fabricmc.fabric.api.renderer.v1.render.RenderContext t = context;
+        *///?}
             Ground g = current;
             boolean swap = g.customTexture() && !soul;
             if (!g.active() && !swap) {
-                super.emitQuads(emitter, level, pos, state, random, cullTest);
+                parent.run();
                 return;
             }
             if (!g.active()) {
-                emitter.pushTransform(q -> {
+                t.pushTransform(q -> {
                     swapSprite(q);
                     return true;
                 });
                 try {
-                    super.emitQuads(emitter, level, pos, state, random, cullTest);
+                    parent.run();
                 } finally {
-                    emitter.popTransform();
+                    t.popTransform();
                 }
                 return;
             }
             int tint = soul ? g.soulColor() : g.fireColor();
             int alpha = tint >>> 24;
-            emitter.pushTransform(q -> {
+            t.pushTransform(q -> {
                 if (swap) swapSprite(q);
                 for (int i = 0; i < 4; i++) {
                     q.pos(i, q.x(i), q.y(i) * g.height(), q.z(i));
@@ -171,18 +241,28 @@ public final class LowFireModels {
                 if (alpha < 255) q.renderLayer(ChunkSectionLayer.TRANSLUCENT);
                 //?} else {
                 /*// Before 1.21.6 the layer is the material's blend mode.
-                if (alpha < 255) q.material(Renderer.get().materialFinder().copyFrom(q.material()).blendMode(BlendMode.TRANSLUCENT).find());
+                if (alpha < 255) q.material(renderer().materialFinder().copyFrom(q.material()).blendMode(BlendMode.TRANSLUCENT).find());
                 *///?}
 
                 return true;
             });
             try {
-                super.emitQuads(emitter, level, pos, state, random, cullTest);
+                parent.run();
             } finally {
-                emitter.popTransform();
+                t.popTransform();
             }
         }
     }
+
+    //? if <1.21.6 {
+    /*private static Renderer renderer() {
+        //? if >=1.21.4 {
+        return Renderer.get();
+        //?} else {
+        /^return net.fabricmc.fabric.api.renderer.v1.RendererAccess.INSTANCE.getRenderer();
+        ^///?}
+    }
+    *///?}
 
     /** Component-wise ARGB multiply. */
     public static int multiply(int a, int b) {
