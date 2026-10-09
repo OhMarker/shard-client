@@ -8,7 +8,11 @@ import gg.shard.client.launcher.AccountBridge;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+//? if >=26.1 {
+/*import net.minecraft.client.gui.components.PlayerFaceExtractor;
+*///?} else {
 import net.minecraft.client.gui.components.PlayerFaceRenderer;
+//?}
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.item.component.ResolvableProfile;
 
@@ -164,6 +168,11 @@ final class AccountSwitcher {
             skin = net.minecraft.client.resources.DefaultPlayerSkin.get(uuid);
         }
         Render2D.roundedRect(g, x - 1, y - 1, size + 2, size + 2, 3, MenuScreen.ACTIVE);
+        //? if >=26.1 {
+        /*PlayerFaceExtractor.extractRenderState(g, skin, x, y, size);
+        *///?} else {
         PlayerFaceRenderer.draw(g, skin, x, y, size);
+        //?}
+
     }
 }

@@ -91,7 +91,12 @@ public final class ShardTitleScreen extends MenuScreen {
         int w = (COLUMN_W - (count - 1) * GAP) / count;
         int bx = x;
         button(g, "options", bx, y, w, SMALL_H, "settings", I18n.get("menu.options").replace("...", "").replace("…", ""), 13, Style.NORMAL, true,
+                //? if >=26.1 {
+                /*b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options, false)));
+                *///?} else {
                 b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options)));
+                //?}
+
         bx += w + GAP;
         if (modMenu) {
             button(g, "mods", bx, y, w, SMALL_H, "puzzle", "Mods", 13, Style.NORMAL, true, b -> openModMenu());

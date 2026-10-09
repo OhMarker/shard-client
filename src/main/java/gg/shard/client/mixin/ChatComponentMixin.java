@@ -29,14 +29,27 @@ abstract class ChatComponentMixin {
     @Unique
     private boolean shard$inner;
 
+    // 26.1: every chat line goes through the private addMessage(contents, signature, source, tag).
+    //? if >=26.1 {
+    /*@Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/GuiMessageTag;)V",
+            at = @At("HEAD"), cancellable = true, require = 0)
+    private void shard$hide(Component message, MessageSignature signature, net.minecraft.client.multiplayer.chat.GuiMessageSource source, GuiMessageTag tag, CallbackInfo ci) {
+    *///?} else {
     @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V",
             at = @At("HEAD"), cancellable = true, require = 0)
     private void shard$hide(Component message, MessageSignature signature, GuiMessageTag tag, CallbackInfo ci) {
+    //?}
         if (ShardClient.isReady() && ShardClient.modules().get(ChatModule.class).hide(message)) ci.cancel();
     }
 
+    //? if >=26.1 {
+    /*@ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/GuiMessageTag;)V",
+            at = @At("HEAD"), argsOnly = true, require = 0)
+    *///?} else {
     @ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V",
             at = @At("HEAD"), argsOnly = true, require = 0)
+    //?}
+
     private Component shard$decorate(Component message) {
         if (!ShardClient.isReady() || shard$inner) return message;
         ChatModule chat = ShardClient.modules().get(ChatModule.class);

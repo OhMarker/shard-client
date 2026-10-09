@@ -42,6 +42,21 @@ abstract class EndCrystalRendererMixin {
     private static final net.minecraft.resources.Identifier SHARD$TEXTURE = net.minecraft.resources.Identifier.withDefaultNamespace("textures/entity/end_crystal/end_crystal.png");
 
     @com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(method = "submit(Lnet/minecraft/client/renderer/entity/state/EndCrystalRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+    //? if >=26.1 {
+            /*// 26.1 submits the crystal with its texture (the model picks the render type).
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/resources/Identifier;IIILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
+            require = 0)
+    private void shard$recolour(SubmitNodeCollector collector, net.minecraft.client.model.Model<?> model, Object state, PoseStack pose,
+                                net.minecraft.resources.Identifier texture, int light, int overlay, int outline,
+                                net.minecraft.client.renderer.feature.ModelFeatureRenderer.CrumblingOverlay crumbling,
+                                com.llamalad7.mixinextras.injector.wrapoperation.Operation<Void> original) {
+        CrystalTweaksModule tweaks = ShardClient.isReady() ? ShardClient.modules().get(CrystalTweaksModule.class) : null;
+        if (tweaks == null || !tweaks.recolours() || !(state instanceof EndCrystalRenderState crystal)) {
+            original.call(collector, model, state, pose, texture, light, overlay, outline, crumbling);
+            return;
+        }
+        net.minecraft.client.renderer.rendertype.RenderType type = model.renderType(texture);
+    *///?} else {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
             require = 0)
     private void shard$recolour(SubmitNodeCollector collector, net.minecraft.client.model.Model<?> model, Object state, PoseStack pose,
@@ -53,6 +68,8 @@ abstract class EndCrystalRendererMixin {
             original.call(collector, model, state, pose, type, light, overlay, outline, crumbling);
             return;
         }
+    //?}
+
         var rt = tweaks.translucent() ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(SHARD$TEXTURE) : type;
         collector.submitModel(tweaks.frameModel(), crystal, pose, rt, light, overlay, tweaks.frameTint(), null, outline, crumbling);
         collector.submitModel(tweaks.coreModel(), crystal, pose, rt, light, overlay, tweaks.coreTint(), null, outline, crumbling);

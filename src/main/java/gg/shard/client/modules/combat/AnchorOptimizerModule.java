@@ -92,7 +92,7 @@ public final class AnchorOptimizerModule extends Module {
                 double z = pos.getZ() + 0.5;
                 if (instantRemoval.get()) level.setBlock(pos, Blocks.AIR.defaultBlockState(), CLIENT_UPDATE_FLAGS);
                 if (localSound.get()) {
-                    float pitch = (1.0f + (level.random.nextFloat() - level.random.nextFloat()) * 0.2f) * 0.7f;
+                    float pitch = (1.0f + (level.getRandom().nextFloat() - level.getRandom().nextFloat()) * 0.2f) * 0.7f;
                     level.playLocalSound(x, y, z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 4.0f, pitch, false);
                 }
                 if (!reduceParticles.get()) level.addParticle(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 1.0, 0.0, 0.0);

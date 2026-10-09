@@ -49,6 +49,35 @@ abstract class ShieldSpecialRendererMixin {
         }
     }
 
+    //? if >=26.1 {
+    /*// 26.1: submit has no display context, the item model applies the (1, -1, -1) flip, and the
+    // base is one submitModel of the whole model with a sprite id (glint is a second one).
+    @Inject(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
+            at = @At("HEAD"), cancellable = true)
+    private void shard$submitCosmetic(DataComponentMap components, PoseStack pose, SubmitNodeCollector collector,
+                                      int light, int overlay, boolean foil, int outline, CallbackInfo ci) {
+        if (!(components instanceof ShieldCosmetics.Skinned skinned)) return;
+        ci.cancel();
+        int color = ItemTints.multiply(-1, ItemTints.shield());
+        RenderType type = ItemTints.shieldTranslucent() ? RenderTypes.entityTranslucent(skinned.texture()) : RenderTypes.entitySolid(skinned.texture());
+        collector.submitModel(model, net.minecraft.util.Unit.INSTANCE, pose, type, light, overlay, color, null, outline, null);
+        if (foil) collector.submitModel(model, net.minecraft.util.Unit.INSTANCE, pose, RenderTypes.entityGlint(), light, overlay, -1, null, 0, null);
+    }
+
+    @WrapOperation(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
+            at = @At(value = "INVOKE", ordinal = 0, target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;IIILnet/minecraft/client/resources/model/sprite/SpriteId;Lnet/minecraft/client/resources/model/sprite/SpriteGetter;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
+            require = 0)
+    private void shard$tintBase(SubmitNodeCollector collector, net.minecraft.client.model.Model<Object> model, Object state, PoseStack pose, int light, int overlay,
+                                int color, net.minecraft.client.resources.model.sprite.SpriteId base, net.minecraft.client.resources.model.sprite.SpriteGetter sprites,
+                                int outline, ModelFeatureRenderer.CrumblingOverlay crumbling, Operation<Void> original) {
+        int tinted = ItemTints.multiply(color, ItemTints.shield());
+        if (ItemTints.shieldTranslucent()) {
+            collector.submitModel(model, state, pose, RenderTypes.entityTranslucent(base.atlasLocation()), light, overlay, tinted, sprites.get(base), outline, crumbling);
+            return;
+        }
+        original.call(collector, model, state, pose, light, overlay, tinted, base, sprites, outline, crumbling);
+    }
+    *///?} else {
     @Inject(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
             at = @At("HEAD"), cancellable = true)
     private void shard$submitCosmetic(DataComponentMap components, ItemDisplayContext context, PoseStack pose, SubmitNodeCollector collector,
@@ -66,6 +95,7 @@ abstract class ShieldSpecialRendererMixin {
         pose.popPose();
     }
     @WrapOperation(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
+
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/object/equipment/ShieldModel;renderType(Lnet/minecraft/resources/Identifier;)Lnet/minecraft/client/renderer/rendertype/RenderType;"),
             require = 0)
     private RenderType shard$translucentShield(ShieldModel model, Identifier atlas, Operation<RenderType> original) {
@@ -80,4 +110,5 @@ abstract class ShieldSpecialRendererMixin {
                                   int outline, Operation<Void> original) {
         original.call(collector, part, pose, type, light, overlay, sprite, sheeted, foil, ItemTints.multiply(color, ItemTints.shield()), crumbling, outline);
     }
+    //?}
 }

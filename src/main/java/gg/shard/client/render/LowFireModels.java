@@ -160,7 +160,12 @@ public final class LowFireModels {
                     q.pos(i, q.x(i), q.y(i) * g.height(), q.z(i));
                     q.color(i, multiply(q.color(i), tint));
                 }
+                //? if >=26.1 {
+                /*if (alpha < 255) q.chunkLayer(ChunkSectionLayer.TRANSLUCENT);
+                *///?} else {
                 if (alpha < 255) q.renderLayer(ChunkSectionLayer.TRANSLUCENT);
+                //?}
+
                 return true;
             });
             try {

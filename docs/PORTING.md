@@ -137,3 +137,84 @@ no injection failures with `-PcountInjections`.
   again (javap) on older versions, where Fabric's older `rendering.v1.WorldRenderEvents` may be
   usable instead.
 - Verified (2026-10-09): same passes and results as 1.21.10.
+
+### 26.1 (also 26.1.1 and 26.1.2)
+- Unobfuscated: the Loom cache has `minecraftMaven/net/minecraft/minecraft-merged-deobf/<mc>/...jar`
+  (javap it directly), and `./gradlew :<mc>:genSources` gives readable sources with real parameter
+  names (`.gradle/loom-cache/minecraftMaven/.../minecraft-merged-*-<mc>-sources.jar`). Lambdas are
+  `lambda$method$N`. The 1.21.x global replacements are `>= since`, so they stay in force on 26.x.
+- **Stonecutter replacements never chain**: the matches of all replacements are collected first
+  and overlapping ones lose. `public void render(GuiGraphics g, ...` with one rule for `render(`
+  and one for `GuiGraphics` only applies one; use zero-width lookaheads
+  (`render(?=\(\w+ \w+, int ...)`, `resources([./])model\1(?=Material\b)`) so matches do not
+  overlap. They do apply inside commented-out code, which is fine.
+- **GUI**: `GuiGraphics` → `GuiGraphicsExtractor`; `drawString` → `text`, `renderItem` → `item`,
+  `renderOutline` → `outline`, `submitEntityRenderState` → `entity`; `Screen.render` →
+  `extractRenderState`, `renderBackground` → `extractBackground` (+ `extractMenuBackground`,
+  `extractBlurredBackground`, `extractPanorama`), `renderWithTooltipAndSubtitles` →
+  `extractRenderStateWithTooltipAndSubtitles` (called from `GameRenderer.extractGui`), `Gui.render*`
+  overlays/crosshair/subtitles → `extract*`, `HudElement.render` → `extractRenderState`,
+  `PlayerFaceRenderer.draw` → `PlayerFaceExtractor.extractRenderState`. All global except the last
+  two (in place). Fabric still draws `addLast` HUD layers with the (deferred) subtitles, as on 1.21.11.
+- **Package moves**: `GuiMessage(Tag)` → `client.multiplayer.chat`, `GuiEntityRenderState` →
+  `renderer.state.gui.pip`, `Block/Camera/Level/SkyRenderState` → `renderer.state.level`,
+  `BlockStateModel` → `renderer.block.dispatch`, `BlockAndTintGetter` → `client.renderer.block`,
+  `AtlasManager` → `resources.model.sprite`; the sprite record `Material` is `SpriteId` in
+  `resources.model.sprite` (a different `Material` exists there: a block-model material).
+- **Fabric API**: `client.keybinding.v1.KeyBindingHelper.registerKeyBinding` →
+  `client.keymapping.v1.KeyMappingHelper.registerKeyMapping`; `fabric.api.renderer.v1` →
+  `fabric.api.client.renderer.v1` (`renderLayer` on quads is `chunkLayer`);
+  `LivingEntityFeatureRendererRegistrationCallback` → `LivingEntityRenderLayerRegistrationCallback`;
+  `rendering.v1.world.WorldRenderEvents` → `rendering.v1.level.LevelRenderEvents` with
+  `LevelRenderContext` (`poseStack()`, `bufferSource()`, `levelState()`). AFTER_ENTITIES is gone:
+  entities render as solid then translucent features, and `AFTER_TRANSLUCENT_FEATURES` fires where
+  AFTER_ENTITIES did (after both, before the block outline). `BEFORE_BLOCK_OUTLINE` is unchanged.
+- **Small API changes**: `ChatComponent.addMessage(Component)` → `addClientSystemMessage`, and
+  every line goes through the private `addMessage(contents, signature, GuiMessageSource, tag)`
+  (ChatComponentMixin); `Minecraft.resizeDisplay()` → `resizeGui()`; `Level.random` is protected
+  (use `getRandom()`, fine everywhere); `OptionsScreen(parent, options, inWorld)`;
+  `RenderTypes.entityCutoutNoCull` → `entityCutout` (the culling one is `entityCutoutCull`).
+- **ItemStacks cannot be built before the item components are bound** (mod init runs earlier):
+  no `static final ItemStack` fields (CooldownsModule builds its stacks on first use).
+- **Mixins that moved**: `GameRenderer.getFov` is gone, the world FOV is
+  `Camera.calculateFov(F)F` (CameraMixin, >=26.1); `GameRenderer.bobHurt` takes
+  `(CameraRenderState, PoseStack)` (the handler now takes only the CallbackInfo on all versions);
+  `LightTexture` is gone, gamma is the first `Double.floatValue()` in
+  `LightmapRenderStateExtractor.extract` (LightTextureMixin versioned); `Level.getDayTime` is gone,
+  the sky follows world clocks (`ClientClockManager.getTotalTicks`, ClientClockManagerMixin,
+  >=26.1) for Weather and Time; `EndCrystalRenderer.submit` submits with an `Identifier` texture
+  (`model.renderType(texture)` gives the old RenderType); `ShieldSpecialRenderer.submit` has no
+  display context, the item model applies the (1, -1, -1) flip, and the base is one
+  `submitModel(model, state, pose, light, overlay, color, SpriteId, SpriteGetter, outline, crumbling)`
+  (tinted/translucent there), so `BannerRenderer.submitPatterns` no longer draws the base and only
+  the pattern-layer tint is left in BannerRendererMixin.
+- Finding them: the static check from the Tooling notes (every `@Mixin` target, `method =` and
+  `target =` against the jar) caught the renamed/moved targets; handler-signature and injection
+  point changes (bobHurt, EndCrystalRenderer, ShieldSpecialRenderer) only show at run time, so
+  start the client with `-PcountInjections` early (26.x has no dev companions) and compare each
+  target method body between `genSources` of 1.21.11 and 26.x.
+- For 26.2 / 26.3: start from these replacements (all `>= 26.1`); re-run the static check and
+  `genSources` diff of every mixin target, check Fabric's `LevelRenderEvents`/`HudElement` and the
+  renderer API, and watch for further `render*` â†’ `extract*` renames in `Gui`/`Screen`.
+
+- Vanilla differences seen in the smoke screenshots (not Shard): new title panorama; first-person
+  right-hand blocking shield sits lower (`shield_blocking.json` translation 5 → 3.25); gamerules
+  are snake_case since 1.21.11 (`gamerule doFireTick` fails in the smoke log there too).
+- Fix found while comparing (all versions >= 1.21.11): see-through flames on burning mobs used
+  `Sheets.translucentItemSheet()`, which is the item atlas from 1.21.11, so they were invisible;
+  now `translucentBlockItemSheet()`.
+- 26.1.1 and 26.1.2 change only `DetectedVersion`, `SharedConstants`, `PlayerEntry`, `Checkbox`
+  and report-screen classes (none touched by Shard); their Fabric API builds (renderer API 13,
+  rendering 23.3) are signature-compatible for everything Shard uses. Same source, no versioned
+  code for them.
+- Smoke tip: copy `run/config/shard/` into `run-<mc>/config/` before **every** pass; a run that
+  crashes half-way leaves its own changed config behind (other modules on, HUD moved).
+
+Verified on 26.1 (2026-10-09): build + all JUnit tests; default (with `-PcountInjections`),
+features, screens, cosmetics and drop2 passes give the same summaries as 1.21.10; screenshots
+compared side by side. 26.1.1: default pass with `-PcountInjections`. 26.1.2: default pass with
+`-PcountInjections` and drop2 (newer Fabric API). Same summaries, no injection failures.
+After the 26.1 changes, 1.21.11 (default pass) and 1.21.10 (default pass, `-PcountInjections`)
+were run again: same summaries, no injection failures, and the burning-mob flames now show.
+For 1.21.8 and older: the new mixins (CameraMixin, ClientClockManagerMixin) are `>=26.1` only;
+everything else 26.1 added sits in `>=26.1` blocks, so the 1.21.10 notes above still apply.

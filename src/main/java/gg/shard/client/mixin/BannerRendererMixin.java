@@ -26,6 +26,9 @@ import java.util.function.Function;
  */
 @Mixin(BannerRenderer.class)
 abstract class BannerRendererMixin {
+    // 26.1: submitPatterns no longer draws the shield base (ShieldSpecialRendererMixin tints it);
+    // only the pattern layers are left here.
+    //? if <26.1 {
     @WrapOperation(method = "submitPatterns", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/resources/model/Material;renderType(Ljava/util/function/Function;)Lnet/minecraft/client/renderer/rendertype/RenderType;"),
             require = 0)
@@ -40,8 +43,10 @@ abstract class BannerRendererMixin {
                                        TextureAtlasSprite sprite, int outline, ModelFeatureRenderer.CrumblingOverlay crumbling, Operation<Void> original) {
         original.call(collector, model, state, pose, type, light, overlay, ItemTints.multiply(color, ItemTints.shield()), sprite, outline, crumbling);
     }
+    //?}
 
     @WrapOperation(method = "submitPatternLayer", at = @At(value = "INVOKE",
+
             target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
             require = 0)
     private static void shard$tintLayer(SubmitNodeCollector collector, Model<?> model, Object state, PoseStack pose, RenderType type, int light, int overlay, int color,

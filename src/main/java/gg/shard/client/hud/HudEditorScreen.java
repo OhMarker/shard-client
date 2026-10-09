@@ -169,7 +169,12 @@ public final class HudEditorScreen extends DesignScreen {
         renderToast(g);
         popDesign(g);
 
+        //? if >=26.1 {
+        /*if (panelOpen) panel.extractRenderState(g, mouseX, mouseY, partialTick);
+        *///?} else {
         if (panelOpen) panel.render(g, mouseX, mouseY, partialTick);
+        //?}
+
     }
 
     /** A fill at fractional GUI coordinates (GuiGraphics.fill only takes ints). */

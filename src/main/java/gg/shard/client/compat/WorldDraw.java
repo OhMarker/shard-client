@@ -10,9 +10,14 @@ import net.minecraft.world.phys.Vec3;
  * world render events, so LevelRendererEventsMixin builds it there.
  */
 public record WorldDraw(PoseStack matrices, MultiBufferSource consumers, Vec3 camera) {
-    //? if >=1.21.10 {
+    //? if >=26.1 {
+    /*public static WorldDraw of(net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext ctx) {
+        return new WorldDraw(ctx.poseStack(), ctx.bufferSource(), ctx.levelState().cameraRenderState.pos);
+    }
+    *///?} else if >=1.21.10 {
     public static WorldDraw of(net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext ctx) {
         return new WorldDraw(ctx.matrices(), ctx.consumers(), ctx.worldState().cameraRenderState.pos);
     }
     //?}
+
 }

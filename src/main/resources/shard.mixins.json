@@ -11,7 +11,9 @@
     "AbstractContainerScreenAccessor",
     "AtmosphericFogEnvironmentMixin",
     "BannerRendererMixin",
+    "CameraMixin",
     "ChatComponentMixin",
+    "ClientClockManagerMixin",
     "ClientLevelWeatherMixin",
     "ClientPacketListenerMixin",
     "CompositeRenderTypeMixin",
@@ -59,6 +61,8 @@
   ],
   "mixins": [],
   "versioned": {
+    "CameraMixin": ">=26.1",
+    "ClientClockManagerMixin": ">=26.1",
     "CompositeRenderTypeMixin": "<1.21.11",
     "EntityHitboxDebugRendererMixin": ">=1.21.11",
     "EntityRendererHitboxMixin": "<1.21.11",

@@ -34,7 +34,15 @@ abstract class FlameFeatureRendererMixin {
 
     @WrapOperation(method = "renderFlame", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Sheets;cutoutBlockSheet()Lnet/minecraft/client/renderer/rendertype/RenderType;"), require = 0)
     private RenderType shard$flameSheet(Operation<RenderType> original) {
-        if (ShardClient.isReady() && ShardClient.modules().get(LowFireModule.class).entityTranslucent()) return Sheets.translucentItemSheet();
+        if (ShardClient.isReady() && ShardClient.modules().get(LowFireModule.class).entityTranslucent()) {
+            // The flame sprites are in the block atlas; from 1.21.11 the item sheet uses the separate item atlas.
+            //? if >=1.21.11 {
+            return Sheets.translucentBlockItemSheet();
+            //?} else {
+            /*return Sheets.translucentItemSheet();
+            *///?}
+        }
+
         return original.call();
     }
 

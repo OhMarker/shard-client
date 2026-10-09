@@ -117,7 +117,7 @@ public final class GuiScalesModule extends Module {
         HudElementRegistry.replaceElement(id, original -> (HudElement) (g, delta) -> {
             int p = percent.getAsInt();
             if (p == 100) {
-                original.render(g, delta);
+                draw(original, g, delta);
                 return;
             }
             float s = p / 100f;
@@ -125,8 +125,17 @@ public final class GuiScalesModule extends Module {
             pose.pushMatrix();
             pose.translate((float) ScreenScale.anchorShift(g.guiWidth() * ax, s), (float) ScreenScale.anchorShift(g.guiHeight() * ay, s));
             pose.scale(s, s);
-            original.render(g, delta);
+            draw(original, g, delta);
             pose.popMatrix();
         });
     }
+
+    private static void draw(HudElement element, net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.DeltaTracker delta) {
+        //? if >=26.1 {
+        /*element.extractRenderState(g, delta);
+        *///?} else {
+        element.render(g, delta);
+        //?}
+    }
+
 }
