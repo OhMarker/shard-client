@@ -176,6 +176,11 @@ public final class SmokeTest {
             else finish(mc);
             return;
         }
+        if ("drop2".equals(only)) {
+            if (t < DropSmoke.TICKS) DropSmoke.block(mc, t);
+            else finish(mc);
+            return;
+        }
         if ("scales".equals(only)) {
             if (t < SCALES_TICKS) scalesBlock(mc, t);
             else finish(mc);
