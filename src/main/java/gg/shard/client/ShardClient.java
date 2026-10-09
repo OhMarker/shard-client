@@ -33,7 +33,6 @@ import gg.shard.client.modules.visual.HitColorModule;
 import gg.shard.client.modules.visual.HitboxModule;
 import gg.shard.client.modules.visual.LowFireModule;
 import gg.shard.client.modules.visual.LowShieldModule;
-import gg.shard.client.modules.visual.NametagsModule;
 import gg.shard.client.modules.visual.NoHurtCamModule;
 import gg.shard.client.modules.visual.TotemPopModule;
 import gg.shard.client.modules.visual.ZoomModule;
@@ -85,6 +84,7 @@ public final class ShardClient implements ClientModInitializer {
 
         hud = new HudManager(modules);
         gg.shard.client.render.LowFireModels.init();
+        gg.shard.client.modules.visual.LowFireModule.registerFirePack();
         gg.shard.client.combat.CombatTracker.init();
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> {
             if (gg.shard.client.dev.SmokeTest.active() || !gg.shard.client.gui.WelcomeScreen.needed()) return;
@@ -127,7 +127,6 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new ItemCounterModule());
         m.register(new ServerAddressModule());
         m.register(new SessionStatsModule());
-        m.register(new gg.shard.client.modules.hud.TargetHudModule());
         m.register(new gg.shard.client.modules.hud.ComboModule());
         m.register(new gg.shard.client.modules.hud.ReachModule());
         m.register(new gg.shard.client.modules.hud.FightRecapModule());
@@ -147,6 +146,7 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new HitColorModule());
         m.register(new LowFireModule());
         m.register(new LowShieldModule());
+        m.register(new gg.shard.client.modules.visual.SmallItemsModule());
         m.register(new gg.shard.client.modules.visual.AnchorGlowModule());
         m.register(new gg.shard.client.modules.utility.GuiScalesModule());
         m.register(new gg.shard.client.modules.utility.DisplayModule());
@@ -158,7 +158,7 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new gg.shard.client.modules.chat.ChatModule());
         m.register(new FullbrightModule());
         m.register(new HitboxModule());
-        m.register(new NametagsModule());
+        m.register(new gg.shard.client.modules.visual.SkyModule());
         m.register(new gg.shard.client.modules.visual.CosmeticsModule());
         m.register(new CrosshairModule());
         m.register(new ZoomModule());
@@ -168,6 +168,7 @@ public final class ShardClient implements ClientModInitializer {
         m.register(new ToggleSprintModule());
         // Performance
         m.register(new ExplosionOptimizerModule());
+        m.register(new gg.shard.client.modules.perf.EntityOptimizerModule());
     }
 
     /** True once modules and config exist; mixins check this because they can run very early. */

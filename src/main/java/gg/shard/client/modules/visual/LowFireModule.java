@@ -12,7 +12,12 @@ import gg.shard.client.module.setting.DoubleSetting;
 import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.module.setting.Setting;
 import gg.shard.client.render.LowFireModels;
+import gg.shard.client.ShardClient;
 import gg.shard.client.util.Colors;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
+import net.fabricmc.fabric.api.resource.v1.pack.PackActivationType;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -20,16 +25,26 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.repository.PackRepository;
 
 /**
- * Low Fire: the first-person fire overlay, fire and soul fire blocks on the ground, and flames on
+ * Fire (key "low-fire" from its 0.3.0 name "Low Fire"): Shard's own animated fire texture (a
+ * built-in resource pack), and the first-person fire overlay, fire and soul fire blocks on the ground, and flames on
  * burning players and mobs, each with its own height, opacity and colour. Purely how things look:
  * burning, fire blocks, hitboxes and damage are untouched, and nothing hidden is revealed.
  */
 public final class LowFireModule extends Module implements PanelPreview {
+    /** Built-in pack under resources/resourcepacks/shard_fire; Fabric names it "namespace:path". */
+    private static final Identifier FIRE_PACK = Identifier.fromNamespaceAndPath("shard", "shard_fire");
+    private static final String FIRE_PACK_ID = FIRE_PACK.toString();
+    private static boolean clientStarted;
+
     private static final Material SOUL_FIRE = new Material(TextureAtlas.LOCATION_BLOCKS, Identifier.withDefaultNamespace("block/soul_fire_0"));
 
+    private final BoolSetting customTexture = add(new BoolSetting("Custom fire texture", "Use Shard's animated fire texture instead of the resource pack's (applies even while Fire is off)", true).group("Texture")
+            .details("Switching this reloads resources once. It is the \"Shard fire\" pack in Options > Resource Packs."));
     // Your screen (keys kept from 0.3.0: "lower-by", "opacity").
     private final DoubleSetting height = add(new DoubleSetting("Lower by", "How far down to move the flames on your screen", 0.5, 0.0, 1.0, 0.05).group("Your screen"));
     private final IntSetting opacity = add(new IntSetting("Opacity", "Opacity of the flames on your screen (0 hides them)", 80, 0, 100, 5, "%").group("Your screen"));
@@ -47,8 +62,46 @@ public final class LowFireModule extends Module implements PanelPreview {
     private final ColorSetting entityColor = add(new ColorSetting("Entity fire colour", "Tint for those flames", 0xFFFFFFFF).group("Burning players and mobs"));
 
     public LowFireModule() {
-        super("Low Fire", "Lower, see-through, recoloured fire on your screen, on the ground and on players.", ModuleCategory.VISUALS);
+        super("Fire", "Custom fire texture, and lower, see-through, recoloured fire on your screen, on the ground and on players.", ModuleCategory.VISUALS);
         for (Setting<?> s : new Setting<?>[]{groundHeight, groundOpacity, fireColor, soulColor}) s.visibleWhen(ground::get);
+        customTexture.onChange(v -> syncFirePack());
+    }
+
+    @Override
+    protected String legacyKey() {
+        return "low-fire";
+    }
+
+    /**
+     * Registers the built-in fire texture pack (on by default) and syncs it with the setting once
+     * the client has started. Called once from {@code onInitializeClient}, before the game scans packs.
+     */
+    public static void registerFirePack() {
+        FabricLoader.getInstance().getModContainer("shard").ifPresent(mod ->
+                ResourceLoader.registerBuiltinPack(FIRE_PACK, mod, Component.literal("Shard fire"), PackActivationType.DEFAULT_ENABLED));
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            clientStarted = true;
+            if (ShardClient.isReady()) ShardClient.modules().get(LowFireModule.class).syncFirePack();
+        });
+    }
+
+    /**
+     * Selects or deselects the fire pack to match the setting. Only called when the setting changes
+     * (and once at start-up); vanilla saves options.txt and reloads only if the selection changed.
+     * The module switch does not touch the pack: toggling Fire must never reload every resource.
+     */
+    private void syncFirePack() {
+        if (!clientStarted) return;
+        Minecraft mc = Minecraft.getInstance();
+        mc.execute(() -> {
+            PackRepository repo = mc.getResourcePackRepository();
+            if (!repo.isAvailable(FIRE_PACK_ID)) return;
+            boolean want = customTexture.get();
+            if (want == repo.getSelectedIds().contains(FIRE_PACK_ID)) return;
+            if (want) repo.addPack(FIRE_PACK_ID);
+            else repo.removePack(FIRE_PACK_ID);
+            mc.options.updateResourcePacks(repo);
+        });
     }
 
     @Override
@@ -63,7 +116,7 @@ public final class LowFireModule extends Module implements PanelPreview {
 
     @Override
     public String about() {
-        return "Three kinds of fire, each with its own height, opacity and colour: the flames on your screen while you burn, fire and soul fire blocks on the ground, "
+        return "Shard's own animated fire texture (switch it off to keep your resource pack's), and three kinds of fire, each with its own height, opacity and colour: the flames on your screen while you burn, fire and soul fire blocks on the ground, "
                 + "and the flames on burning players and mobs. Only how fire looks changes; burning, the fire blocks, their hitboxes and damage are untouched.";
     }
 

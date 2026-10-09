@@ -87,7 +87,7 @@ final class Benchmark {
                     gg.shard.client.gui.QuickSetup.apply(gg.shard.client.gui.QuickSetup.PRO);
                     gg.shard.client.hud.HudPresets.apply(ShardClient.hud(), gg.shard.client.hud.HudPresets.FULL);
                     for (var m : ShardClient.modules().all()) {
-                        if (java.util.Set.of("combo", "reach", "fight-recap", "compass", "speed", "tps", "target-hud", "cooldowns", "keystrokes", "cps").contains(m.key())) m.setEnabled(true);
+                        if (java.util.Set.of("combo", "reach", "fight-recap", "compass", "speed", "tps", "cooldowns", "keystrokes", "cps").contains(m.key())) m.setEnabled(true);
                         for (var st : m.settings()) {
                             if ((m.key().equals("fps") && st.key().equals("frame-time-graph")) || (m.key().equals("ping") && st.key().equals("graph"))) st.parse("true");
                         }

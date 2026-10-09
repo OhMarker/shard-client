@@ -3,7 +3,7 @@ package gg.shard.client.gui;
 import gg.shard.client.util.Colors;
 
 /**
- * Neutral graphite palette (docs/DESIGN.md) driven by one accent colour (the launcher's, defaulting to crystal cyan,
+ * Neutral grey palette (#141416 page, #1A1A1D tiles, #232326 lines) (docs/DESIGN.md) driven by one accent colour (the launcher's, defaulting to crystal cyan,
  * optionally overridden in Settings → Appearance). Surfaces are near-opaque so they read
  * cleanly over the blurred world; lines are 1 design unit and low-contrast; the accent only
  * ever appears on the active switch, the focused control, the selected category and the
@@ -44,17 +44,17 @@ public final class Theme {
 
     /** Rows, cards and inputs. */
     public static int radius() {
-        return 8;
+        return 6;
     }
 
     /** Controls: buttons, fields, dropdowns, swatches. */
     public static int radiusSmall() {
-        return 6;
+        return 5;
     }
 
     /** The rail, the detail panel and popovers. */
     public static int radiusLarge() {
-        return 12;
+        return 8;
     }
 
     // ---- accent -------------------------------------------------------------------------------
@@ -79,35 +79,35 @@ public final class Theme {
 
     /** Full-screen tint behind the settings page (drawn over the blur). */
     public static int overlay() {
-        return 0xB80A0B0E;
+        return 0x80000000;
     }
 
     /** Sidebar and settings panel. */
     public static int surface() {
-        return 0xF5111317;
+        return 0xFF141416;
     }
 
     /** Cards and list rows. */
     public static int surfaceRaised() {
-        return 0xFF171A1F;
+        return 0xFF1A1A1D;
     }
 
     public static int surfaceHover() {
-        return 0xFF1D2026;
+        return 0xFF1F1F22;
     }
 
     /** Inputs, switch tracks, dropdown buttons. */
     public static int control() {
-        return 0xFF22262D;
+        return 0xFF232326;
     }
 
     public static int controlHover() {
-        return 0xFF2A2E36;
+        return 0xFF2A2A2E;
     }
 
     /** Popovers (dropdown lists, colour picker, confirmations). */
     public static int popover() {
-        return 0xFF16181D;
+        return 0xFF1A1A1D;
     }
 
     /** Tinted square behind a module icon. */
@@ -115,12 +115,36 @@ public final class Theme {
         return 0x14FFFFFF;
     }
 
+    /** Text fields (the search box). */
+    public static int input() {
+        return 0xFF1C1C1F;
+    }
+
+    public static int inputLine() {
+        return 0xFF26262A;
+    }
+
+    /** Text on the category tabs and secondary labels: between muted and text. */
+    public static int soft() {
+        return 0xFF8A8A90;
+    }
+
+    /** Module icons on tiles that are off. */
+    public static int icon() {
+        return 0xFFA9A9AF;
+    }
+
+    /** Hovered tile border. */
+    public static int lineHover() {
+        return 0xFF38383D;
+    }
+
     public static int line() {
-        return 0x12FFFFFF;
+        return 0xFF232326;
     }
 
     public static int lineStrong() {
-        return 0x24FFFFFF;
+        return 0xFF2C2C30;
     }
 
     public static int shadow() {
@@ -130,15 +154,15 @@ public final class Theme {
     // ---- text ---------------------------------------------------------------------------------
 
     public static int text() {
-        return 0xFFECEEF2;
+        return 0xFFEDEDED;
     }
 
     public static int muted() {
-        return 0xFFA3A9B5;
+        return 0xFF7C7C82;
     }
 
     public static int subtle() {
-        return 0xFF6B717D;
+        return 0xFF55555B;
     }
 
     public static int success() {

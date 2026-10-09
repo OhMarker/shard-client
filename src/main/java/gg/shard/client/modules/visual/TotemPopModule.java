@@ -29,6 +29,7 @@ import java.util.UUID;
  */
 public final class TotemPopModule extends Module {
     private final BoolSetting hideAnimation = add(new BoolSetting("Hide animation", "Skip the full-screen totem animation (a frame-time spike mid-fight)", true).group("Animation"));
+    private final IntSetting animationSize = add(new IntSetting("Animation size", "Size of the full-screen totem animation when it is shown", 100, 25, 150, 5, "%").group("Animation"));
     private final BoolSetting flash = add(new BoolSetting("Flash", "Brief accent-coloured flash when you pop", false).group("Animation"));
     private final IntSetting volume = add(new IntSetting("Pop volume", "Totem sound volume", 100, 0, 200, 10, "%").group("Sound"));
     private final DoubleSetting pitch = add(new DoubleSetting("Pop pitch", "Totem sound pitch", 1.0, 0.5, 2.0, 0.1).group("Sound"));
@@ -47,6 +48,7 @@ public final class TotemPopModule extends Module {
 
     public TotemPopModule() {
         super("Totem Pops", "Tame the totem animation, sound and particles, and announce pops in chat.", ModuleCategory.VISUALS);
+        animationSize.visibleWhen(() -> !hideAnimation.get());
         ShardEvents.onTotemPop(this::onPop);
     }
 
@@ -67,12 +69,17 @@ public final class TotemPopModule extends Module {
 
     @Override
     public String about() {
-        return "Everything that happens when a totem pops: hides the full-screen animation, scales the sound and particles, adds an optional flash and a chat line "
+        return "Everything that happens when a totem pops: hides or resizes the full-screen animation, scales the sound and particles, adds an optional flash and a chat line "
                 + "with per-player counts. Pops are read from the totem event the server sends to every client; nothing is sent back.";
     }
 
     public boolean hideAnimation() {
         return isEnabled() && hideAnimation.get();
+    }
+
+    /** Scale for the floating totem animation (1 when the module is off). */
+    public float animationScale() {
+        return isEnabled() ? animationSize.get() / 100f : 1f;
     }
 
     public float soundVolume(float original) {
@@ -88,7 +95,7 @@ public final class TotemPopModule extends Module {
         return isEnabled() ? particles.get() : 100;
     }
 
-    /** Pops seen for a player this session (used by the nametag module). */
+    /** Pops seen for a player this session (the chat line count). */
     public int popsFor(UUID player) {
         return popsByPlayer.getOrDefault(player, 0);
     }

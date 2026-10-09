@@ -5,10 +5,13 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import gg.shard.client.ShardClient;
 import gg.shard.client.modules.visual.LowFireModule;
+import gg.shard.client.modules.visual.TotemPopModule;
 import net.minecraft.client.renderer.ScreenEffectRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 /**
  * Low Fire, your screen: vanilla's renderFire translates each flame quad by (±0.24, -0.3, 0) and
@@ -28,5 +31,14 @@ abstract class ScreenEffectRendererMixin {
         if (!ShardClient.isReady()) return original.call(consumer, r, g, b, a);
         float[] c = ShardClient.modules().get(LowFireModule.class).screenColor(r, g, b, a);
         return original.call(consumer, c[0], c[1], c[2], c[3]);
+    }
+
+    /** Totem Pops, animation size: vanilla scales the floating item by 0.8 on every axis; this multiplies that. */
+    @ModifyArgs(method = "renderItemActivationAnimation", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;scale(FFF)V"), require = 0)
+    private void shard$totemSize(Args args) {
+        if (!ShardClient.isReady()) return;
+        float f = ShardClient.modules().get(TotemPopModule.class).animationScale();
+        if (f == 1f) return;
+        for (int i = 0; i < 3; i++) args.set(i, args.<Float>get(i) * f);
     }
 }

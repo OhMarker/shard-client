@@ -41,12 +41,13 @@ import java.util.Set;
 import java.util.function.IntConsumer;
 
 /**
- * Shard's menu (docs/DESIGN.md, direction A): a rail with search, filters and categories; a
- * list (or grid) of modules where the full name always fits; and a detail column with the
- * selected module's settings, always visible on wide windows. Search matches module names,
- * descriptions and individual settings. Everything is laid out in design units (see
- * {@link Scale}) on a 4-unit grid, so the page looks the same at every GUI scale; on medium
- * windows the detail replaces the list, on small ones the rail becomes a tab strip.
+ * Shard's mod menu: one compact centred panel with a top bar (wordmark, Mods / Settings /
+ * Cosmetics / Friends tabs, search), a row of category tabs, a six-column grid of mod tiles and
+ * a footer. Clicking a tile toggles it; the gear or a right-click swaps the grid for that mod's
+ * settings inside the same panel. Search matches module names, descriptions and individual
+ * settings. The menu is drawn at one design unit per physical pixel on a 1080p screen (scaled
+ * with the window height and Settings → Appearance → Interface size), so it keeps its
+ * proportions at every GUI scale. The HUD editor embeds the settings column on its own.
  *
  * <p>Input is routed through "hits": every control registers its rectangle while it renders,
  * so clicks, hover and keyboard focus all share one source of truth.
@@ -54,17 +55,8 @@ import java.util.function.IntConsumer;
 public final class ClickGuiScreen extends DesignScreen {
     // ---- spacing grid (design units) ---------------------------------------------------------
     static final int PAD = 16;
-    static final int RAIL_W = 176;
-    static final int RAIL_ROW_H = 30;
-    /** Below this page height the rail tightens its rows so every entry stays visible. */
-    static final int COMPACT_HEIGHT = 420;
-    /** From this width on the detail column sits next to the list instead of replacing it. */
-    static final int WIDE_UNITS = 820;
     static final long DETAILS_DELAY_MS = 600;
     static final int GRID_GAP = 12;
-    static final int LIST_ROW_H = 44;
-    static final int CARD_H = 96;
-    static final int CARD_MIN_W = 180;
     static final int DETAIL_W = 300;
     static final int PANEL_PAD = 16;
     static final int ROW_H = 32;
@@ -76,10 +68,19 @@ public final class ClickGuiScreen extends DesignScreen {
     static final int SWITCH_H = 16;
     static final int BUTTON_H = 28;
     static final int FIELD_H = 28;
-    static final int TOPBAR_H = 84;
-    static final int SECTION_MAX_W = 600;
+    static final int SECTION_MAX_W = 640;
+    // ---- menu frame (design units = physical pixels at 1080p) -------------------------------
+    static final int MENU_W = 960;
+    static final int MENU_H = 580;
+    static final int TOP_H = 52;
+    static final int FOOT_H = 40;
+    static final int CAT_H = 27;
+    static final int COLS = 6;
+    static final int TILE_H = 118;
+    static final int TILE_GAP = 8;
+    static final int GRID_PAD = 14;
+    static final int STRIP_H = 26;
     // ---- typography ---------------------------------------------------------------------------
-    static final int TITLE = 18;
     static final int NAME = 15;
     static final int SECTION = 13;
     static final int LABEL = 12;
@@ -97,7 +98,10 @@ public final class ClickGuiScreen extends DesignScreen {
     private static final String KEY_SERVER_PATTERN = "server-pattern";
 
     /** Which modules the list shows when the search is empty. */
-    private enum Filter { CATEGORY, FAVORITES, ENABLED }
+    private enum Filter { ALL, CATEGORY, FAVORITES, ENABLED }
+
+    /** The top bar's tabs. */
+    public enum Tab { MODS, SETTINGS, COSMETICS, FRIENDS }
 
     /** A clickable (and optionally focusable) rectangle registered during rendering. */
     private record Hit(String key, int x, int y, int w, int h, int[] clip, boolean focusable, IntConsumer onClick) {
@@ -117,8 +121,8 @@ public final class ClickGuiScreen extends DesignScreen {
 
     private final Screen parent;
     private ModuleCategory category = ModuleCategory.COMBAT;
-    private Filter filter = Filter.CATEGORY;
-    private boolean settingsPage;
+    private Filter filter = Filter.ALL;
+    private Tab tab = Tab.MODS;
     private boolean gridView;
     private final Set<String> favorites = new LinkedHashSet<>();
     private final TextInput search = new TextInput(48).placeholder("Search").padLeft(30);
@@ -139,7 +143,17 @@ public final class ClickGuiScreen extends DesignScreen {
     private int gridScroll;
     private int panelScroll;
     private int pageScroll;
-    private int sidebarScroll;
+    /** What is drawn: each scroll eases toward its target every frame, so the wheel glides. */
+    private float gridShown;
+    private float panelShown;
+    private float pageShown;
+    private int menuX;
+    private int menuY;
+    private int menuW;
+    private int menuH;
+    private int catY;
+    /** Thin lines between setting rows (the menu's settings view). */
+    private boolean rowDividers;
     private PanelPreview previewDragging;
     private int previewButton;
     private Setting<?> flashSetting;
@@ -150,7 +164,7 @@ public final class ClickGuiScreen extends DesignScreen {
     private final Map<String, Setting<?>> focusTargets = new HashMap<>();
     private final List<String> cardOrder = new ArrayList<>();
     private int gridColumns = 1;
-    private int cardWidth = CARD_MIN_W;
+    private int cardWidth;
     private String focusKey;
     /** Focus rings only show while navigating with the keyboard (like CSS :focus-visible). */
     private boolean keyboardFocus;
@@ -174,14 +188,11 @@ public final class ClickGuiScreen extends DesignScreen {
 
     private int mouseX;
     private int mouseY;
-    private boolean narrow;
     private boolean wide;
-    private boolean panelReplacesGrid;
     private int contentX;
     private int contentY;
     private int contentW;
     private int contentH;
-    private int listW;
     private int panelX;
     private int panelY;
     private int panelW;
@@ -234,12 +245,16 @@ public final class ClickGuiScreen extends DesignScreen {
             if (gui.has("category")) {
                 String saved = gui.get("category").getAsString();
                 switch (saved) {
-                    case "settings" -> settingsPage = true;
+                    case "settings" -> tab = Tab.SETTINGS;
+                    case "cosmetics" -> tab = Tab.COSMETICS;
+                    case "friends" -> tab = Tab.FRIENDS;
+                    case "all" -> filter = Filter.ALL;
                     case "favorites" -> filter = Filter.FAVORITES;
                     case "enabled" -> filter = Filter.ENABLED;
                     default -> {
                         try {
                             category = ModuleCategory.valueOf(saved);
+                            filter = Filter.CATEGORY;
                         } catch (IllegalArgumentException ignored) {
                             // keep default
                         }
@@ -267,7 +282,8 @@ public final class ClickGuiScreen extends DesignScreen {
             return;
         }
         var gui = ShardClient.config().gui();
-        String saved = settingsPage ? "settings" : switch (filter) {
+        String saved = tab == Tab.SETTINGS ? "settings" : tab == Tab.COSMETICS ? "cosmetics" : tab == Tab.FRIENDS ? "friends" : switch (filter) {
+            case ALL -> "all";
             case FAVORITES -> "favorites";
             case ENABLED -> "enabled";
             case CATEGORY -> category.name();
@@ -288,13 +304,40 @@ public final class ClickGuiScreen extends DesignScreen {
         return false;
     }
 
+    /**
+     * The menu is drawn at one design unit per physical pixel on a 1080p screen, more on taller
+     * windows, times Interface size; the HUD editor's embedded column keeps the usual density.
+     */
+    @Override
+    protected double pageScaleFor(int guiScale, double interfaceSize) {
+        if (embedded) return super.pageScaleFor(guiScale, interfaceSize);
+        double perUnit = Math.max(1.0, minecraft.getWindow().getHeight() / 1080.0) * interfaceSize;
+        return perUnit / Math.max(1, guiScale);
+    }
+
+    /** Switches the top bar's tab (a click on it, and the smoke test). */
+    public void selectTab(Tab t) {
+        popover = null;
+        if (t != Tab.MODS) clearSearch();
+        closePanel();
+        tab = t;
+        pageScroll = 0;
+        pageShown = 0;
+        focusKey = "tab:" + t.name().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean modSettingsOpen() {
+        return tab == Tab.MODS && panelModule != null && panelTarget > 0;
+    }
+
     /** Opens a module's settings (used by the smoke test, the HUD editor and setting search results). */
     public void openModule(Module module) {
         panelModule = module;
         panelTarget = 1f;
         if (wide) panelAnim = 1f;
         panelScroll = 0;
-        settingsPage = false;
+        panelShown = 0;
+        tab = Tab.MODS;
         if (module != null && search.isEmpty() && filter == Filter.CATEGORY && module.category() != category) category = module.category();
     }
 
@@ -321,6 +364,21 @@ public final class ClickGuiScreen extends DesignScreen {
         selectCategory(c);
     }
 
+    /** Shows every mod (the All tab). */
+    public void showAll() {
+        selectFilter(Filter.ALL);
+    }
+
+    /** Centre of the n-th tile in the first row, in design units (smoke test). */
+    public int[] tileCentre(int index) {
+        return new int[]{contentX + index * (cardWidth + TILE_GAP) + cardWidth / 2, contentY + TILE_H / 2};
+    }
+
+    /** Physical pixels per design unit this frame (smoke test). */
+    public double pixelsPerUnitNow() {
+        return Render2D.pixelsPerUnit();
+    }
+
     /** Below the wide layout, slides the detail column away so the list shows (smoke test). */
     public void showList() {
         if (!wide) closePanel();
@@ -335,6 +393,7 @@ public final class ClickGuiScreen extends DesignScreen {
     public void setGridView(boolean grid) {
         gridView = grid;
         gridScroll = 0;
+        gridShown = 0;
     }
 
     public Module openModule() {
@@ -342,9 +401,7 @@ public final class ClickGuiScreen extends DesignScreen {
     }
 
     public LayoutInfo layoutInfo() {
-        int cardH = gridView ? CARD_H : LIST_ROW_H;
-        return new LayoutInfo(designW, designH, narrow, gridColumns, cardWidth, cardH, narrow ? 0 : RAIL_W, panelW,
-                panelModule != null && panelTarget > 0, pageScale);
+        return new LayoutInfo(designW, designH, false, COLS, cardWidth, TILE_H, 0, panelW, modSettingsOpen(), pageScale);
     }
 
     // ---- animation helpers ---------------------------------------------------------------------
@@ -440,10 +497,8 @@ public final class ClickGuiScreen extends DesignScreen {
         pose.scale(s, s);
 
         if (embedded) {
-            narrow = false;
             wide = true;
-            settingsPage = false;
-            panelReplacesGrid = false;
+            tab = Tab.MODS;
             panelTarget = panelAnim = panelModule == null ? 0f : 1f;
             layoutPanel();
             contentX = panelX;
@@ -452,19 +507,10 @@ public final class ClickGuiScreen extends DesignScreen {
             contentH = panelH;
             if (panelModule != null) renderPanel(g);
         } else {
-            layout();
-            ensureSelection();
-            panelAnim = wide ? panelTarget : Render2D.step(panelAnim, panelTarget, dt, PANEL_MS);
-            if (!wide && panelTarget == 0f && panelAnim == 0f) panelModule = null;
-            layoutPanel();
-
-            if (narrow) renderTopBar(g);
-            else renderRail(g);
-
-            boolean hideList = panelReplacesGrid && panelAnim > 0.02f && !settingsPage;
-            if (settingsPage) renderSettingsPage(g);
-            else if (!hideList) renderList(g);
-            if (!settingsPage && (wide || (panelModule != null && panelAnim > 0.001f))) renderPanel(g);
+            wide = true;
+            panelAnim = panelTarget;
+            layoutMenu();
+            renderMenu(g);
         }
         pose.popMatrix();
 
@@ -479,26 +525,6 @@ public final class ClickGuiScreen extends DesignScreen {
         if (hoverDetails == null) hoverDetailsShown = null;
         renderToast(g);
         popDesign(g);
-    }
-
-    private void layout() {
-        narrow = Scale.narrow(designW);
-        wide = !narrow && designW >= WIDE_UNITS;
-        if (narrow) {
-            contentX = PAD;
-            contentY = PAD + TOPBAR_H + GRID_GAP;
-            contentW = designW - 2 * PAD;
-            contentH = designH - contentY - PAD;
-        } else {
-            contentX = PAD + RAIL_W + 24;
-            contentY = PAD + 4;
-            contentW = designW - contentX - PAD;
-            contentH = designH - contentY - PAD;
-        }
-        panelReplacesGrid = !wide;
-        listW = wide && !settingsPage ? contentW - DETAIL_W - 24 : contentW;
-        gridColumns = gridView && search.isEmpty() ? Scale.gridColumns(listW, CARD_MIN_W, GRID_GAP) : 1;
-        cardWidth = Scale.cardWidth(listW, gridColumns, GRID_GAP);
     }
 
     /** Where the detail column sits: its own column on wide windows, sliding over the list otherwise. */
@@ -517,18 +543,36 @@ public final class ClickGuiScreen extends DesignScreen {
         panelX = contentX + Math.round((1f - eased) * (panelW + PAD));
     }
 
-    /** On wide windows something is always selected: the saved module, else the first in the list. */
-    private void ensureSelection() {
-        if (!wide || settingsPage || embedded) return;
-        if (panelModule == null || panelModule.hidden()) {
-            List<Module> visible = visibleModules();
-            panelModule = visible.isEmpty() ? null : visible.get(0);
-        }
-        panelTarget = panelModule == null ? 0f : 1f;
+    /** The centred panel and its regions; the settings view and the other tabs use the whole body. */
+    private void layoutMenu() {
+        menuW = Math.min(MENU_W, designW - 2 * PAD);
+        menuH = Math.min(MENU_H, designH - 2 * PAD);
+        menuX = (designW - menuW) / 2;
+        menuY = (designH - menuH) / 2;
+        int bodyTop = menuY + TOP_H;
+        int bodyBottom = menuY + menuH - FOOT_H;
+        catY = bodyTop + 12;
+        contentX = menuX + GRID_PAD;
+        contentW = menuW - 2 * GRID_PAD;
+        contentY = tab == Tab.MODS && !modSettingsOpen() ? catY + CAT_H + GRID_PAD : bodyTop + GRID_PAD;
+        contentH = bodyBottom - contentY;
+        gridColumns = COLS;
+        cardWidth = (contentW - (COLS - 1) * TILE_GAP) / COLS;
+        panelX = menuX;
+        panelY = bodyTop;
+        panelW = menuW;
+        panelH = bodyBottom - bodyTop;
+    }
+
+    /** One frame of scroll easing toward {@code target} (instant with Reduce motion). */
+    private float ease(float shown, int target) {
+        if (Theme.reduceMotion()) return target;
+        float next = shown + (target - shown) * (1f - (float) Math.exp(-dt * 18f));
+        return Math.abs(target - next) < 0.5f ? target : next;
     }
 
     private boolean panelCovers(double mx, double my) {
-        if (wide || settingsPage) return false;
+        if (wide || (tab == Tab.SETTINGS)) return false;
         return panelModule != null && panelAnim > 0.001f && Render2D.hovered(mx, my, panelX, panelY, panelW, panelH);
     }
 
@@ -543,155 +587,116 @@ public final class ClickGuiScreen extends DesignScreen {
                 .map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("dev");
     }
 
-    // ---- rail / top bar ------------------------------------------------------------------------
+    // ---- menu chrome ---------------------------------------------------------------------------
 
-    private void renderRail(GuiGraphics g) {
-        int x = PAD;
-        int y = PAD;
-        int w = RAIL_W;
-        int h = designH - 2 * PAD;
-        Render2D.panel(g, x, y, w, h, Theme.radiusLarge(), Theme.surface(), Theme.line());
-        hit("rail", x, y, w, h, false, b -> {});
-        int ix = x + 10;
-        int iw = w - 20;
-
-        // Brand: mark, name, version.
-        int brandY = y + 14;
-        Icons.draw(g, "logo", ix + 4, brandY, 18, Theme.accent());
-        Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, SECTION, ix + 30, brandY + (18 - Fonts.lineHeight(SECTION)) / 2, Theme.text());
-        Fonts.drawRight(g, version(), Fonts.Weight.MEDIUM, HINT, ix + iw - 4, brandY + (18 - Fonts.lineHeight(HINT)) / 2, Theme.subtle());
-
-        boolean compact = designH < COMPACT_HEIGHT;
-        int rowH = compact ? 26 : RAIL_ROW_H;
-        int searchY = y + (compact ? 40 : 46);
-        renderSearch(g, ix, searchY, iw, FIELD_H);
-
-        int listY = searchY + FIELD_H + (compact ? 6 : 12);
-        int bottomH = 2 * rowH + 2 + 10;
-        int listH = y + h - bottomH - listY - 6;
-        clip(g, x, listY, w, listH);
-        int cy = listY - sidebarScroll;
-        boolean noSearch = search.isEmpty();
-        railRow(g, "nav:favorites", "Favorites", "favorites", noSearch && !settingsPage && filter == Filter.FAVORITES, ix, cy, iw, rowH, true,
-                () -> selectFilter(Filter.FAVORITES));
-        cy += rowH + 2;
-        railRow(g, "nav:enabled", "Enabled", "enabled", noSearch && !settingsPage && filter == Filter.ENABLED, ix, cy, iw, rowH, true,
-                () -> selectFilter(Filter.ENABLED));
-        cy += rowH + (compact ? 6 : 14);
-        if (!compact) {
-            Fonts.draw(g, "CATEGORIES", Fonts.Weight.MEDIUM, HINT, ix + 8, cy, Theme.subtle());
-            cy += Fonts.lineHeight(HINT) + 6;
+    private void renderMenu(GuiGraphics g) {
+        Render2D.panel(g, menuX, menuY, menuW, menuH, Theme.radiusLarge(), Theme.surface(), Theme.line());
+        hit("menu", menuX, menuY, menuW, menuH, false, b -> {});
+        renderMenuTop(g);
+        switch (tab) {
+            case MODS -> {
+                if (modSettingsOpen()) renderPanel(g);
+                else {
+                    renderCategoryRow(g);
+                    renderTiles(g);
+                }
+            }
+            case SETTINGS -> renderSettingsPage(g);
+            case COSMETICS -> renderCosmeticsPage(g);
+            case FRIENDS -> renderFriendsPage(g);
         }
-        for (ModuleCategory c : categories()) {
-            railRow(g, "cat:" + c.name(), c.displayName(), Icons.categoryIcon(c), noSearch && !settingsPage && filter == Filter.CATEGORY && c == category,
-                    ix, cy, iw, rowH, true, () -> selectCategory(c));
-            cy += rowH + 2;
-        }
-        int contentHeight = cy + sidebarScroll - listY;
-        sidebarScroll = Math.max(0, Math.min(sidebarScroll, contentHeight - listH));
-        unclip(g);
-
-        int by = y + h - 10 - 2 * rowH - 2;
-        g.fill(ix + 6, by - 6, ix + iw - 6, by - 5, Theme.line());
-        boolean canEdit = minecraft.player != null;
-        railRow(g, "nav:hud-editor", "Edit HUD", "edit-hud", false, ix, by, iw, rowH, canEdit, () -> {
-            if (canEdit) minecraft.setScreen(new HudEditorScreen(this, ShardClient.hud()));
-        });
-        railRow(g, "cat:settings", "Settings", "settings", settingsPage, ix, by + rowH + 2, iw, rowH, true, this::selectSettings);
+        renderMenuFooter(g);
     }
 
-    private void railRow(GuiGraphics g, String key, String label, String icon, boolean selected,
-                         int x, int y, int w, int h, boolean enabled, Runnable onSelect) {
-        Hit probe = new Hit(key, x, y, w, h, currentClip, enabled, b -> {
-            if (enabled) onSelect.run();
-        });
-        hits.add(probe);
-        boolean hover = enabled && hoverable(probe);
-        float sel = Render2D.easeInOut(anim(key + ":sel", selected ? 1f : 0f, HOVER_MS));
-        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
-        int fill = Colors.mix(Colors.mix(0x00000000, Theme.surfaceHover(), hov), Theme.control(), sel);
-        if (Colors.alpha(fill) > 4) Render2D.roundedRect(g, x, y, w, h, Theme.radiusSmall(), fill);
-        if (focused(key)) Render2D.roundedOutline(g, x, y, w, h, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
-        int textColor = !enabled ? Theme.subtle() : selected || hover ? Theme.text() : Theme.muted();
-        Icons.draw(g, icon, x + 8, y + (h - 16) / 2, 16, selected ? Theme.accent() : enabled ? Theme.muted() : Theme.subtle());
-        Fonts.drawClipped(g, label, Fonts.Weight.MEDIUM, LABEL, x + 34, y + (h - Fonts.lineHeight(LABEL)) / 2, w - 42, textColor);
-    }
-
-    private void renderTopBar(GuiGraphics g) {
-        int x = PAD;
-        int y = PAD;
-        int w = designW - 2 * PAD;
-        Render2D.panel(g, x, y, w, TOPBAR_H, Theme.radiusLarge(), Theme.surface(), Theme.line());
-        hit("topbar", x, y, w, TOPBAR_H, false, b -> {});
-        Icons.draw(g, "logo", x + 14, y + 12 + (FIELD_H - 18) / 2, 18, Theme.accent());
-        Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, SECTION, x + 40, y + 12 + (FIELD_H - Fonts.lineHeight(SECTION)) / 2, Theme.text());
-        int searchX = x + 40 + Fonts.widthInt("Shard", Fonts.Weight.SEMIBOLD, SECTION) + 16;
-        renderSearch(g, searchX, y + 12, x + w - 12 - searchX, FIELD_H);
-
-        int tabY = y + 12 + FIELD_H + 10;
-        int tabH = 26;
-        int tx = x + 10;
-        List<ModuleCategory> cats = categories();
-        // Narrower and narrower until everything fits: full names; short names and an icon-only
-        // Edit HUD button; icon-only category tabs. Nothing is ever cut off or overlapped.
-        int fullHudW = Fonts.widthInt("Edit HUD", Fonts.Weight.MEDIUM, LABEL) + 24;
-        int iconHudW = tabH + 6;
-        int full = tabsWidth(cats, 0);
-        int shortNames = tabsWidth(cats, 1);
-        int level = full <= w - 28 - fullHudW ? 0 : shortNames <= w - 28 - iconHudW ? 1 : 2;
-        int hudW = level == 0 ? fullHudW : iconHudW;
-        for (ModuleCategory c : cats) {
-            boolean sel = search.isEmpty() && !settingsPage && filter == Filter.CATEGORY && c == category;
-            tx += renderTab(g, "cat:" + c.name(), tabLabel(c, level), level == 2 ? Icons.categoryIcon(c) : null, sel, tx, tabY, tabH,
-                    () -> selectCategory(c));
-        }
-        renderTab(g, "cat:settings", level == 0 ? "Settings" : "More", null, settingsPage, tx, tabY, tabH, this::selectSettings);
-        boolean canEdit = minecraft.player != null;
-        int hudX = x + w - 10 - hudW;
-        button(g, "nav:hud-editor", hudX, tabY, hudW, tabH, level == 0 ? "Edit HUD" : "", false, canEdit, b -> {
-            if (canEdit) minecraft.setScreen(new HudEditorScreen(this, ShardClient.hud()));
-        });
-        if (level > 0) Icons.draw(g, "edit-hud", hudX + (hudW - 14) / 2, tabY + (tabH - 14) / 2, 14, canEdit ? Theme.text() : Theme.subtle());
-    }
-
-    /** Width of the category tabs plus Settings at a compaction level (see {@link #renderTopBar}). */
-    private int tabsWidth(List<ModuleCategory> cats, int level) {
-        int sum = Fonts.widthInt(level == 0 ? "Settings" : "More", Fonts.Weight.MEDIUM, DESC) + 24;
-        for (ModuleCategory c : cats) sum += level == 2 ? 36 : Fonts.widthInt(tabLabel(c, level), Fonts.Weight.MEDIUM, DESC) + 24;
-        return sum;
-    }
-
-    private static String tabLabel(ModuleCategory c, int level) {
-        return level == 0 ? c.displayName() : compactName(c);
-    }
-
-    private static String compactName(ModuleCategory c) {
-        return switch (c) {
-            case PERFORMANCE -> "Perf";
-            default -> c.displayName();
+    private static String tabName(Tab t) {
+        return switch (t) {
+            case MODS -> "Mods";
+            case SETTINGS -> "Settings";
+            case COSMETICS -> "Cosmetics";
+            case FRIENDS -> "Friends";
         };
     }
 
-    /** A tab in the narrow top bar; with an icon it shows only the icon (the label is still its name for focus). */
-    private int renderTab(GuiGraphics g, String key, String label, String icon, boolean selected, int x, int y, int h, Runnable onSelect) {
-        int w = icon != null ? 32 : Fonts.widthInt(label, Fonts.Weight.MEDIUM, DESC) + 20;
-        Hit probe = new Hit(key, x, y, w, h, currentClip, true, b -> onSelect.run());
+    /** Wordmark, text tabs with a 1-unit underline on the active one, search on the right. */
+    private void renderMenuTop(GuiGraphics g) {
+        int y = menuY;
+        g.fill(menuX + 1, y + TOP_H - 1, menuX + menuW - 1, y + TOP_H, Theme.line());
+        int x = menuX + 18;
+        Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, 14, x, y + (TOP_H - Fonts.lineHeight(14)) / 2, Theme.text());
+        int tx = x + Fonts.widthInt("Shard", Fonts.Weight.SEMIBOLD, 14) + 24;
+        int textY = y + (TOP_H - Fonts.lineHeight(SECTION)) / 2;
+        for (Tab t : Tab.values()) {
+            String label = tabName(t);
+            int w = Fonts.widthInt(label, Fonts.Weight.MEDIUM, SECTION);
+            String key = "tab:" + t.name().toLowerCase(Locale.ROOT);
+            Hit probe = new Hit(key, tx - 6, y, w + 12, TOP_H, currentClip, true, b -> selectTab(t));
+            hits.add(probe);
+            boolean on = tab == t;
+            float hov = Render2D.easeInOut(anim(key + ":hov", hoverable(probe) ? 1f : 0f, HOVER_MS));
+            int color = on ? Theme.text() : Colors.mix(Theme.muted(), Theme.icon(), hov);
+            Fonts.draw(g, label, Fonts.Weight.MEDIUM, SECTION, tx, textY, color);
+            if (on) g.fill(tx, y + TOP_H - 1, tx + w, y + TOP_H, Theme.text());
+            if (focused(key)) Render2D.roundedOutline(g, tx - 6, y + 13, w + 12, TOP_H - 26, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
+            tx += w + 20;
+        }
+        renderSearch(g, menuX + menuW - 18 - 200, y + (TOP_H - 30) / 2, 200, 30);
+    }
+
+    private static int pillWidth(String label) {
+        return Fonts.widthInt(label, Fonts.Weight.MEDIUM, LABEL) + 22;
+    }
+
+    /** All and the categories on the left, Favorites and Enabled on the right. */
+    private void renderCategoryRow(GuiGraphics g) {
+        boolean noSearch = search.isEmpty();
+        int x = menuX + GRID_PAD;
+        x += pill(g, "cat:all", "All", noSearch && filter == Filter.ALL, x, catY, () -> selectFilter(Filter.ALL));
+        for (ModuleCategory c : categories()) {
+            x += pill(g, "cat:" + c.name(), c.displayName(), noSearch && filter == Filter.CATEGORY && c == category, x, catY, () -> selectCategory(c));
+        }
+        int rx = menuX + menuW - GRID_PAD - pillWidth("Enabled");
+        pill(g, "nav:enabled", "Enabled", noSearch && filter == Filter.ENABLED, rx, catY, () -> selectFilter(Filter.ENABLED));
+        rx -= 4 + pillWidth("Favorites");
+        pill(g, "nav:favorites", "Favorites", noSearch && filter == Filter.FAVORITES, rx, catY, () -> selectFilter(Filter.FAVORITES));
+    }
+
+    private int pill(GuiGraphics g, String key, String label, boolean selected, int x, int y, Runnable onSelect) {
+        int w = pillWidth(label);
+        Hit probe = new Hit(key, x, y, w, CAT_H, currentClip, true, b -> onSelect.run());
         hits.add(probe);
         boolean hover = hoverable(probe);
         float sel = Render2D.easeInOut(anim(key + ":sel", selected ? 1f : 0f, HOVER_MS));
-        int fill = Colors.mix(hover ? Theme.surfaceHover() : 0x00000000, Theme.control(), sel);
-        if (Colors.alpha(fill) > 4) Render2D.roundedRect(g, x, y, w, h, Theme.radiusSmall(), fill);
-        if (focused(key)) Render2D.roundedOutline(g, x, y, w, h, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
-        if (icon != null) Icons.draw(g, icon, x + (w - 16) / 2, y + (h - 16) / 2, 16, selected ? Theme.accent() : Theme.muted());
-        else Fonts.draw(g, label, Fonts.Weight.MEDIUM, DESC, x + 10, y + (h - Fonts.lineHeight(DESC)) / 2, selected ? Theme.text() : Theme.muted());
+        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
+        int fill = Colors.mix(Colors.mix(0x00000000, Theme.surfaceHover(), hov), Theme.control(), sel);
+        if (Colors.alpha(fill) > 4) Render2D.roundedRect(g, x, y, w, CAT_H, Theme.radiusSmall(), fill);
+        if (focused(key)) Render2D.roundedOutline(g, x, y, w, CAT_H, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
+        int color = Colors.mix(Colors.mix(Theme.soft(), Theme.icon(), hov), Theme.text(), sel);
+        Fonts.draw(g, label, Fonts.Weight.MEDIUM, LABEL, x + 11, y + (CAT_H - Fonts.lineHeight(LABEL)) / 2, color);
         return w + 4;
+    }
+
+    /** Status line and the Edit HUD Layout button. */
+    private void renderMenuFooter(GuiGraphics g) {
+        int y = menuY + menuH - FOOT_H;
+        g.fill(menuX + 1, y, menuX + menuW - 1, y + 1, Theme.line());
+        int on = 0;
+        for (Module m : ShardClient.modules().all()) if (!m.hidden() && m.isToggledOn()) on++;
+        String status = on + " enabled · Right-click a mod for settings";
+        Fonts.draw(g, status, Fonts.Weight.REGULAR, DESC, menuX + 18, y + (FOOT_H - Fonts.lineHeight(DESC)) / 2, Theme.subtle());
+        boolean canEdit = minecraft.player != null;
+        String label = "Edit HUD Layout";
+        int bw = Fonts.widthInt(label, Fonts.Weight.MEDIUM, LABEL) + 24;
+        int bh = 26;
+        button(g, "nav:hud-editor", menuX + menuW - 18 - bw, y + (FOOT_H - bh) / 2, bw, bh, label, false, canEdit, b -> {
+            if (canEdit) minecraft.setScreen(new HudEditorScreen(this, ShardClient.hud()));
+        });
     }
 
     private void renderSearch(GuiGraphics g, int x, int y, int w, int h) {
         boolean isFocused = activeInput == search;
         search.render(g, x, y, w, h, isFocused);
-        Icons.draw(g, "search", x + 9, y + (h - 14) / 2, 14, isFocused ? Theme.accent() : Theme.subtle());
-        if (search.isEmpty() && !isFocused) {
+        Icons.draw(g, "search", x + 10, y + (h - 13) / 2, 13, isFocused ? Theme.muted() : Theme.subtle());
+        if (search.isEmpty() && !isFocused && w >= 240) {
             String hint = "Ctrl F";
             int hw = Fonts.widthInt(hint, Fonts.Weight.MEDIUM, HINT) + 10;
             int hx = x + w - 6 - hw;
@@ -705,10 +710,11 @@ public final class ClickGuiScreen extends DesignScreen {
 
     private void selectCategory(ModuleCategory c) {
         popover = null;
-        settingsPage = false;
+        tab = Tab.MODS;
         filter = Filter.CATEGORY;
         category = c;
         gridScroll = 0;
+        gridShown = 0;
         clearSearch();
         if (!wide && panelModule != null && panelModule.category() != c) closePanel();
         if (wide && panelModule != null && panelModule.category() != c) panelModule = null;
@@ -717,22 +723,18 @@ public final class ClickGuiScreen extends DesignScreen {
 
     private void selectFilter(Filter f) {
         popover = null;
-        settingsPage = false;
+        tab = Tab.MODS;
         filter = f;
         gridScroll = 0;
+        gridShown = 0;
         clearSearch();
         if (!wide) closePanel();
         else panelModule = null;
-        focusKey = "nav:" + f.name().toLowerCase(Locale.ROOT);
+        focusKey = f == Filter.ALL ? "cat:all" : "nav:" + f.name().toLowerCase(Locale.ROOT);
     }
 
     private void selectSettings() {
-        popover = null;
-        settingsPage = true;
-        pageScroll = 0;
-        clearSearch();
-        if (!wide) closePanel();
-        focusKey = "cat:settings";
+        selectTab(Tab.SETTINGS);
     }
 
     /**
@@ -742,9 +744,10 @@ public final class ClickGuiScreen extends DesignScreen {
      */
     private void searchEdited() {
         gridScroll = 0;
+        gridShown = 0;
         if (embedded || search.isEmpty()) return;
-        settingsPage = false;
-        if (!wide && panelTarget > 0f) {
+        tab = Tab.MODS;
+        if (panelTarget > 0f) {
             panelTarget = 0f;
             popover = null;
         }
@@ -769,6 +772,11 @@ public final class ClickGuiScreen extends DesignScreen {
         String q = search.value().trim();
         if (q.isEmpty()) {
             return switch (filter) {
+                case ALL -> {
+                    List<Module> out = new ArrayList<>();
+                    for (ModuleCategory c : ModuleCategory.values()) out.addAll(ShardClient.modules().byCategory(c));
+                    yield out;
+                }
                 case CATEGORY -> ShardClient.modules().byCategory(category);
                 case FAVORITES -> {
                     List<Module> out = new ArrayList<>();
@@ -812,181 +820,108 @@ public final class ClickGuiScreen extends DesignScreen {
         return out.size() > 12 ? new ArrayList<>(out.subList(0, 12)) : out;
     }
 
-    private int headerHeight() {
-        return Fonts.lineHeight(TITLE) + 2 + Fonts.lineHeight(DESC) + 14;
-    }
-
-    private void renderPageHeader(GuiGraphics g, String title, String sub, int w) {
-        Fonts.drawClipped(g, title, Fonts.Weight.SEMIBOLD, TITLE, contentX, contentY, w, Theme.text());
-        Fonts.drawClipped(g, sub, Fonts.Weight.REGULAR, DESC, contentX, contentY + Fonts.lineHeight(TITLE) + 2, w, Theme.muted());
-    }
-
-    private String listTitle(boolean searching) {
-        if (searching) return "Results";
-        return switch (filter) {
-            case FAVORITES -> "Favorites";
-            case ENABLED -> "Enabled";
-            case CATEGORY -> category.displayName();
-        };
-    }
-
-    private String listSubtitle(boolean searching, int modules, int settings) {
-        if (searching) {
-            int n = modules + settings;
-            return n == 0 ? "Nothing matches \"" + search.value().trim() + "\"" : n + (n == 1 ? " match for \"" : " matches for \"") + search.value().trim() + "\"";
-        }
-        return switch (filter) {
-            case FAVORITES -> "Star a module in its panel to pin it here.";
-            case ENABLED -> "Everything that is switched on right now.";
-            case CATEGORY -> category.description();
-        };
-    }
-
-    private void renderList(GuiGraphics g) {
-        boolean searching = !search.isEmpty();
-        List<Module> modules = visibleModules();
-        List<SettingHit> settings = settingResults();
-        int toggleW = 54;
-        renderPageHeader(g, listTitle(searching), listSubtitle(searching, modules.size(), settings.size()), listW - (searching ? 0 : toggleW + 12));
-        if (!searching) renderViewToggle(g, contentX + listW - toggleW, contentY + 4, toggleW);
-
-        int top = contentY + headerHeight();
-        int viewH = contentY + contentH - top;
-        if (modules.isEmpty() && settings.isEmpty()) {
-            String icon = filter == Filter.FAVORITES && !searching ? "favorites" : "search";
-            Icons.draw(g, icon, contentX + listW / 2 - 12, top + 32, 24, Theme.subtle());
-            String msg = searching ? "Try another word" : filter == Filter.FAVORITES ? "No favorites yet" : "Nothing here yet";
-            Fonts.drawCentered(g, msg, Fonts.Weight.MEDIUM, LABEL, contentX + listW / 2, top + 64, Theme.muted());
-            return;
-        }
-
-        clip(g, contentX - 4, top, listW + 8, viewH);
-        int y = top - gridScroll;
-        if (gridView && search.isEmpty()) {
-            for (int i = 0; i < modules.size(); i++) {
-                Module m = modules.get(i);
-                int cx = contentX + (i % gridColumns) * (cardWidth + GRID_GAP);
-                int cy = y + (i / gridColumns) * (CARD_H + GRID_GAP);
-                cardOrder.add("row:" + m.key());
-                if (cy + CARD_H >= top && cy <= top + viewH) renderCard(g, m, cx, cy, cardWidth);
-            }
-            y += ((modules.size() + gridColumns - 1) / gridColumns) * (CARD_H + GRID_GAP);
-        } else {
-            for (Module m : modules) {
-                cardOrder.add("row:" + m.key());
-                if (y + LIST_ROW_H >= top && y <= top + viewH) renderModuleRow(g, m, contentX, y, listW);
-                y += LIST_ROW_H + 2;
-            }
-        }
-        if (!settings.isEmpty()) {
-            y += 12;
-            Fonts.draw(g, "SETTINGS", Fonts.Weight.MEDIUM, HINT, contentX + 12, y, Theme.subtle());
-            y += Fonts.lineHeight(HINT) + 6;
-            for (SettingHit sh : settings) {
-                if (y + 36 >= top && y <= top + viewH) renderSettingResult(g, sh, contentX, y, listW);
-                y += 38;
-            }
-        }
-        int contentHeight = y + gridScroll - top + 8;
-        gridScroll = Math.max(0, Math.min(gridScroll, contentHeight - viewH));
-        // Fade the bottom edge when more is below.
-        if (contentHeight - gridScroll > viewH + 2) {
-            Render2D.gradientV(g, contentX - 4, top + viewH - 16, listW + 8, 16, 0x00000000, Colors.withAlpha(Theme.overlay(), 0xC0));
-        }
-        unclip(g);
-    }
-
-    private void renderViewToggle(GuiGraphics g, int x, int y, int w) {
-        int h = 24;
-        Render2D.panel(g, x, y, w, h, Theme.radiusSmall(), Theme.surfaceRaised(), Theme.line());
-        int half = (w - 4) / 2;
-        viewButton(g, "view:grid", "grid", gridView, x + 2, y + 2, half, h - 4, () -> setGridView(true));
-        viewButton(g, "view:list", "list", !gridView, x + 2 + half, y + 2, half, h - 4, () -> setGridView(false));
-    }
-
-    private void viewButton(GuiGraphics g, String key, String icon, boolean on, int x, int y, int w, int h, Runnable onClick) {
-        Hit probe = new Hit(key, x, y, w, h, currentClip, true, b -> onClick.run());
-        hits.add(probe);
-        boolean hover = hoverable(probe);
-        if (on) Render2D.roundedRect(g, x, y, w, h, 4, Theme.control());
-        else if (hover) Render2D.roundedRect(g, x, y, w, h, 4, Theme.surfaceHover());
-        if (focused(key)) Render2D.roundedOutline(g, x, y, w, h, 4, Theme.accentAlpha(0xA0));
-        Icons.draw(g, icon, x + (w - 14) / 2, y + (h - 14) / 2, 14, on ? Theme.text() : Theme.subtle());
-    }
-
     private void selectModule(Module m) {
         if (panelModule != m) panelScroll = 0;
         openModule(m);
         focusKey = "row:" + m.key();
     }
 
-    /** One list row: icon, full name, one line of description, switch. Right-click toggles. */
-    private void renderModuleRow(GuiGraphics g, Module m, int x, int y, int w) {
-        String key = "row:" + m.key();
-        int h = LIST_ROW_H;
-        Hit row = new Hit(key, x, y, w, h, currentClip, true, b -> {
-            if (b == GLFW.GLFW_MOUSE_BUTTON_RIGHT) m.toggle();
-            else selectModule(m);
-        });
-        hits.add(row);
-        boolean hover = hoverable(row) || (popover == null && focused(key));
-        boolean selected = panelModule == m && panelTarget > 0;
-        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
-        float sel = Render2D.easeInOut(anim(key + ":sel", selected ? 1f : 0f, HOVER_MS));
-        int fill = Colors.mix(Colors.mix(0x00000000, Theme.surfaceRaised(), hov), Theme.surfaceRaised(), sel);
-        if (Colors.alpha(fill) > 4) Render2D.roundedRect(g, x, y, w, h, Theme.radius(), fill);
-        if (sel > 0.01f) Render2D.roundedRect(g, x, y + 10, 2, h - 20, 1, Colors.fade(Theme.accent(), sel));
-        if (focused(key)) Render2D.roundedOutline(g, x, y, w, h, Theme.radius(), Theme.accentAlpha(0xA0));
-
-        Icons.draw(g, m, x + 12, y + (h - 16) / 2, 16, m.isEnabled() ? Theme.accent() : Theme.muted());
-        int textX = x + 40;
-        int switchX = x + w - 12 - SWITCH_W;
-        int textW = switchX - 12 - textX;
-        int nameY = y + (h - Fonts.lineHeight(LABEL) - Fonts.lineHeight(DESC)) / 2;
-        int nameW = Fonts.widthInt(m.name(), Fonts.Weight.SEMIBOLD, LABEL);
-        Fonts.drawClipped(g, m.name(), Fonts.Weight.SEMIBOLD, LABEL, textX, nameY, textW, Theme.text());
-        if (favorites.contains(m.key()) && nameW + 18 < textW) Icons.draw(g, "favorite-on", textX + nameW + 6, nameY + (Fonts.lineHeight(LABEL) - 10) / 2, 10, Theme.subtle());
-        String notice = notice(m);
-        int descY = nameY + Fonts.lineHeight(LABEL);
-        if (notice != null) Fonts.drawClipped(g, notice, Fonts.Weight.REGULAR, DESC, textX, descY, textW, Theme.warning());
-        else Fonts.drawClipped(g, m.description(), Fonts.Weight.REGULAR, DESC, textX, descY, textW, Theme.muted());
-        renderSwitch(g, "sw:" + m.key(), switchX, y + (h - SWITCH_H) / 2, m.isToggledOn(), notice == null, m::toggle);
-    }
-
-    /** Grid card: icon and switch on top, the full name on its own line, two lines of description. */
-    private void renderCard(GuiGraphics g, Module m, int x, int y, int w) {
-        String key = "row:" + m.key();
-        int h = CARD_H;
-        Hit card = new Hit(key, x, y, w, h, currentClip, true, b -> {
-            if (b == GLFW.GLFW_MOUSE_BUTTON_RIGHT) m.toggle();
-            else selectModule(m);
-        });
-        hits.add(card);
-        boolean hover = hoverable(card) || (popover == null && focused(key));
-        boolean selected = panelModule == m && panelTarget > 0;
-        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
-        int lift = Math.round(hov);
-        int fill = Colors.mix(Theme.surfaceRaised(), Theme.surfaceHover(), hov);
-        Render2D.roundedRect(g, x, y - lift, w, h, Theme.radius(), fill);
-        int border = selected ? Theme.accentAlpha(0x90) : m.isEnabled() ? Theme.accentAlpha(0x38) : Colors.mix(Theme.line(), Theme.lineStrong(), hov);
-        if (focused(key)) border = Theme.accentAlpha(0xC0);
-        Render2D.roundedOutline(g, x, y - lift, w, h, Theme.radius(), border);
-        int top = y - lift + 12;
-        Icons.draw(g, m, x + 12, top, 16, m.isEnabled() ? Theme.accent() : Theme.muted());
-        String notice = notice(m);
-        renderSwitch(g, "sw:" + m.key(), x + w - 12 - SWITCH_W, top, m.isToggledOn(), notice == null, m::toggle);
-        int textW = w - 24;
-        int nameY = top + 24;
-        Fonts.drawClipped(g, m.name(), Fonts.Weight.SEMIBOLD, LABEL, x + 12, nameY, textW, Theme.text());
-        int descY = nameY + Fonts.lineHeight(LABEL) + 2;
-        if (notice != null) {
-            Fonts.drawClipped(g, notice, Fonts.Weight.REGULAR, DESC, x + 12, descY, textW, Theme.warning());
+    /** The tile grid (or search results: matching tiles, then matching settings). */
+    private void renderTiles(GuiGraphics g) {
+        List<Module> modules = visibleModules();
+        List<SettingHit> settings = settingResults();
+        int top = contentY;
+        int viewH = contentH;
+        if (modules.isEmpty() && settings.isEmpty()) {
+            boolean searching = !search.isEmpty();
+            String icon = filter == Filter.FAVORITES && !searching ? "favorites" : "search";
+            int cx = menuX + menuW / 2;
+            Icons.draw(g, icon, cx - 11, top + viewH / 2 - 40, 22, Theme.subtle());
+            String msg = searching ? "Nothing matches \"" + search.value().trim() + "\"" : filter == Filter.FAVORITES ? "No favorites yet" : "Nothing here yet";
+            Fonts.drawCentered(g, msg, Fonts.Weight.MEDIUM, LABEL, cx, top + viewH / 2 - 8, Theme.muted());
+            if (filter == Filter.FAVORITES && !searching) {
+                Fonts.drawCentered(g, "Open a mod's settings and star it to pin it here", Fonts.Weight.REGULAR, DESC, cx, top + viewH / 2 + 10, Theme.subtle());
+            }
             return;
         }
-        List<String> lines = Fonts.wrap(m.description(), Fonts.Weight.REGULAR, DESC, textW);
-        for (int i = 0; i < Math.min(2, lines.size()); i++) {
-            String line = i == 1 && lines.size() > 2 ? Fonts.clip(lines.get(1) + " " + lines.get(2), Fonts.Weight.REGULAR, DESC, textW) : lines.get(i);
-            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x + 12, descY + i * Fonts.lineHeight(DESC), Theme.muted());
+        gridShown = ease(gridShown, gridScroll);
+        int scroll = Math.round(gridShown);
+        clip(g, menuX + 1, top - 8, menuW - 2, viewH + 7);
+        int y = top - scroll;
+        for (int i = 0; i < modules.size(); i++) {
+            Module m = modules.get(i);
+            int tx = contentX + (i % COLS) * (cardWidth + TILE_GAP);
+            int ty = y + (i / COLS) * (TILE_H + TILE_GAP);
+            cardOrder.add("row:" + m.key());
+            if (ty + TILE_H >= top - 8 && ty <= top + viewH) renderTile(g, m, tx, ty, cardWidth, TILE_H);
+        }
+        y += ((modules.size() + COLS - 1) / COLS) * (TILE_H + TILE_GAP);
+        if (!settings.isEmpty()) {
+            y += 6;
+            Fonts.draw(g, "Settings", Fonts.Weight.SEMIBOLD, LABEL, contentX + 2, y, Theme.soft());
+            y += Fonts.lineHeight(LABEL) + 6;
+            for (SettingHit sh : settings) {
+                if (y + 36 >= top && y <= top + viewH) renderSettingResult(g, sh, contentX, y, contentW);
+                y += 38;
+            }
+        }
+        int contentHeight = y + scroll - top + GRID_PAD - TILE_GAP;
+        int max = Math.max(0, contentHeight - viewH);
+        gridScroll = Math.max(0, Math.min(gridScroll, max));
+        gridShown = Math.max(0, Math.min(gridShown, max));
+        unclip(g);
+    }
+
+    /**
+     * One mod tile: centred line icon and name, a dim gear top-right for settings, and a status
+     * strip. A click toggles the mod; the gear or a right-click opens its settings.
+     */
+    private void renderTile(GuiGraphics g, Module m, int x, int y, int w, int h) {
+        String key = "row:" + m.key();
+        String gearKey = "gear:" + m.key();
+        hits.add(new Hit(key, x, y, w, h, currentClip, true, b -> {
+            if (b == GLFW.GLFW_MOUSE_BUTTON_RIGHT) selectModule(m);
+            else m.toggle();
+        }));
+        int gs = 13;
+        int gx = x + w - 8 - gs;
+        int gy = y + 8;
+        hits.add(new Hit(gearKey, gx - 5, gy - 5, gs + 10, gs + 10, currentClip, false, b -> selectModule(m)));
+        Hit top = popover == null ? hitAt(mouseX, mouseY) : null;
+        boolean hover = top != null && (top.key.equals(key) || top.key.equals(gearKey));
+        boolean gearHover = top != null && top.key.equals(gearKey);
+        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
+        boolean on = m.isEnabled();
+        String notice = notice(m);
+
+        Render2D.roundedRect(g, x, y, w, h, Theme.radius(), Theme.surfaceRaised());
+        int stripY = y + h - STRIP_H;
+        if (on) {
+            // A very faint green behind the status, kept inside the rounded bottom corners.
+            int tint = Colors.withAlpha(Theme.success(), 0x0F);
+            g.fill(x + 1, stripY + 1, x + w - 1, y + h - 4, tint);
+            g.fill(x + 2, y + h - 4, x + w - 2, y + h - 2, tint);
+            g.fill(x + 4, y + h - 2, x + w - 4, y + h - 1, tint);
+        }
+        g.fill(x + 1, stripY, x + w - 1, stripY + 1, Theme.line());
+        int border = focused(key) ? Theme.accentAlpha(0xC0) : Colors.mix(Theme.line(), Theme.lineHover(), hov);
+        Render2D.roundedOutline(g, x, y, w, h, Theme.radius(), border);
+
+        int blockH = 22 + 10 + Fonts.lineHeight(LABEL);
+        int iconY = y + (h - blockH) / 2;
+        Icons.draw(g, m, x + (w - 22) / 2, iconY, 22, on ? Theme.text() : Theme.icon());
+        String name = Fonts.clip(m.name(), Fonts.Weight.MEDIUM, LABEL, w - 16);
+        Fonts.drawCentered(g, name, Fonts.Weight.MEDIUM, LABEL, x + w / 2, iconY + 32, on ? 0xFFFFFFFF : 0xFFCFCFD4);
+        Icons.draw(g, "settings", gx, gy, gs, gearHover ? Theme.icon() : 0xFF4A4A50);
+        if (favorites.contains(m.key())) Icons.draw(g, "favorite-on", x + 8, y + 8, 11, 0xFF4A4A50);
+
+        String status = notice != null ? (m.blockedBy() != null ? "BLOCKED" : "OFF HERE") : on ? "ENABLED" : "DISABLED";
+        int statusColor = notice != null ? Theme.warning() : on ? Theme.success() : 0xFF6A6A70;
+        Fonts.drawCentered(g, status, Fonts.Weight.SEMIBOLD, HINT, x + w / 2, stripY + (STRIP_H - Fonts.lineHeight(HINT)) / 2, statusColor);
+        if (notice != null && hover) {
+            hoverDetails = notice;
+            hoverDetailsX = mouseX + 12;
+            hoverDetailsY = mouseY + 16;
         }
     }
 
@@ -1017,6 +952,7 @@ public final class ClickGuiScreen extends DesignScreen {
         }
         openModule(m);
         panelScroll = 0;
+        panelShown = 0;
         flashSetting = s;
         flashSince = System.currentTimeMillis();
         flashScrollPending = true;
@@ -1054,8 +990,8 @@ public final class ClickGuiScreen extends DesignScreen {
         int fill;
         int color;
         if (primary) {
-            fill = Colors.mix(Theme.accent(), Theme.accentHover(), hov);
-            color = Theme.accentText();
+            fill = Colors.mix(Theme.text(), 0xFFFFFFFF, hov);
+            color = Theme.surface();
         } else if (danger) {
             fill = Colors.mix(Colors.withAlpha(Theme.danger(), 0x1A), Colors.withAlpha(Theme.danger(), 0x30), hov);
             color = Theme.danger();
@@ -1124,9 +1060,11 @@ public final class ClickGuiScreen extends DesignScreen {
         int y = panelY;
         int w = panelW;
         int h = panelH;
-        if (!wide) clip(g, contentX, contentY, contentW, contentH);
-        else Render2D.shadow(g, x, y, w, h, r, 0.5);
-        Render2D.panel(g, x, y, w, h, r, Theme.surface(), Theme.line());
+        boolean inline = !embedded;
+        if (!inline) {
+            Render2D.shadow(g, x, y, w, h, r, 0.5);
+            Render2D.panel(g, x, y, w, h, r, Theme.surface(), Theme.line());
+        }
         hit("panel", x, y, w, h, false, b -> {});
         int innerX = x + PANEL_PAD;
         int innerW = w - 2 * PANEL_PAD;
@@ -1139,14 +1077,14 @@ public final class ClickGuiScreen extends DesignScreen {
         int hy = y + PANEL_PAD;
         int headH = 36;
         int hx = innerX;
-        if (!wide) {
+        if (inline) {
             iconButton(g, "panel-back", "chevron-left", hx - 4, hy + (headH - 28) / 2, 28, Theme.muted(), b -> closePanel());
             hx += 28;
         } else if (embedded) {
             iconButton(g, "panel-back", "close", hx - 4, hy + (headH - 28) / 2, 28, Theme.muted(), b -> onClose());
             hx += 28;
         }
-        Icons.draw(g, m, hx, hy + (headH - 20) / 2, 20, m.isEnabled() ? Theme.accent() : Theme.muted());
+        if (!inline) Icons.draw(g, m, hx, hy + (headH - 20) / 2, 20, m.isEnabled() ? Theme.accent() : Theme.muted());
         String notice = notice(m);
         int switchX = x + w - PANEL_PAD - SWITCH_W;
         renderSwitch(g, "panel-enabled", switchX, hy + (headH - SWITCH_H) / 2, m.isToggledOn(), notice == null, m::toggle);
@@ -1155,7 +1093,7 @@ public final class ClickGuiScreen extends DesignScreen {
         iconButton(g, "panel-star", fav ? "favorite-on" : "favorites", starX, hy + (headH - 24) / 2, 24, fav ? Theme.warning() : Theme.subtle(), b -> {
             if (!favorites.remove(m.key())) favorites.add(m.key());
         });
-        int titleX = hx + 30;
+        int titleX = inline ? hx + 4 : hx + 30;
         int titleW = starX - 6 - titleX;
         Fonts.drawClipped(g, m.name(), Fonts.Weight.SEMIBOLD, NAME, titleX, hy, titleW, Theme.text());
         String key = Keys.name(m.keybind());
@@ -1196,12 +1134,14 @@ public final class ClickGuiScreen extends DesignScreen {
         int rowsTop = cy;
         int rowsH = y + h - rowsTop - 1;
         clip(g, x + 1, rowsTop, w - 2, rowsH);
-        int ry = rowsTop + 4 - panelScroll;
+        panelShown = ease(panelShown, panelScroll);
+        int ry = rowsTop + 4 - Math.round(panelShown);
+        rowDividers = inline;
         ry = renderSettingRows(g, m, m.settings(), innerX, ry, innerW, rowsTop);
 
         ry += SECTION_ABOVE;
-        Fonts.draw(g, "GENERAL", Fonts.Weight.MEDIUM, HINT, innerX, ry, Theme.subtle());
-        ry += Fonts.lineHeight(HINT) + SECTION_BELOW;
+        Fonts.draw(g, "General", Fonts.Weight.SEMIBOLD, DESC, innerX, ry, Theme.soft());
+        ry += Fonts.lineHeight(DESC) + SECTION_BELOW;
         List<Module> bindable = new ArrayList<>();
         for (Module other : ShardClient.modules().all()) if (!other.hidden()) bindable.add(other);
         String conflict = conflictFor(m, bindable);
@@ -1223,18 +1163,15 @@ public final class ClickGuiScreen extends DesignScreen {
             numericInputs.clear();
             showToast(m.name() + " reset");
         });
+        rowDividers = false;
         ry += BUTTON_H + PANEL_PAD;
-        int contentHeight = ry + panelScroll - rowsTop;
+        int contentHeight = ry + Math.round(panelShown) - rowsTop;
         panelScroll = Math.max(0, Math.min(panelScroll, contentHeight - rowsH));
+        panelShown = Math.max(0, Math.min(panelShown, Math.max(0, contentHeight - rowsH)));
         if (contentHeight - panelScroll > rowsH + 2) {
             Render2D.gradientV(g, x + 1, rowsTop + rowsH - 16, w - 2, 16, 0x00000000, Colors.withAlpha(Theme.surface(), 0xF0));
         }
         unclip(g);
-        if (!wide) {
-            // Leave the outer (content area) scissor as well.
-            g.disableScissor();
-            currentClip = null;
-        }
     }
 
     /**
@@ -1252,8 +1189,8 @@ public final class ClickGuiScreen extends DesignScreen {
             if (!s.isVisible()) continue;
             if (!s.group().isEmpty() && !s.group().equals(lastGroup)) {
                 y += first ? 8 : SECTION_ABOVE;
-                Fonts.draw(g, s.group().toUpperCase(Locale.ROOT), Fonts.Weight.MEDIUM, HINT, x, y, Theme.subtle());
-                y += Fonts.lineHeight(HINT) + SECTION_BELOW;
+                Fonts.draw(g, s.group(), Fonts.Weight.SEMIBOLD, DESC, x, y, Theme.soft());
+                y += Fonts.lineHeight(DESC) + SECTION_BELOW;
                 lastGroup = s.group();
             } else if (s.group().isEmpty() && lastGroup != null) {
                 y += 8;
@@ -1275,6 +1212,10 @@ public final class ClickGuiScreen extends DesignScreen {
             int rowH = renderSettingRow(g, m, s, x, y, w);
             if (s == flashSetting) anims.put("flash-h", (float) rowH);
             y += rowH;
+            if (rowDividers && rowH > 0) {
+                g.fill(x, y, x + w, y + 1, Theme.line());
+                y += 1;
+            }
             first = false;
         }
         return y;
@@ -1509,7 +1450,7 @@ public final class ClickGuiScreen extends DesignScreen {
         String cacheKey = "section-h:" + title;
         int cachedH = Math.round(anims.getOrDefault(cacheKey, (float) (headerH + 40)));
         Render2D.panel(g, x, y, w, cachedH, Theme.radius(), Theme.surfaceRaised(), Theme.line());
-        Icons.draw(g, icon, innerX, y + pad + (Fonts.lineHeight(SECTION) - 16) / 2, 16, Theme.accent());
+        Icons.draw(g, icon, innerX, y + pad + (Fonts.lineHeight(SECTION) - 16) / 2, 16, Theme.muted());
         Fonts.drawClipped(g, title, Fonts.Weight.SEMIBOLD, SECTION, innerX + 26, y + pad, innerW - 26, Theme.text());
         Fonts.drawClipped(g, sub, Fonts.Weight.REGULAR, DESC, innerX + 26, y + pad + Fonts.lineHeight(SECTION) + 2, innerW - 26, Theme.muted());
         int end = body.render(innerX, y + headerH, innerW);
@@ -1519,13 +1460,13 @@ public final class ClickGuiScreen extends DesignScreen {
     }
 
     private void renderSettingsPage(GuiGraphics g) {
-        renderPageHeader(g, "Settings", "Appearance, HUD, keybinds, profiles, server rules, export and reset", contentW);
-        int top = contentY + headerHeight();
-        int viewH = contentH - headerHeight();
-        clip(g, contentX, top, contentW, viewH);
-        int y = top - pageScroll;
+        int top = contentY;
+        int viewH = contentH;
+        clip(g, menuX + 1, top - GRID_PAD + 1, menuW - 2, viewH + GRID_PAD - 1);
+        pageShown = ease(pageShown, pageScroll);
+        int y = top - Math.round(pageShown);
         int sectionW = Math.min(contentW, SECTION_MAX_W);
-        int x = contentX;
+        int x = menuX + (menuW - sectionW) / 2;
 
         y += section(g, "favorites", "Quick setup", "One click to a setup made for crystal PvP; change anything afterwards", x, y, sectionW, this::renderQuickSetupBody) + GRID_GAP;
         y += section(g, "appearance", "Appearance", "Accent, interface size, font, blur and motion", x, y, sectionW,
@@ -1539,10 +1480,56 @@ public final class ClickGuiScreen extends DesignScreen {
         y += section(g, "reset", "Reset", "Back to a fresh install, keeping server rules", x, y, sectionW, this::renderResetBody) + GRID_GAP;
         y += section(g, "logo", "About", "Shard Client " + version(), x, y, sectionW, this::renderAboutBody) + GRID_GAP;
 
-        int contentHeight = y + pageScroll - top;
+        int contentHeight = y + Math.round(pageShown) - top;
         pageScroll = Math.max(0, Math.min(pageScroll, contentHeight - viewH));
+        pageShown = Math.max(0, Math.min(pageShown, Math.max(0, contentHeight - viewH)));
         unclip(g);
     }
+
+    /** Cosmetics are always on; this tab holds what they show and the token options. */
+    private void renderCosmeticsPage(GuiGraphics g) {
+        Module cosmetics = ShardClient.modules().get(gg.shard.client.modules.visual.CosmeticsModule.class);
+        int top = contentY;
+        int viewH = contentH;
+        clip(g, menuX + 1, top - GRID_PAD + 1, menuW - 2, viewH + GRID_PAD - 1);
+        pageShown = ease(pageShown, pageScroll);
+        int w = Math.min(contentW, SECTION_MAX_W);
+        int x = menuX + (menuW - w) / 2;
+        int y = top - Math.round(pageShown);
+        Fonts.draw(g, "Cosmetics", Fonts.Weight.SEMIBOLD, NAME, x, y, Theme.text());
+        y += Fonts.lineHeight(NAME) + 2;
+        for (String line : Fonts.wrap("Capes you equip in Shard Launcher show here, on you and on every Shard player. They are always on.",
+                Fonts.Weight.REGULAR, DESC, w)) {
+            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x, y, Theme.muted());
+            y += Fonts.lineHeight(DESC);
+        }
+        y += 4;
+        for (String line : Fonts.wrap(((gg.shard.client.modules.visual.CosmeticsModule) cosmetics).status(), Fonts.Weight.REGULAR, DESC, w)) {
+            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x, y, Theme.subtle());
+            y += Fonts.lineHeight(DESC);
+        }
+        y += 12;
+        g.fill(x, y, x + w, y + 1, Theme.line());
+        y += 1;
+        rowDividers = true;
+        y = renderSettingRows(g, cosmetics, cosmetics.settings(), x, y, w);
+        rowDividers = false;
+        int contentHeight = y + Math.round(pageShown) - top + GRID_PAD;
+        pageScroll = Math.max(0, Math.min(pageScroll, contentHeight - viewH));
+        pageShown = Math.max(0, Math.min(pageShown, Math.max(0, contentHeight - viewH)));
+        unclip(g);
+    }
+
+    /** Friends are managed in the launcher; the tab points there. */
+    private void renderFriendsPage(GuiGraphics g) {
+        int cx = menuX + menuW / 2;
+        int cy = contentY + contentH / 2 - 30;
+        Icons.draw(g, "user", cx - 11, cy - 32, 22, Theme.subtle());
+        Fonts.drawCentered(g, "Friends live in Shard Launcher", Fonts.Weight.MEDIUM, LABEL, cx, cy, Theme.text());
+        Fonts.drawCentered(g, "Add players, answer requests and see who is in game on the launcher's Friends page.", Fonts.Weight.REGULAR, DESC, cx,
+                cy + Fonts.lineHeight(LABEL) + 4, Theme.muted());
+    }
+
 
     private int renderQuickSetupBody(int x, int y, int w) {
         GuiGraphics g = g0;
@@ -1942,24 +1929,15 @@ public final class ClickGuiScreen extends DesignScreen {
             if (popover.contains(mx, my)) return popover.mouseScrolled(mx, my, sy);
             return true;
         }
-        int step = (int) Math.round(sy * 48);
-        if (panelCovers(mx, my)) {
-            panelScroll = Math.max(0, panelScroll - step);
+        int step = (int) Math.round(sy * 56);
+        if (embedded) {
+            if (Render2D.hovered(mx, my, panelX, panelY, panelW, panelH)) panelScroll = Math.max(0, panelScroll - step);
             return true;
         }
-        if (!narrow && Render2D.hovered(mx, my, PAD, PAD, RAIL_W, designH - 2 * PAD)) {
-            sidebarScroll = Math.max(0, sidebarScroll - step);
-            return true;
-        }
-        if (wide && !settingsPage && Render2D.hovered(mx, my, panelX, panelY, panelW, panelH)) {
-            panelScroll = Math.max(0, panelScroll - step);
-            return true;
-        }
-        if (Render2D.hovered(mx, my, contentX, contentY, contentW, contentH)) {
-            if (settingsPage) pageScroll = Math.max(0, pageScroll - step);
+        if (tab == Tab.MODS) {
+            if (modSettingsOpen()) panelScroll = Math.max(0, panelScroll - step);
             else gridScroll = Math.max(0, gridScroll - step);
-            return true;
-        }
+        } else pageScroll = Math.max(0, pageScroll - step);
         return true;
     }
 
@@ -2026,7 +2004,7 @@ public final class ClickGuiScreen extends DesignScreen {
         switch (key) {
             case GLFW.GLFW_KEY_ESCAPE -> {
                 if (!search.isEmpty()) clearSearch();
-                else if (!wide && panelTarget > 0) closePanel();
+                else if (!embedded && panelTarget > 0) closePanel();
                 else onClose();
                 return true;
             }
@@ -2161,12 +2139,12 @@ public final class ClickGuiScreen extends DesignScreen {
         if (h.y < h.clip[1]) {
             int delta = h.clip[1] - h.y + 8;
             if (h.key.startsWith("row:") || h.key.startsWith("res:")) gridScroll = Math.max(0, gridScroll - delta);
-            else if (settingsPage) pageScroll = Math.max(0, pageScroll - delta);
+            else if ((tab == Tab.SETTINGS)) pageScroll = Math.max(0, pageScroll - delta);
             else panelScroll = Math.max(0, panelScroll - delta);
         } else if (h.y + h.h > h.clip[3]) {
             int delta = h.y + h.h - h.clip[3] + 8;
             if (h.key.startsWith("row:") || h.key.startsWith("res:")) gridScroll += delta;
-            else if (settingsPage) pageScroll += delta;
+            else if ((tab == Tab.SETTINGS)) pageScroll += delta;
             else panelScroll += delta;
         }
     }

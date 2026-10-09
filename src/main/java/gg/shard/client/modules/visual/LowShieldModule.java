@@ -9,8 +9,12 @@ import gg.shard.client.gui.Theme;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
+import gg.shard.client.module.setting.ColorSetting;
 import gg.shard.client.module.setting.DoubleSetting;
+import gg.shard.client.module.setting.EnumSetting;
 import gg.shard.client.module.setting.IntSetting;
+import gg.shard.client.module.setting.Labeled;
+import gg.shard.client.render.ItemTints;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.world.InteractionHand;
@@ -23,6 +27,25 @@ import net.minecraft.world.item.Items;
  * first-person view changes; blocking, its timing and what others see are vanilla.
  */
 public final class LowShieldModule extends Module implements PanelPreview {
+    /** Quick tints; picking one sets the colour, editing the colour switches back to Custom. */
+    public enum TintPreset implements Labeled {
+        CUSTOM("Custom", -1), VANILLA("Vanilla", 0xFFFFFFFF), ICE("Ice", 0xFF9FD8FF), GHOST("Ghost", 0xFFB8B8C8),
+        EMBER("Ember", 0xFFFFA070), ROSE("Rose", 0xFFFF9FC8), MINT("Mint", 0xFFA8F0C8), GOLD("Gold", 0xFFFFE08A);
+
+        private final String label;
+        final int argb;
+
+        TintPreset(String label, int argb) {
+            this.label = label;
+            this.argb = argb;
+        }
+
+        @Override
+        public String label() {
+            return label;
+        }
+    }
+
     private final IntSetting blockWidth = add(new IntSetting("Blocking width", "How wide the shield is while you block", 65, 30, 100, 5, "%").group("While blocking"));
     private final IntSetting blockSize = add(new IntSetting("Blocking size", "Overall size while you block", 80, 40, 100, 5, "%").group("While blocking"));
     private final DoubleSetting blockLower = add(new DoubleSetting("Blocking lower", "Move it down while you block", 0.2, 0.0, 0.6, 0.05).group("While blocking"));
@@ -32,9 +55,19 @@ public final class LowShieldModule extends Module implements PanelPreview {
     private final DoubleSetting holdLower = add(new DoubleSetting("Holding lower", "Move it down while you just hold it", 0.15, 0.0, 0.6, 0.05).group("While holding"));
     private final DoubleSetting holdSide = add(new DoubleSetting("Holding sideways", "Move it towards the edge (+) or the centre (-) while you just hold it", 0.0, -0.3, 0.3, 0.05).group("While holding"));
     private final BoolSetting mainHand = add(new BoolSetting("Main hand too", "Also change a shield in your main hand, not only the offhand", true));
+    private final IntSetting opacity = add(new IntSetting("Opacity", "How solid the shield looks (100 is vanilla)", 100, 10, 100, 5, "%").group("Look")
+            .details("Below 100 % the shield is drawn see-through so you can watch the fight behind it."));
+    private final ColorSetting tint = add(new ColorSetting("Tint", "Colour multiplied into the shield (white keeps vanilla's)", 0xFFFFFFFF, false).group("Look"));
+    private final EnumSetting<TintPreset> preset = add(new EnumSetting<>("Tint preset", "Pick a ready-made tint", TintPreset.CUSTOM).group("Look"));
 
     public LowShieldModule() {
-        super("Shield", "A thinner, smaller, lower shield, whether you block or just hold it.", ModuleCategory.VISUALS);
+        super("Shield", "A thinner, smaller, lower, see-through or tinted shield, whether you block or just hold it.", ModuleCategory.VISUALS);
+        preset.onChange(p -> {
+            if (p != TintPreset.CUSTOM && tint.get() != p.argb) tint.set(p.argb);
+        });
+        tint.onChange(c -> {
+            if (preset.get() != TintPreset.CUSTOM && preset.get().argb != c) preset.set(TintPreset.CUSTOM);
+        });
     }
 
     @Override
@@ -50,7 +83,7 @@ public final class LowShieldModule extends Module implements PanelPreview {
     @Override
     public String about() {
         return "Makes your first-person shield thinner and smaller and moves it out of the way, with one set of values for blocking and one for just holding it, "
-                + "so it covers less of the screen even when you are not blocking. Blocking works exactly as in vanilla; nobody else sees a difference.";
+                + "so it covers less of the screen even when you are not blocking, and can make it see-through or tint it. Blocking works exactly as in vanilla; nobody else sees a difference.";
     }
 
     private boolean applies(AbstractClientPlayer player, InteractionHand hand, ItemStack stack) {
@@ -80,6 +113,12 @@ public final class LowShieldModule extends Module implements PanelPreview {
         float size = (block ? blockSize.get() : holdSize.get()) / 100f;
         float width = (block ? blockWidth.get() : holdWidth.get()) / 100f;
         return new float[]{size * width, size, size};
+    }
+
+    /** ARGB multiplier (tint + opacity) for the shield in this hand, or {@link ItemTints#NONE} to leave it. */
+    public int colorFor(AbstractClientPlayer player, InteractionHand hand, ItemStack stack) {
+        if (!applies(player, hand, stack)) return ItemTints.NONE;
+        return ItemTints.shieldColor(opacity.get(), tint.get());
     }
 
     // 0.3.0 had "Lower by" and "Only while blocking".

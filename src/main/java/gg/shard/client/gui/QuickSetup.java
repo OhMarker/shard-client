@@ -30,7 +30,7 @@ public final class QuickSetup {
     }
 
     private static final Set<String> PRO_ON = Set.of("crystal-optimizer", "anchor-optimizer", "totem-pop-tweaks", "crystal-size", "low-fire", "low-shield",
-            "clean-screen", "block-outline", "no-hurt-cam", "nametags", "display");
+            "clean-screen", "block-outline", "no-hurt-cam", "display");
     private static final Set<String> MINIMAL_ON = Set.of("crystal-optimizer", "anchor-optimizer", "low-fire");
     private static final Set<String> RECORDING_ON = Set.of("clean-screen", "display", "crystal-size", "low-fire");
 

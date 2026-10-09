@@ -56,7 +56,7 @@ public final class CrystalTweaksModule extends Module implements PanelPreview {
 
     @Override
     public String icon() {
-        return "crystal";
+        return "visuals";
     }
 
     @Override

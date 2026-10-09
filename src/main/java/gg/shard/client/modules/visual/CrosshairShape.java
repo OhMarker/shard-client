@@ -8,8 +8,9 @@ import java.util.Locale;
 /**
  * Pure crosshair geometry (tested): every style becomes a square pixel mask centred on the
  * crosshair, the outline is the mask grown by the outline width, and drawing merges each row
- * into runs. One crosshair pixel is one GUI unit, like vanilla's crosshair, so it scales with
- * the GUI scale. Also the custom pixel grid and the share code.
+ * into runs. One crosshair pixel is one screen pixel when the module draws pixel-perfect, or
+ * one GUI unit (scaling with the GUI scale, like vanilla's crosshair) otherwise. Also the custom
+ * pixel grid and the share code.
  */
 public final class CrosshairShape {
     private CrosshairShape() {}
@@ -17,7 +18,7 @@ public final class CrosshairShape {
     /** Side of the custom pixel grid. */
     public static final int CUSTOM = 15;
 
-    public enum Kind { CROSS, DOT, CROSS_DOT, CIRCLE, PLUS, T_SHAPE, X, CUSTOM }
+    public enum Kind { CROSS, DOT, CROSS_DOT, CIRCLE, PLUS, T_SHAPE, X, CUSTOM, RING, CIRCLE_CROSS, SQUARE, X_DOT, CHEVRON }
 
     /** A mask of side {@code size}, pixel (x, y) at {@code bits[y * size + x]}, centre at size / 2. */
     public record Mask(int size, boolean[] bits) {
@@ -39,8 +40,7 @@ public final class CrosshairShape {
         int g = Math.max(0, gap);
         int reach = switch (kind) {
             case CUSTOM -> CUSTOM / 2;
-            case CIRCLE -> g + s / 2 + 1 + t;
-            case X -> g + s + t;
+            case CIRCLE, RING, SQUARE -> ringRadius(s, g) + t;
             default -> g + s + t;
         };
         int size = reach * 2 + 1;
@@ -57,31 +57,63 @@ public final class CrosshairShape {
                 square(bits, size, c, lo, hi);
             }
             case T_SHAPE -> arms(bits, size, c, g + 1, s, lo, hi, false, true);
-            case X -> {
-                for (int d = g + 1; d <= g + s; d++) {
-                    for (int k = lo; k <= hi; k++) {
-                        set(bits, size, c + d + k, c + d);
-                        set(bits, size, c - d + k, c + d);
-                        set(bits, size, c + d + k, c - d);
-                        set(bits, size, c - d + k, c - d);
-                    }
-                }
+            case X -> diagonals(bits, size, c, g, s, lo, hi, true);
+            case X_DOT -> {
+                diagonals(bits, size, c, g, s, lo, hi, true);
+                square(bits, size, c, lo, hi);
             }
+            case CHEVRON -> diagonals(bits, size, c, g, s, lo, hi, false);
             case CIRCLE -> {
-                double r = g + s / 2.0 + 1;
+                ring(bits, size, c, g + s / 2.0 + 1, t);
+                square(bits, size, c, lo, hi);
+            }
+            case RING -> ring(bits, size, c, g + s / 2.0 + 1, t);
+            case CIRCLE_CROSS -> {
+                ring(bits, size, c, g + s / 2.0 + 1, t);
+                arms(bits, size, c, g + 1, s, lo, hi, true, true);
+            }
+            case SQUARE -> {
+                int r = ringRadius(s, g);
                 for (int y = 0; y < size; y++) {
                     for (int x = 0; x < size; x++) {
-                        double d = Math.hypot(x - c, y - c);
-                        if (Math.abs(d - r) <= t / 2.0) bits[y * size + x] = true;
+                        int d = Math.max(Math.abs(x - c), Math.abs(y - c));
+                        if (d > r - t && d <= r) bits[y * size + x] = true;
                     }
                 }
-                square(bits, size, c, lo, hi);
             }
             case CUSTOM -> {
                 for (int i = 0; i < CUSTOM * CUSTOM && custom != null && i < custom.length; i++) bits[i] = custom[i];
             }
         }
         return new Mask(size, bits);
+    }
+
+    /** Outer radius of the ring and square styles for an arm length and gap. */
+    private static int ringRadius(int s, int g) {
+        return g + s / 2 + 1;
+    }
+
+    private static void ring(boolean[] bits, int size, int c, double r, int t) {
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                double d = Math.hypot(x - c, y - c);
+                if (Math.abs(d - r) <= t / 2.0) bits[y * size + x] = true;
+            }
+        }
+    }
+
+    /** The four diagonals of an X, or only the lower two (a chevron pointing up at the centre). */
+    private static void diagonals(boolean[] bits, int size, int c, int g, int s, int lo, int hi, boolean upper) {
+        for (int d = g + 1; d <= g + s; d++) {
+            for (int k = lo; k <= hi; k++) {
+                set(bits, size, c + d + k, c + d);
+                set(bits, size, c - d + k, c + d);
+                if (upper) {
+                    set(bits, size, c + d + k, c - d);
+                    set(bits, size, c - d + k, c - d);
+                }
+            }
+        }
     }
 
     /** The mask grown by {@code r} pixels in every direction (square brush), as a larger mask. */
@@ -165,15 +197,23 @@ public final class CrosshairShape {
 
     // ---- share code ---------------------------------------------------------------------------
 
-    /** Everything that defines how a crosshair looks. Colours are ARGB. */
-    public record Spec(Kind kind, int size, int gap, int thickness, int color, boolean outline, int outlineColor, int outlineWidth, String pixels) {}
+    /**
+     * Everything that defines how a crosshair looks. Colours are ARGB. {@code pixelPerfect} says
+     * the sizes are screen pixels; codes from before it existed decode as GUI units.
+     */
+    public record Spec(Kind kind, int size, int gap, int thickness, int color, boolean outline, int outlineColor, int outlineWidth, String pixels,
+                       boolean pixelPerfect) {
+        public Spec(Kind kind, int size, int gap, int thickness, int color, boolean outline, int outlineColor, int outlineWidth, String pixels) {
+            this(kind, size, gap, thickness, color, outline, outlineColor, outlineWidth, pixels, false);
+        }
+    }
 
     private static final String PREFIX = "SHARD-X1-";
 
     public static String encode(Spec s) {
         String raw = String.join(";", s.kind().name(), String.valueOf(s.size()), String.valueOf(s.gap()), String.valueOf(s.thickness()),
                 Integer.toHexString(s.color()), s.outline() ? "1" : "0", Integer.toHexString(s.outlineColor()), String.valueOf(s.outlineWidth()),
-                s.pixels() == null ? "" : s.pixels());
+                s.pixels() == null ? "" : s.pixels(), s.pixelPerfect() ? "1" : "0");
         return PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
@@ -188,7 +228,7 @@ public final class CrosshairShape {
             if (f.length < 8) return null;
             return new Spec(Kind.valueOf(f[0]), Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]),
                     (int) Long.parseLong(f[4], 16), "1".equals(f[5]), (int) Long.parseLong(f[6], 16), Integer.parseInt(f[7]),
-                    f.length > 8 ? f[8] : "");
+                    f.length > 8 ? f[8] : "", f.length > 9 && "1".equals(f[9]));
         } catch (RuntimeException e) {
             return null;
         }

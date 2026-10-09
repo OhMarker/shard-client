@@ -41,12 +41,17 @@ public abstract class DesignScreen extends Screen {
         lastFrameNs = now;
         int guiScale = minecraft.getWindow().getGuiScale();
         double size = ShardClient.modules() == null ? 1.0 : ShardClient.appearance().interfaceScale();
-        pageScale = Scale.pageScale(guiScale, size);
+        pageScale = pageScaleFor(guiScale, size);
         designW = Scale.designSize(width, pageScale, minecraft.getWindow().getWidth(), guiScale);
         designH = Scale.designSize(height, pageScale, minecraft.getWindow().getHeight(), guiScale);
         Render2D.setPixelsPerUnit(Scale.pixelsPerUnit(pageScale, guiScale));
         if (ShardClient.modules() != null) ShardClient.appearance().apply();
         applyBlur();
+    }
+
+    /** GUI units per design unit; screens with their own density (the mod menu) override it. */
+    protected double pageScaleFor(int guiScale, double interfaceSize) {
+        return Scale.pageScale(guiScale, interfaceSize);
     }
 
     public double pageScale() {

@@ -216,6 +216,32 @@
   the skin hook turns the module off instead of crashing the game (a null lookup did crash the dev
   build once; it is fixed and guarded now).
 
+## 0.7.0: compact menu, 1:1 text, visual mods
+
+- **Menu at one design unit per physical pixel.** The owner's mockup is 960x580 CSS pixels at
+  1080p. `ClickGuiScreen.pageScaleFor` draws the menu at max(1, window height / 1080) physical
+  pixels per unit times Interface size, so the panel keeps the mockup's proportions at every GUI
+  scale (the smoke test's `layoutIdenticalAcrossScales` still holds). The HUD editor's embedded
+  column keeps the 2-px-per-unit density. Rail, list view and slide-in panel are gone; the
+  settings view replaces the grid inside the panel.
+- **Why text was still choppy.** At 1 px per unit the smallest raster was density 2, so every glyph
+  was downsampled 2:1 by bilinear filtering, which skips texels and breaks 1-px stems (the "F" in
+  FPS lost its bar). A density-1 raster (`-x1` definitions, `tools/fonts/gen_fonts.py`) is drawn
+  1:1 and FreeType hints it at that size; zoomed crops show solid strokes.
+- **Smooth scrolling.** Grid, settings view and pages keep a target and a drawn position that
+  eases toward it with frame-time exponential smoothing (instant with Reduce motion).
+- **Removed Target HUD and Nametags** (health on name tags): commonly banned. Old config entries
+  are ignored because modules are loaded by registered key.
+- **Cosmetics always on** (`Module.alwaysOn`): no tile, no keybind; options on the Cosmetics tab.
+- **Fire texture is a built-in resource pack** (`resourcepacks/shard_fire`, Fabric
+  `ResourceLoader.registerBuiltinPack`). It follows only its own setting: tying it to the module
+  switch reloaded every resource each time Fire was toggled (seen in the smoke run).
+- **Neutral controls.** Switches use the green "on" token, sliders a light grey fill, primary
+  buttons white; the accent only marks keyboard focus.
+- Fire / Shield / Hit Color / Small Items / Totem size and Crosshair / Sky / Hitboxes / Zoom /
+  Entity Optimizer details: CHANGELOG.md 0.7.0. New mixins use `require = 0` and were checked with
+  javap against the 1.21.11 jar; the full smoke run logs no injection failures.
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.

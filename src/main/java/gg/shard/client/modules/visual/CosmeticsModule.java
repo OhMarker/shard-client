@@ -80,6 +80,16 @@ public final class CosmeticsModule extends Module {
     }
 
     @Override
+    public boolean hidden() {
+        return true;
+    }
+
+    @Override
+    public boolean alwaysOn() {
+        return true;
+    }
+
+    @Override
     public boolean defaultEnabled() {
         return true;
     }

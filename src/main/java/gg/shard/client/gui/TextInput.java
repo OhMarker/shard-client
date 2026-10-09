@@ -83,8 +83,8 @@ public final class TextInput {
 
     public void render(GuiGraphics g, int x, int y, int w, int h, boolean focused) {
         int r = Theme.radiusSmall();
-        Render2D.roundedRect(g, x, y, w, h, r, Theme.surfaceRaised());
-        Render2D.roundedOutline(g, x, y, w, h, r, focused ? Theme.accentAlpha(0xB0) : Theme.line());
+        Render2D.roundedRect(g, x, y, w, h, r, Theme.input());
+        Render2D.roundedOutline(g, x, y, w, h, r, focused ? Theme.lineHover() : Theme.inputLine());
         int lineH = Fonts.lineHeight(SIZE);
         int textY = y + (h - lineH) / 2;
         int maxW = w - padLeft - PAD;

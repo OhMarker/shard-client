@@ -27,10 +27,13 @@ import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.level.GameType;
 import org.lwjgl.glfw.GLFW;
 
+import com.google.gson.JsonObject;
+
 import java.util.List;
 
 /**
- * Shard's crosshair: eight shapes including one you draw pixel by pixel, outline colour and
+ * Shard's crosshair: thirteen shapes including one you draw pixel by pixel, drawn in real screen
+ * pixels (so a 1-pixel line works at any GUI scale) or in GUI units, outline colour and
  * width, colours for aiming at a player or mob and at a crystal, dimming while your hit
  * recharges, a dynamic gap and a hit marker. Every shape is a pixel mask ({@link CrosshairShape})
  * so the outline follows it exactly. The settings panel shows it live on sample backgrounds at
@@ -38,7 +41,8 @@ import java.util.List;
  */
 public final class CrosshairModule extends Module implements PanelPreview {
     public enum Style implements Labeled {
-        CROSS("Gap plus"), PLUS("Plus"), CROSS_DOT("Plus and dot"), DOT("Dot"), CIRCLE("Circle"), T_SHAPE("T"), X("X"), CUSTOM("Custom");
+        CROSS("Gap plus"), PLUS("Plus"), CROSS_DOT("Plus and dot"), DOT("Dot"), CIRCLE("Circle and dot"), RING("Circle"), CIRCLE_CROSS("Circle and plus"),
+        SQUARE("Square"), T_SHAPE("T"), X("X"), X_DOT("X and dot"), CHEVRON("Chevron"), CUSTOM("Custom");
 
         private final String label;
 
@@ -57,21 +61,24 @@ public final class CrosshairModule extends Module implements PanelPreview {
     }
 
     private static final long GAP_MS = 150;
+    private static final String[] ZOOM_CAPTIONS = {"", "Pixel grid", "Zoomed 2x", "Zoomed 3x", "Zoomed 4x"};
     private static final String[] BACKGROUNDS = {"Sky", "Grass", "Stone", "Nether", "End"};
     private static final Material[] BG_SPRITES = {null, block("grass_block_top"), block("stone"), block("netherrack"), block("end_stone")};
 
     private final EnumSetting<Style> style = add(new EnumSetting<>("Style", "Shape of the crosshair; Custom lets you draw it in the preview (right-click erases)", Style.CROSS).group("Shape"));
-    private final IntSetting size = add(new IntSetting("Size", "Length of each arm", 5, 1, 12, 1, "px").group("Shape"));
-    private final IntSetting gap = add(new IntSetting("Gap", "Space around the centre", 2, 0, 8, 1, "px").group("Shape"));
-    private final IntSetting thickness = add(new IntSetting("Thickness", "Line width", 1, 1, 4, 1, "px").group("Shape"));
+    private final BoolSetting pixelPerfect = add(new BoolSetting("Pixel-perfect", "Measure sizes in real screen pixels, so a 1-pixel line stays 1 pixel at any GUI scale", true).group("Shape")
+            .details("Off measures in GUI pixels like vanilla's crosshair: 1 px is 3 screen pixels at GUI scale 3."));
+    private final IntSetting size = add(new IntSetting("Size", "Length of each arm", 9, 1, 40, 1, "px").group("Shape"));
+    private final IntSetting gap = add(new IntSetting("Gap", "Space around the centre", 4, 0, 20, 1, "px").group("Shape"));
+    private final IntSetting thickness = add(new IntSetting("Thickness", "Line width", 2, 1, 10, 1, "px").group("Shape"));
     private final StringSetting pixels = add(new StringSetting("Pixels", "Your custom crosshair, drawn in the preview", CrosshairShape.encodePixels(defaultCustom()), 64).group("Shape"));
     private final BoolSetting dynamicGap = add(new BoolSetting("Dynamic gap", "Widen the gap for a moment when you attack", true).group("Shape")
             .details("Reacts to attacks you perform; it does not change aim or timing."));
-    private final IntSetting gapKick = add(new IntSetting("Gap kick", "How far the gap widens on an attack", 3, 1, 8, 1, "px").group("Shape"));
+    private final IntSetting gapKick = add(new IntSetting("Gap kick", "How far the gap widens on an attack", 4, 1, 16, 1, "px").group("Shape"));
     private final ColorSetting color = add(new ColorSetting("Colour", "Crosshair colour (alpha is opacity)", 0xFFFFFFFF).group("Colour"));
     private final BoolSetting outline = add(new BoolSetting("Outline", "An outline around the crosshair for contrast", true).group("Colour"));
     private final ColorSetting outlineColor = add(new ColorSetting("Outline colour", "Colour of the outline", 0xB0000000).group("Colour"));
-    private final IntSetting outlineWidth = add(new IntSetting("Outline width", "Width of the outline", 1, 1, 2, 1, "px").group("Colour"));
+    private final IntSetting outlineWidth = add(new IntSetting("Outline width", "Width of the outline", 1, 1, 4, 1, "px").group("Colour"));
     private final BoolSetting highlightTarget = add(new BoolSetting("Highlight target", "Change colour while aiming at a player or mob", true).group("Colour"));
     private final ColorSetting targetColor = add(new ColorSetting("Target colour", "Colour while aiming at a player or mob", 0xFFFB7185).group("Colour"));
     private final BoolSetting highlightCrystal = add(new BoolSetting("Highlight crystals", "Change colour while aiming at an end crystal", true).group("Colour"));
@@ -96,6 +103,11 @@ public final class CrosshairModule extends Module implements PanelPreview {
     private String maskKey = "";
     private List<CrosshairShape.Run> mainRuns = List.of();
     private List<CrosshairShape.Run> outlineRuns = List.of();
+    private int maskSize = 1;
+    private static final int[][] CORNERS = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
+    /** 0.6.0 defaults, for configs saved before Pixel-perfect existed (their sizes are GUI pixels). */
+    private static final int LEGACY_SIZE = 5, LEGACY_GAP = 2, LEGACY_THICKNESS = 1, LEGACY_KICK = 3;
+    private static final String UNITS_MARKER = "crosshairUnits";
 
     public CrosshairModule() {
         super("Crosshair", "Your own crosshair: shapes, a pixel editor, outline, target and crystal colours, hit marker.", ModuleCategory.VISUALS);
@@ -168,6 +180,7 @@ public final class CrosshairModule extends Module implements PanelPreview {
         if (key.equals(maskKey)) return;
         maskKey = key;
         CrosshairShape.Mask m = CrosshairShape.mask(style.get().kind(), size.get(), gap.get() + extraGap, thickness.get(), CrosshairShape.decodePixels(pixels.get()));
+        maskSize = m.size();
         mainRuns = CrosshairShape.runs(m);
         outlineRuns = outline.get() ? CrosshairShape.runs(CrosshairShape.grow(m, outlineWidth.get())) : List.of();
     }
@@ -184,8 +197,6 @@ public final class CrosshairModule extends Module implements PanelPreview {
         Minecraft mc = Minecraft.getInstance();
         if (!mc.options.getCameraType().isFirstPerson()) return;
         if (mc.gameMode != null && mc.gameMode.getPlayerMode() == GameType.SPECTATOR && mc.crosshairPickEntity == null) return;
-        int cx = g.guiWidth() / 2;
-        int cy = g.guiHeight() / 2;
         int c = color.get();
         Entity picked = mc.crosshairPickEntity;
         if (highlightCrystal.get() && picked instanceof EndCrystal) c = crystalColor.get();
@@ -198,8 +209,22 @@ public final class CrosshairModule extends Module implements PanelPreview {
             kick = Math.round(gapKick.get() * (1f - Render2D.easeOut(progress)));
         }
         updateMask(kick);
-        drawShape(g, cx, cy, 1, c);
-        if (hitMarker.get()) drawHitMarker(g, cx, cy, now);
+        if (pixelPerfect.get()) {
+            // One unit per screen pixel: undo the GUI scale and centre on the framebuffer's middle pixel.
+            float gs = (float) mc.getWindow().getGuiScale();
+            int cx = mc.getWindow().getWidth() / 2;
+            int cy = mc.getWindow().getHeight() / 2;
+            g.pose().pushMatrix();
+            g.pose().scale(1f / gs, 1f / gs);
+            drawShape(g, cx, cy, 1, c);
+            if (hitMarker.get()) drawHitMarker(g, cx, cy, now);
+            g.pose().popMatrix();
+        } else {
+            int cx = g.guiWidth() / 2;
+            int cy = g.guiHeight() / 2;
+            drawShape(g, cx, cy, 1, c);
+            if (hitMarker.get()) drawHitMarker(g, cx, cy, now);
+        }
     }
 
     private void drawHitMarker(GuiGraphics g, int cx, int cy, long now) {
@@ -209,14 +234,16 @@ public final class CrosshairModule extends Module implements PanelPreview {
         int mc2 = Colors.fade(hitMarkerColor.get(), alpha);
         int t = Math.max(1, thickness.get());
         int r0 = gap.get() + size.get() + 3;
+        int len = pixelPerfect.get() ? Math.max(4, size.get() / 2 + 2) : 5;
         int half = t / 2;
-        for (int i = 0; i < 5; i++) {
+        int ow = outlineWidth.get();
+        for (int i = 0; i < len; i++) {
             int d = r0 + i;
             if (outline.get()) {
                 int oc = Colors.fade(outlineColor.get(), alpha);
-                for (int[] s : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) Render2D.fill(g, cx + s[0] * d - half - 1, cy + s[1] * d - half - 1, t + 2, t + 2, oc);
+                for (int[] s : CORNERS) Render2D.fill(g, cx + s[0] * d - half - ow, cy + s[1] * d - half - ow, t + 2 * ow, t + 2 * ow, oc);
             }
-            for (int[] s : new int[][]{{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) Render2D.fill(g, cx + s[0] * d - half, cy + s[1] * d - half, t, t, mc2);
+            for (int[] s : CORNERS) Render2D.fill(g, cx + s[0] * d - half, cy + s[1] * d - half, t, t, mc2);
         }
     }
 
@@ -261,18 +288,27 @@ public final class CrosshairModule extends Module implements PanelPreview {
         backdrop(g, lx, areaY, half, areaH);
         backdrop(g, rx, areaY, half, areaH);
         updateMask(0);
-        // Actual size: one crosshair pixel is one GUI unit, which is one design unit at GUI scale 2.
-        drawShape(g, lx + half / 2, areaY + areaH / 2, 1, color.get());
+        if (pixelPerfect.get()) {
+            // Actual size: one crosshair pixel is one physical pixel of this screen.
+            float ppu = (float) Render2D.pixelsPerUnit();
+            g.pose().pushMatrix();
+            g.pose().scale(1f / ppu, 1f / ppu);
+            drawShape(g, Math.round((lx + half / 2) * ppu), Math.round((areaY + areaH / 2) * ppu), 1, color.get());
+            g.pose().popMatrix();
+        } else {
+            // Actual size: one crosshair pixel is one GUI unit, which is one design unit at GUI scale 2.
+            drawShape(g, lx + half / 2, areaY + areaH / 2, 1, color.get());
+        }
         if (style.get() == Style.CUSTOM) {
             drawEditor(g, rx, areaY, half, areaH);
             caption(g, "Click to draw", rx, areaY);
         } else {
             editor[2] = 0;
-            int zoom = 4;
+            int zoom = Math.max(1, Math.min(4, (areaH - 20) / Math.max(1, maskSize)));
             g.enableScissor(rx, areaY, rx + half, areaY + areaH);
             drawShape(g, rx + half / 2 - zoom / 2, areaY + areaH / 2 - zoom / 2, zoom, color.get());
             g.disableScissor();
-            caption(g, "Zoomed 4x", rx, areaY);
+            caption(g, ZOOM_CAPTIONS[zoom], rx, areaY);
         }
         caption(g, "Actual size", lx, areaY);
         return h;
@@ -382,7 +418,7 @@ public final class CrosshairModule extends Module implements PanelPreview {
 
     private CrosshairShape.Spec spec() {
         return new CrosshairShape.Spec(style.get().kind(), size.get(), gap.get(), thickness.get(), color.get(), outline.get(),
-                outlineColor.get(), outlineWidth.get(), pixels.get());
+                outlineColor.get(), outlineWidth.get(), pixels.get(), pixelPerfect.get());
     }
 
     private void apply(CrosshairShape.Spec s) {
@@ -395,5 +431,30 @@ public final class CrosshairModule extends Module implements PanelPreview {
         outlineColor.set(s.outlineColor());
         outlineWidth.set(s.outlineWidth());
         if (s.pixels() != null && !s.pixels().isEmpty()) pixels.set(s.pixels());
+        pixelPerfect.set(s.pixelPerfect());
+    }
+
+    // ---- config ------------------------------------------------------------------------------
+
+    @Override
+    protected void saveExtra(JsonObject out) {
+        out.addProperty(UNITS_MARKER, true);
+    }
+
+    /**
+     * Configs from before Pixel-perfect stored their sizes in GUI pixels. When such a file
+     * changed any size, keep drawing in GUI pixels and keep the old defaults for the sizes it
+     * left alone, so the crosshair looks exactly as it did.
+     */
+    @Override
+    protected void loadExtra(JsonObject in) {
+        if (in.has(UNITS_MARKER)) return;
+        JsonObject values = in.has("settings") && in.get("settings").isJsonObject() ? in.getAsJsonObject("settings") : new JsonObject();
+        if (!values.has("size") && !values.has("gap") && !values.has("thickness") && !values.has("gap-kick")) return;
+        pixelPerfect.set(false);
+        if (!values.has("size")) size.set(LEGACY_SIZE);
+        if (!values.has("gap")) gap.set(LEGACY_GAP);
+        if (!values.has("thickness")) thickness.set(LEGACY_THICKNESS);
+        if (!values.has("gap-kick")) gapKick.set(LEGACY_KICK);
     }
 }
