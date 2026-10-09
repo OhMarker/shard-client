@@ -55,6 +55,9 @@
     "SoundEngineMixin"
   ],
   "mixins": [],
+  "versioned": {
+    "ExampleOnlyOnSomeVersions": ">=1.21.9 <26.1"
+  },
   "injectors": {
     "defaultRequire": 1
   }

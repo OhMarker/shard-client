@@ -129,6 +129,7 @@ java {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.release.set(javaVersion)
+    options.compilerArgs.addAll(listOf("-Xmaxerrs", "5000"))
 }
 
 tasks.processResources {
@@ -145,6 +146,12 @@ tasks.processResources {
                 "java_version" to javaVersion
             )
         )
+    }
+    // shard.mixins.json may carry "versioned": { "SomeMixin": ">=1.21.9 <26.1" }. Mixins listed
+    // there are kept only on matching Minecraft versions; the key itself is removed.
+    inputs.property("mc_version", mcVersion)
+    filesMatching("shard.mixins.json") {
+        filter(VersionedMixins(mcVersion))
     }
 }
 
@@ -178,3 +185,41 @@ val sha512 = tasks.register("sha512") {
     }
 }
 tasks.build { dependsOn(sha512) }
+
+/** Compares dotted release versions ("1.21.9" < "1.21.10" < "26.1"). */
+fun compareMc(a: String, b: String): Int {
+    val pa = a.split('.').map { it.toInt() }
+    val pb = b.split('.').map { it.toInt() }
+    for (i in 0 until maxOf(pa.size, pb.size)) {
+        val d = pa.getOrElse(i) { 0 } - pb.getOrElse(i) { 0 }
+        if (d != 0) return d
+    }
+    return 0
+}
+
+/** True when the version satisfies every space-separated predicate (">=1.21.9 <26.1", "1.21.11"). */
+fun mcMatches(version: String, predicates: String): Boolean = predicates.trim().split(Regex("\\s+")).all { p ->
+    val m = Regex("^(>=|<=|>|<|=|!=)?(.+)$").find(p) ?: error("bad predicate $p")
+    val c = compareMc(version, m.groupValues[2])
+    when (m.groupValues[1]) {
+        ">=" -> c >= 0; "<=" -> c <= 0; ">" -> c > 0; "<" -> c < 0; "!=" -> c != 0; else -> c == 0
+    }
+}
+
+/** Line filter for shard.mixins.json: drops "versioned" mixins that do not apply to [mc]. */
+class VersionedMixins(private val mc: String) : Transformer<String?, String> {
+    private var buffer = StringBuilder()
+    override fun transform(line: String): String? {
+        // Collect the whole file (it is small), then emit it once on the closing brace.
+        buffer.append(line).append('\n')
+        if (line.trimEnd() != "}") return null
+        @Suppress("UNCHECKED_CAST")
+        val json = groovy.json.JsonSlurper().parseText(buffer.toString()) as MutableMap<String, Any?>
+        val versioned = (json.remove("versioned") as Map<String, String>?).orEmpty()
+        for (key in listOf("client", "mixins")) {
+            val list = (json[key] as List<String>?) ?: continue
+            json[key] = list.filter { name -> versioned[name]?.let { mcMatches(mc, it) } ?: true }
+        }
+        return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json))
+    }
+}
