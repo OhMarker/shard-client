@@ -4,6 +4,7 @@ Builds in this release, every Minecraft version from 1.21 to 26.3:
 - Minecraft 26.3
 - Minecraft 26.2
 - Minecraft 26.1, 26.1.1, 26.1.2
+- Minecraft 1.21.11 (also fixes the see-through flames on burning mobs, which were invisible)
 - Minecraft 1.21.10
 - Minecraft 1.21.9
 - Minecraft 1.21.8, 1.21.7, 1.21.6
