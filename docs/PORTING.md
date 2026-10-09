@@ -195,7 +195,7 @@ no injection failures with `-PcountInjections`.
   target method body between `genSources` of 1.21.11 and 26.x.
 - For 26.2 / 26.3: start from these replacements (all `>= 26.1`); re-run the static check and
   `genSources` diff of every mixin target, check Fabric's `LevelRenderEvents`/`HudElement` and the
-  renderer API, and watch for further `render*` â†’ `extract*` renames in `Gui`/`Screen`.
+  renderer API, and watch for further `render*` → `extract*` renames in `Gui`/`Screen`.
 
 - Vanilla differences seen in the smoke screenshots (not Shard): new title panorama; first-person
   right-hand blocking shield sits lower (`shield_blocking.json` translation 5 → 3.25); gamerules
@@ -218,3 +218,92 @@ After the 26.1 changes, 1.21.11 (default pass) and 1.21.10 (default pass, `-Pcou
 were run again: same summaries, no injection failures, and the burning-mob flames now show.
 For 1.21.8 and older: the new mixins (CameraMixin, ClientClockManagerMixin) are `>=26.1` only;
 everything else 26.1 added sits in `>=26.1` blocks, so the 1.21.10 notes above still apply.
+
+### Tooling for 26.x (static checks)
+- `python tools/mixin-targets.py <mc>` (after `:<mc>:compileJava :<mc>:processResources`): for
+  every injector in the generated mixins of that node, the `method` must exist on the target and
+  its `@At` target (INVOKE/FIELD with the exact owner, NEW) must be in that method's bytecode.
+  The owner matters: 26.2 moved calls from `SubmitNodeCollector` to `OrderedSubmitNodeCollector`.
+- `python tools/mixin-sigdiff.py <older> <newer>`: every mixin target method whose descriptor
+  changed; those handlers (Inject arguments, ModifyReturnValue types) need a versioned block.
+  Accessor/invoker descriptors are not covered; `-PcountInjections` at run time catches the rest.
+- Stonecutter applies a rule's reverse pattern on the versions where its predicate is false, so a
+  reverse pattern must not match anything `src/` contains (an `OptionsScreen` rule for 26.3
+  rewrote the 1.21.x call; that one is versioned in place now).
+
+### 26.2
+- **Gui split**: the HUD class `Gui` is `Hud`; the new `Gui` (`Minecraft.gui`) owns the screen,
+  overlay, toasts and chat listener; the HUD is `Minecraft.gui.hud`. Global rules: `Gui` -> `Hud`
+  (a quoted `"net.minecraft.client.gui.Gui"` is left alone, for `@Mixin(targets = ...)` on the
+  new class), `mc.screen`/`setScreen` -> `mc.gui.screen()`/`gui.setScreen`, `getOverlay`,
+  `getToastManager`, `gui.getChat` -> `gui.hud.getChat`, F1 (`options.hideGui`) ->
+  `gui.hud.isHidden()`/`toggle()`, `getMainRenderTarget` -> `gameRenderer.mainRenderTarget()`,
+  `levelRenderer.allChanged` -> `levelExtractor.allChanged`, `EntityType.X` -> `EntityTypes.X`,
+  `TextureFormat.RGBA8` -> `GpuFormat.RGBA8_UNORM`. MinecraftScreenSwapMixin and the scaled
+  screen wrap (now ScreenRenderScaleMixin, all versions) target the new Gui.
+- **No immediate buffers in the level pass** (`MultiBufferSource` and `ShapeRenderer` are gone;
+  Fabric's `LevelRenderContext` only has `submitNodeCollector()`). `compat.WorldDraw` carries the
+  collector and has `outline(shape, x, y, z, colour, width, afterTerrain)` (`submitShapeOutline`
+  with `RenderTypes.lines()`; the block outline passes the state's `isTranslucent`). Anchor glow
+  moved from AFTER_TRANSLUCENT_FEATURES to COLLECT_SUBMITS (fired after vanilla's submits; the
+  later events have nothing left to submit into).
+- **Mixins**: flames are batched (`buildGroup` gets the sprites and the `entityCutoutCull` buffer,
+  `prepare` scales one); the screen fire is custom geometry (`submitFire` sprite,
+  `lambda$submitFire$0` Matrix4f.translate, `buildFireQuad` packed colour);
+  `extractVisibleEntities` is on `LevelExtractor`; `renderArmWithItem` -> `submitArmWithItem`;
+  the inventory model's `GuiEntityRenderState` takes `Vector3fc`/`Quaternionfc`; banner layers go
+  to `OrderedSubmitNodeCollector`.
+- **Account switch**: `PlayerSocialManager(mc, api, friendsService, RemoteFriendListUpdateHandler)`;
+  the switch closes the old friends updater and builds a new one for the new token.
+- Entities are numbered by the level (`Level.getNextEntityId`, 0 on the client): client-side
+  stand-ins need `setId` (the crystal fakes already had one; the smoke players now too).
+- The client exits through a post-main watchdog that crashes it after a few seconds if a
+  non-daemon thread is left; the dev fake account bridge (an `HttpServer`) stops on CLIENT_STOPPING.
+- Vanilla differences in the screenshots: new title panorama, a friends button on the title screen.
+
+Verified on 26.2 (2026-10-09): build + all JUnit tests; default pass with `-PcountInjections`,
+features, screens (`-PfakeBridge`), cosmetics and drop2 give the same summaries as 26.1, no
+injection failures; screenshots compared side by side.
+
+### 26.3
+- **SDL3 instead of GLFW** (`org.lwjgl.glfw` is not on the classpath). `compat.GLFW` stands in
+  for the LWJGL class (the import is rewritten): key, mouse button and modifier constants are
+  Minecraft's SDL values from `InputConstants` (scancodes; left button 1, right 3; shift 3,
+  control 192), so event comparisons work unchanged; cursor, window, monitor and attribute calls
+  go to SDL (`SDL_WarpMouseInWindow`, `SDL_SetWindowBordered`, display bounds as the "video
+  mode"). Saved keybinds stay GLFW codes (the launcher shares the config between instances):
+  `compat.KeyCodes` converts on load/save and `Keys` names through it (identity before 26.3).
+  `GLFW_KEY_UNKNOWN` is 0 there (SDL's unknown scancode; -1 is out of range for
+  `InputConstants.isKeyDown`). `InputConstants.Type.KEYSYM` -> `KEYBOARD`, `isKeyDown(key)`.
+- **Display**: F11 is `Minecraft.toggleFullscreen` (it flips the fullscreen option; Window has no
+  toggle); leaving vanilla fullscreen sets the option and applies it right away. Vanilla's raw
+  mouse input option is gone (SDL reads relative motion raw); the setting now sets
+  `SDL_HINT_MOUSE_RELATIVE_SYSTEM_SCALE` (off = Windows acceleration), the closest equivalent.
+  SDL gives the 1920x1080 dev window its full height (1061 before), so screenshots are 1080 tall.
+- **GPU API** moved to `com.mojang.renderpearl.api.*` (global `moved` rules); authlib 10 has no
+  `YggdrasilAuthenticationService` (`MinecraftServicesDiscoveryService` creates the user API and
+  friends services) and `ProfileResult` is in `authlib.services`.
+- **First-person hands**: `ItemInHandRenderer` is gone; FirstPersonHandsMixin (`>=26.3`, replacing
+  ItemInHandRendererMixin there) hooks `FirstPersonHandsAndItemsRenderer.renderPlayerArm` and
+  `submitArmWithItem` and wraps the held item's `ItemStackRenderState.submit`. It draws from
+  render states, so Low Shield and Small Items get the camera's player.
+- **Submit API**: `submitModel` has no crumbling argument and takes a `UvMapping`; glints are part
+  of the render type (`entitySolidGlint`, `armorCutoutNoCullGlint`; `entityGlint` and
+  `armorEntityGlint` are gone). EndCrystal, Shield (cosmetic shield: `entitySolidGlint` /
+  `itemTranslucentGlint` when enchanted), Banner and Equipment mixins have 26.3 blocks; the armour
+  hit tint skips `trimmedArmorGlint`.
+- **Other**: sky and fog colours are `Vector3fc`/`Vector4fc` (converted with `ARGB`); world clocks
+  answer through `ClientClockInstance.totalTicks()`; the totem animation is
+  `LocalPlayer.displayItemActivation`; `EntityRenderDispatcher.shouldRender` and
+  `MouseHandler.onMove` (relative motion) gained arguments; `swing(hand, SwingAnimation, boolean)`;
+  `ClientboundRemoveEntitiesPacket` is a record; `OptionsScreen(parent, options)` again;
+  `Window.isIconified`.
+- Smoke tips: a crashed run can leave a broken key in `run-<mc>/options.txt` (`key.keyboard.-1`);
+  passes after cosmetics/drop2 start with FOV 30 in options.txt and the drop2 inventory on the
+  server, so reset the FOV before comparing a re-run.
+
+Verified on 26.3 (2026-10-09): build + all JUnit tests; default pass with `-PcountInjections`,
+features, screens (`-PfakeBridge`), cosmetics and drop2 give the same summaries as 26.2 (only the
+taller window's layout numbers differ); screenshots compared side by side. After the 26.2/26.3
+changes, 1.21.11 (default pass), 1.21.10 and 26.1 (default pass, `-PcountInjections`) were run
+again: same summaries, no injection failures, same screenshots.
