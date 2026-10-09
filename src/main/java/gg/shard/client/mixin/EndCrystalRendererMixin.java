@@ -7,14 +7,27 @@ import gg.shard.client.modules.visual.CrystalTweaksModule;
 //? if >=1.21.9 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.CameraRenderState;
-//?} else {
+//?} else if >=1.21.2 {
 /*import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EndCrystalModel;
 import net.minecraft.client.renderer.MultiBufferSource;
+*///?} else {
+/*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.Constant;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
 *///?}
 import net.minecraft.client.renderer.entity.EndCrystalRenderer;
+//? if >=1.21.2 {
 import net.minecraft.client.renderer.entity.state.EndCrystalRenderState;
+//?}
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -27,6 +40,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(EndCrystalRenderer.class)
 abstract class EndCrystalRendererMixin {
+    //? if >=1.21.2 {
     //? if >=1.21.9 {
     @Inject(method = "submit", at = @At("HEAD"))
     private void shard$scaleCrystal(EndCrystalRenderState state, PoseStack poseStack, SubmitNodeCollector collector,
@@ -134,4 +148,57 @@ abstract class EndCrystalRendererMixin {
         collector.submitModel(tweaks.coreModel(), crystal, pose, rt, light, overlay, tweaks.coreTint(), null, outline, crumbling);
     }
     //?}
+    //?} else {
+    /*// Before 1.21.2 there are no render states and no EndCrystalModel: the renderer draws its own
+    // base, two glass frames and cube from the entity, so the spin, bounce and base (EndCrystalModelMixin
+    // and adjustState later) are handled here, and recoloured crystals tint each part as it is drawn.
+    @Shadow @Final private ModelPart cube;
+
+    @Inject(method = "render(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("HEAD"))
+    private void shard$scaleCrystal(EndCrystal crystal, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light, CallbackInfo ci) {
+        if (!ShardClient.isReady()) return;
+        float s = ShardClient.modules().get(CrystalTweaksModule.class).renderScale()
+                * ShardClient.modules().get(CrystalOptimizerModule.class).highlightScale(crystal.getX(), crystal.getY(), crystal.getZ());
+        if (s != 1f) poseStack.scale(s, s, s);
+    }
+
+    // Spin: vanilla turns (time + partialTick) * 3 degrees.
+    @ModifyConstant(method = "render(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            constant = @Constant(floatValue = 3.0F))
+    private float shard$spin(float degrees) {
+        return ShardClient.isReady() ? degrees * ShardClient.modules().get(CrystalTweaksModule.class).spinFactor() : degrees;
+    }
+
+    @WrapOperation(method = "render(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/EndCrystalRenderer;getY(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;F)F"))
+    private float shard$bounce(EndCrystal crystal, float partialTick, Operation<Float> original) {
+        if (ShardClient.isReady() && ShardClient.modules().get(CrystalTweaksModule.class).noBounce()) {
+            float h = 0.5F; // getY at age 0, as the later model's getY(0)
+            return (h * h + h) * 0.4F - 1.4F;
+        }
+        return original.call(crystal, partialTick);
+    }
+
+    @WrapOperation(method = "render(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;showsBottom()Z"))
+    private boolean shard$base(EndCrystal crystal, Operation<Boolean> original) {
+        return original.call(crystal) && !(ShardClient.isReady() && ShardClient.modules().get(CrystalTweaksModule.class).hidesBase());
+    }
+
+    @WrapOperation(method = "render(Lnet/minecraft/world/entity/boss/enderdragon/EndCrystal;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/geom/ModelPart;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"))
+    private void shard$recolour(ModelPart part, PoseStack pose, VertexConsumer buffer, int light, int overlay, Operation<Void> original,
+                                @com.llamalad7.mixinextras.sugar.Local(argsOnly = true) MultiBufferSource buffers) {
+        CrystalTweaksModule tweaks = ShardClient.isReady() ? ShardClient.modules().get(CrystalTweaksModule.class) : null;
+        if (tweaks == null || !tweaks.recolours()) {
+            original.call(part, pose, buffer, light, overlay);
+            return;
+        }
+        VertexConsumer vc = tweaks.translucent() ? buffers.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(SHARD$TEXTURE)) : buffer;
+        part.render(pose, vc, light, overlay, part == cube ? tweaks.coreTint() : tweaks.frameTint());
+    }
+
+    private static final net.minecraft.resources.Identifier SHARD$TEXTURE = net.minecraft.resources.Identifier.withDefaultNamespace("textures/entity/end_crystal/end_crystal.png");
+    *///?}
 }

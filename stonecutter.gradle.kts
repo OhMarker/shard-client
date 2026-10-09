@@ -97,9 +97,17 @@ stonecutter parameters {
             """\b(g)\.nextStratum\(\)""", "gg.shard.client.compat.GuiDraw.nextStratum(\$1)")
     }
     // GUI blits take a RenderType factory instead of a pipeline before 1.21.6.
+    // Before 1.21.2 blits take no render type at all (and no colour): compat.GuiDraw.blit and
+    // blitSprite take the 1.21.2 arguments, with GuiDraw.GUI_TEXTURED as the (ignored) type.
+    val guiTextured = if (current.parsed >= "1.21.2") "net.minecraft.client.renderer.RenderType::guiTextured" else "gg.shard.client.compat.GuiDraw.GUI_TEXTURED"
     replacements.regex(current.parsed >= "1.21.6") {
         replace("""\bnet\.minecraft\.client\.renderer\.RenderType::guiTextured\b""", "RenderPipelines.GUI_TEXTURED",
-            """\b(?:net\.minecraft\.client\.renderer\.)?RenderPipelines\.GUI_TEXTURED\b""", "net.minecraft.client.renderer.RenderType::guiTextured")
+            """\b(?:net\.minecraft\.client\.renderer\.)?RenderPipelines\.GUI_TEXTURED\b""", guiTextured)
+    }
+    replacements.regex(current.parsed >= "1.21.2") {
+        // The lookahead keeps the call and its first argument separate matches (rule above).
+        replace("""\bgg\.shard\.client\.compat\.GuiDraw\.(blit|blitSprite)\((g), (?=gg\.shard\.client\.compat\.GuiDraw\.GUI_TEXTURED\b)""", "\$2.\$1(",
+            """\b(g)\.(blit|blitSprite)\((?=(?:net\.minecraft\.client\.renderer\.)?RenderPipelines\.GUI_TEXTURED\b)""", "gg.shard.client.compat.GuiDraw.\$2(\$1, ")
     }
     // Before 1.21.6 the blur post-processes the main target right away (no graphics argument), so
     // what is drawn before it (the panorama) must be flushed first: compat.GuiDraw.blur(g).
@@ -130,8 +138,12 @@ stonecutter parameters {
             """import net\.minecraft\.client\.renderer\.RenderPipelines;""", "import net.minecraft.client.renderer.RenderType; // no RenderPipelines before 1.21.5")
     }
     // Inventory's selected slot became private in 1.21.5 (setSelectedSlot / getSelectedItem).
+    // Before 1.21.2 there is no setter at all: the public field is assigned.
+    val noSlotSetter = current.parsed < "1.21.2"
     replacements.regex(current.parsed >= "1.21.5") {
-        replace("""\.setSelectedHotbarSlot\(""", ".setSelectedSlot(", """\.setSelectedSlot\(""", ".setSelectedHotbarSlot(")
+        replace("""\.setSelectedHotbarSlot\(""", ".setSelectedSlot(",
+            if (noSlotSetter) """\.setSelectedSlot\(([^;]+)\);""" else """\.setSelectedSlot\(""",
+            if (noSlotSetter) ".selected = \$1;" else ".setSelectedHotbarSlot(")
     }
     replacements.regex(current.parsed >= "1.21.5") {
         replace("""\.getInventory\(\)\.getSelected\(\)""", ".getInventory().getSelectedItem()", """\.getInventory\(\)\.getSelectedItem\(\)""", ".getInventory().getSelected()")
@@ -153,6 +165,29 @@ stonecutter parameters {
     replacements.regex(current.parsed >= "1.21.4") {
         replace("""\bgg\.shard\.client\.compat\.GuiDraw\.enableScissor\((g), """, "\$1.enableScissor(",
             """\b(g)\.enableScissor\(""", "gg.shard.client.compat.GuiDraw.enableScissor(\$1, ")
+    }
+    // ---- 1.21.1 and 1.21 ----------------------------------------------------------------------
+    // ShapeRenderer's static helpers were on LevelRenderer before 1.21.2.
+    replacements.regex(current.parsed >= "1.21.2") {
+        replace("""\bLevelRenderer(?=\.(?:renderLineBox|addChainedFilledBoxVertices)\()""", "ShapeRenderer",
+            """\bShapeRenderer\b""", "LevelRenderer")
+    }
+    // ARGB was FastColor.ARGB32 (no float getters: compat.Argb, rule above).
+    replacements.regex(current.parsed >= "1.21.2") {
+        replace("""\bnet\.minecraft\.util\.FastColor\.ARGB32\.""", "net.minecraft.util.ARGB.",
+            """\bnet\.minecraft\.util\.ARGB\.(?=(?:colorFromFloat|color|alpha|red|green|blue|multiply|lerp|opaque)\()""", "net.minecraft.util.FastColor.ARGB32.")
+    }
+    // Minecraft.getToastManager() was getToasts() (ToastComponent), getDeltaTracker() was getTimer().
+    replacements.regex(current.parsed >= "1.21.2") {
+        replace("""\.getToasts\(\)""", ".getToastManager()", """\.getToastManager\(\)""", ".getToasts()")
+    }
+    replacements.regex(current.parsed >= "1.21.2") {
+        replace("""\.getTimer\(\)""", ".getDeltaTracker()", """\.getDeltaTracker\(\)""", ".getTimer()")
+    }
+    // NativeImage.setPixel/getPixel (ARGB) were setPixelRGBA/getPixelRGBA (ABGR): compat.NativeImages.
+    replacements.regex(current.parsed >= "1.21.2") {
+        replace("""\bgg\.shard\.client\.compat\.NativeImages\.(setPixel|getPixel)\((\w+), """, "\$2.\$1(",
+            """\b(\w+)\.(setPixel|getPixel)\(""", "gg.shard.client.compat.NativeImages.\$2(\$1, ")
     }
     // ---- 26.1 (unobfuscated; Mojang's own names) ------------------------------------------------
     // GUI drawing became render-state extraction: GuiGraphics is GuiGraphicsExtractor and the

@@ -1,5 +1,7 @@
 package gg.shard.client.mixin;
 
+// Render states arrived in 1.21.2 (BandanaLayer reads the player before).
+//? if >=1.21.2 {
 import gg.shard.client.render.BandanaState;
 //? if >=1.21.9 {
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -29,3 +31,4 @@ abstract class AvatarRenderStateMixin implements BandanaState {
         shard$bandanaTexture = texture;
     }
 }
+//?}

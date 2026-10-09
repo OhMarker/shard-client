@@ -14,7 +14,11 @@ import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 //?} else {
 /*import com.mojang.blaze3d.vertex.VertexConsumer;
 *///?}
+//? if >=1.21.2 {
 import net.minecraft.client.renderer.entity.layers.EquipmentLayerRenderer;
+//?} else {
+/*import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
+*///?}
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -27,7 +31,12 @@ import org.spongepowered.asm.mixin.injection.At;
  * multiplied by the hit tint while the wearer's render state has the red overlay. Glint passes
  * are left alone.
  */
+//? if >=1.21.2 {
 @Mixin(EquipmentLayerRenderer.class)
+//?} else {
+/*// Before 1.21.2 armour is HumanoidArmorLayer (elytra: ElytraLayerMixin).
+@Mixin(HumanoidArmorLayer.class)
+*///?}
 abstract class EquipmentLayerRendererMixin {
     //? if >=26.3 {
     /*// 26.3: no crumbling argument, a UvMapping, and the glint is part of the armour type itself
@@ -57,7 +66,7 @@ abstract class EquipmentLayerRendererMixin {
         }
         original.call(collector, model, state, pose, type, light, overlay, color, sprite, outline, crumbling);
     }
-    //?} else {
+    //?} else if >=1.21.2 {
     /*// Before 1.21.9 the layers are drawn straight into buffers (the glint rides on the armour's foil
     // buffer, so only the colour changes); the wearer's hurt state comes from ItemTints.
     //? if >=1.21.4 {
@@ -79,6 +88,30 @@ abstract class EquipmentLayerRendererMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/Model;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"),
             require = 0)
     private void shard$hitTintTrim(Model model, PoseStack pose, VertexConsumer buffer, int light, int overlay, Operation<Void> original) {
+        int color = shard$tint(-1);
+        if (color == -1) original.call(model, pose, buffer, light, overlay);
+        else model.renderToBuffer(pose, buffer, light, overlay, color);
+    }
+
+    private static int shard$tint(int color) {
+        if (!ShardClient.isReady() || !ItemTints.wearerHurt()) return color;
+        int tint = ShardClient.modules().get(HitColorModule.class).armorTint();
+        return tint == ItemTints.NONE ? color : ItemTints.multiply(color, tint);
+    }
+    *///?} else {
+    /*// Before 1.21.2: HumanoidArmorLayer draws each piece (renderModel, with a colour for dyed
+    // leather) and its trim (renderTrim, no colour); the glint pass (renderGlint) is left alone.
+    @WrapOperation(method = "renderModel",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/HumanoidModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"))
+    private void shard$hitTintArmor(net.minecraft.client.model.HumanoidModel<?> model, PoseStack pose, VertexConsumer buffer, int light, int overlay, int color,
+                                    Operation<Void> original) {
+        original.call(model, pose, buffer, light, overlay, shard$tint(color));
+    }
+
+    @WrapOperation(method = "renderTrim",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/HumanoidModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"))
+    private void shard$hitTintTrim(net.minecraft.client.model.HumanoidModel<?> model, PoseStack pose, VertexConsumer buffer, int light, int overlay,
+                                   Operation<Void> original) {
         int color = shard$tint(-1);
         if (color == -1) original.call(model, pose, buffer, light, overlay);
         else model.renderToBuffer(pose, buffer, light, overlay, color);

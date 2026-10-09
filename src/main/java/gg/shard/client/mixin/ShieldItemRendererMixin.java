@@ -46,7 +46,11 @@ abstract class ShieldItemRendererMixin {
         // The cosmetic is drawn in vanilla's 64x64 shield layout on the whole texture (no atlas sprite).
         int color = ItemTints.multiply(-1, ItemTints.shield());
         RenderType type = ItemTints.shieldTranslucent() ? RenderTypes.entityTranslucent(texture) : RenderTypes.entitySolid(texture);
+        //? if >=1.21.2 {
         VertexConsumer buffer = ItemRenderer.getFoilBuffer(buffers, type, context == ItemDisplayContext.GUI, stack.hasFoil());
+        //?} else {
+        /^VertexConsumer buffer = ItemRenderer.getFoilBufferDirect(buffers, type, true, stack.hasFoil());
+        ^///?}
         pose.pushPose();
         pose.scale(1.0F, -1.0F, -1.0F);
         shieldModel.handle().render(pose, buffer, light, overlay, color);

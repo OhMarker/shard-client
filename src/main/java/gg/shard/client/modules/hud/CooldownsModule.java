@@ -47,7 +47,12 @@ public final class CooldownsModule extends HudModule {
         }
         for (ItemStack s : items) {
 
+            //? if >=1.21.2 {
             float f = p.getCooldowns().getCooldownPercent(s, pt);
+            //?} else {
+            /*// Before 1.21.2 cooldowns are per item.
+            float f = p.getCooldowns().getCooldownPercent(s.getItem(), pt);
+            *///?}
             if (f <= 0 && hideIdle.get()) continue;
             if (f <= 0 && p.getInventory().countItem(s.getItem()) == 0) continue;
             shown.add(s);

@@ -128,7 +128,12 @@ public final class CapeLibrary {
                 int h = image.getHeight();
                 String problem = PlayerCosmetics.layoutProblem(type, w, h, MAX_WIDTH);
                 if (problem != null) throw new IllegalArgumentException(problem);
+                //? if >=1.21.2 {
                 return MipChain.build(image.getPixels(), w, h, 64);
+                //?} else {
+                /*// Before 1.21.2 the ARGB pixel array is makePixelArray().
+                return MipChain.build(image.makePixelArray(), w, h, 64);
+                *///?}
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

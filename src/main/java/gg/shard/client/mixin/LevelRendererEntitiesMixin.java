@@ -37,7 +37,7 @@ abstract class LevelRendererEntitiesMixin {
     private void shard$beginEntityFrame(Camera camera, Frustum frustum, DeltaTracker delta, LevelRenderState state, CallbackInfo ci) {
         if (ShardClient.isReady()) ShardClient.modules().get(EntityOptimizerModule.class).beginFrame();
     }
-    //?} else {
+    //?} else if >=1.21.2 {
     /*@Inject(method = "collectVisibleEntities", at = @At("HEAD"), require = 0)
     private void shard$beginEntityFrame(Camera camera, Frustum frustum, java.util.List<Entity> list, CallbackInfoReturnable<Boolean> cir) {
         if (ShardClient.isReady()) ShardClient.modules().get(EntityOptimizerModule.class).beginFrame();
@@ -53,6 +53,29 @@ abstract class LevelRendererEntitiesMixin {
     }
 
     @WrapOperation(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;getTeamColor()I"))
+    private int shard$crystalOutline(Entity entity, Operation<Integer> original) {
+        int colour = shard$outline(entity);
+        return colour != 0 ? colour : original.call(entity);
+    }
+
+    private static int shard$outline(Entity entity) {
+        if (!(entity instanceof EndCrystal crystal) || !ShardClient.isReady()) return 0;
+        return ShardClient.modules().get(CrystalTweaksModule.class).outline(crystal);
+    }
+    *///?} else {
+    /*// Before 1.21.2 renderLevel walks and draws the entities itself.
+    @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;entitiesForRendering()Ljava/lang/Iterable;"))
+    private void shard$beginEntityFrame(CallbackInfo ci) {
+        if (ShardClient.isReady()) ShardClient.modules().get(EntityOptimizerModule.class).beginFrame();
+    }
+
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/Minecraft;shouldEntityAppearGlowing(Lnet/minecraft/world/entity/Entity;)Z"))
+    private boolean shard$crystalGlows(Minecraft mc, Entity entity, Operation<Boolean> original) {
+        return original.call(mc, entity) || shard$outline(entity) != 0;
+    }
+
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;getTeamColor()I"))
     private int shard$crystalOutline(Entity entity, Operation<Integer> original) {
         int colour = shard$outline(entity);
         return colour != 0 ? colour : original.call(entity);

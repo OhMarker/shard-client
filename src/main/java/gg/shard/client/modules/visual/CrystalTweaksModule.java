@@ -13,9 +13,11 @@ import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+//? if >=1.21.2 {
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.crystal.EndCrystalModel;
 import net.minecraft.client.renderer.entity.state.EndCrystalRenderState;
+//?}
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 
 /**
@@ -36,8 +38,10 @@ public final class CrystalTweaksModule extends Module implements PanelPreview {
             .details("Only the crystal vanilla already picked under your crosshair, which needs line of sight."));
     private final ColorSetting aimColor = add(new ColorSetting("Outline colour", "Colour of that outline", 0xFFC084FC, false).group("Colour"));
 
+    //? if >=1.21.2 {
     private EndCrystalModel coreModel;
     private EndCrystalModel frameModel;
+    //?}
 
     public CrystalTweaksModule() {
         super("Crystal Visuals", "Smaller crystals with your colours, spin speed, bounce and base.", ModuleCategory.VISUALS);
@@ -77,6 +81,12 @@ public final class CrystalTweaksModule extends Module implements PanelPreview {
         return isEnabled() && !bounce.get();
     }
 
+    /** True when the base is hidden (EndCrystalRendererMixin before 1.21.2, which has no render states). */
+    public boolean hidesBase() {
+        return isEnabled() && !base.get();
+    }
+
+    //? if >=1.21.2 {
     /** Applied to the render state after vanilla extracted it. */
     public void adjustState(EndCrystal crystal, EndCrystalRenderState state) {
         if (!isEnabled()) return;
@@ -85,6 +95,7 @@ public final class CrystalTweaksModule extends Module implements PanelPreview {
         if (aimOutline.get() && Minecraft.getInstance().crosshairPickEntity == crystal) state.outlineColor = aimColor.get();
         //?}
     }
+    //?}
 
     //? if <1.21.9 {
     /*/^*
@@ -117,6 +128,7 @@ public final class CrystalTweaksModule extends Module implements PanelPreview {
         return opacity.get() < 100;
     }
 
+    //? if >=1.21.2 {
     /** The cube only (frames skip drawing themselves but still carry the cube's pose). */
     public EndCrystalModel coreModel() {
         if (coreModel == null) {
@@ -146,6 +158,7 @@ public final class CrystalTweaksModule extends Module implements PanelPreview {
         }
         return frameModel;
     }
+    //?}
 
     /** Swatches showing the two colours at the chosen opacity, over a checkerboard. */
     @Override

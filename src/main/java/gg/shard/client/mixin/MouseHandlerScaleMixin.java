@@ -38,6 +38,7 @@ abstract class MouseHandlerScaleMixin {
     }
     //?} else {
     /*// Before 1.21.9 the handler passes loose coordinates.
+    //? if >=1.21.2 {
     @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseClicked(DDI)Z"), require = 0)
     private boolean shard$clicked(Screen screen, double x, double y, int button, Operation<Boolean> original) {
         double f = ScaledScreen.factorOf(screen);
@@ -49,6 +50,20 @@ abstract class MouseHandlerScaleMixin {
         double f = ScaledScreen.factorOf(screen);
         return original.call(screen, x / f, y / f, button);
     }
+    //?} else {
+    /^// Before 1.21.2 clicks and releases are sent from static lambdas (static handlers).
+    @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseClicked(DDI)Z"), require = 0)
+    private static boolean shard$clicked(Screen screen, double x, double y, int button, Operation<Boolean> original) {
+        double f = ScaledScreen.factorOf(screen);
+        return original.call(screen, x / f, y / f, button);
+    }
+
+    @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseReleased(DDI)Z"), require = 0)
+    private static boolean shard$released(Screen screen, double x, double y, int button, Operation<Boolean> original) {
+        double f = ScaledScreen.factorOf(screen);
+        return original.call(screen, x / f, y / f, button);
+    }
+    ^///?}
 
     @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseDragged(DDIDD)Z"), require = 0)
     private boolean shard$dragged(Screen screen, double x, double y, int button, double dx, double dy, Operation<Boolean> original) {
@@ -57,11 +72,20 @@ abstract class MouseHandlerScaleMixin {
     }
     *///?}
 
+    //? if >=1.21.2 {
     @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseMoved(DD)V"), require = 0)
     private void shard$moved(Screen screen, double x, double y, Operation<Void> original) {
         double f = ScaledScreen.factorOf(screen);
         original.call(screen, x / f, y / f);
     }
+    //?} else {
+    /*// Before 1.21.2 mouseMoved is sent from a static lambda (static handler).
+    @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseMoved(DD)V"), require = 0)
+    private static void shard$moved(Screen screen, double x, double y, Operation<Void> original) {
+        double f = ScaledScreen.factorOf(screen);
+        original.call(screen, x / f, y / f);
+    }
+    *///?}
 
     @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseScrolled(DDDD)Z"), require = 0)
     private boolean shard$scrolled(Screen screen, double x, double y, double sx, double sy, Operation<Boolean> original) {

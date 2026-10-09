@@ -1,11 +1,14 @@
 # Static mixin check for a node (26.x, or 1.21.x on its Mojang-mapped jar): every injector's method and @At target
 # (INVOKE / FIELD owner, name and descriptor, NEW constructor) must be in the target method's
-# bytecode on that version's jar. Run `./gradlew :<mc>:compileJava :<mc>:processResources` first.
+# bytecode on that version's jar (`method = "*"`: in any method a handler of that kind can target).
+# Run `./gradlew :<mc>:compileJava :<mc>:processResources` first.
 # Usage: python tools/mixin-targets.py <mc>        (prints "problems: 0" when everything matches)
 import os, re, subprocess, sys, json
 ver = sys.argv[1]
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 gen = os.path.join(root, "versions", ver, "build", "generated", "stonecutter", "main", "java", "gg", "shard", "client", "mixin")
+if not os.path.isdir(gen):  # the active version (1.21.11) compiles src/ itself
+    gen = os.path.join(root, "src", "main", "java", "gg", "shard", "client", "mixin")
 jar = os.path.expanduser(rf"~\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged-deobf\{ver}\minecraft-merged-deobf-{ver}.jar")
 if not os.path.exists(jar):
     # 1.21.x: the Mojang-mapped (named) jar Loom remapped for this version.
@@ -25,7 +28,7 @@ def bodies(cls):
         if m:
             nm = m.group(1); 
             if nm == cls or nm == cls.split('.')[-1]: nm = "<init>"
-            cur = res.setdefault(nm, []); cur.append([None, []]); continue
+            cur = res.setdefault(nm, []); cur.append([None, [], " static " in l]); continue
         if l.strip().startswith("descriptor:") and cur is not None and cur[-1][0] is None:
             cur[-1][0] = l.split("descriptor:")[1].strip(); continue
         if cur is not None and "//" in l: cur[-1][1].append(l.split("//",1)[1].strip())
@@ -62,15 +65,19 @@ for f in sorted(os.listdir(gen)):
         tg = re.search(r'target\s*=\s*"([^"]+)"', ann)
         val = re.search(r'value\s*=\s*"(\w+)"', ann) or re.search(r'@At\("(\w+)"\)', ann)
         val = val.group(1) if val else None
+        # The handler right after the annotation: a non-static handler never matches a static
+        # target (with `method = "*"` such targets are skipped silently, e.g. 1.21.1's static lambdas).
+        hm = re.search(r"\b(?:private|public|protected)\s+(static\s+)?[\w<>\[\]., ?]+\s+\w+\$\w+\(", code[m.end():])
+        static_handler = bool(hm and hm.group(1))
         for meth in meths:
-            if meth == '*': continue
             mn = meth.split('(')[0]; md = meth[len(mn):] or None
             found = False; hit = False
             for t in targets:
                 b = bodies(t)
-                if not b or mn not in b: continue
-                for desc, insns in b[mn]:
+                if not b or (meth != '*' and mn not in b): continue
+                for desc, insns, is_static in (sum(b.values(), []) if meth == '*' else b[mn]):
                     if md and desc != md: continue
+                    if meth == '*' and is_static and not static_handler: continue
                     found = True
                     if not tg: hit = True; continue
                     tgt = tg.group(1)

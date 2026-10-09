@@ -36,7 +36,12 @@ public final class CompassModule extends HudModule {
         int w = width.get();
         int h = 18;
         box(g, st, w, h);
+        //? if >=1.21.2 {
         float yaw = (p.getYRot(delta.getGameTimeDeltaPartialTick(true)) % 360 + 360) % 360; // 0 = south
+        //?} else {
+        /*// Before 1.21.2 the interpolated yaw is getViewYRot.
+        float yaw = (p.getViewYRot(delta.getGameTimeDeltaPartialTick(true)) % 360 + 360) % 360; // 0 = south
+        *///?}
         float pxPerDeg = w / 120f; // 120 degrees visible
         g.enableScissor(0, 0, w, h);
         for (int deg = 0; deg < 360; deg += 15) {

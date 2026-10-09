@@ -1,6 +1,6 @@
 package gg.shard.client.mixin;
 
-//? if <1.21.4 {
+//? if >=1.21.2 <1.21.4 {
 /*import gg.shard.client.render.ShieldCosmetics;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.world.entity.LivingEntity;

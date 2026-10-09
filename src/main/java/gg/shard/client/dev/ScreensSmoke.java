@@ -92,7 +92,11 @@ final class ScreensSmoke {
         switch (t) {
             case 0 -> {
                 // The unfocused dev window counts as idle; keep full frame rate so hovers animate between ticks.
+                //? if >=1.21.2 {
                 mc.options.inactivityFpsLimit().set(net.minecraft.client.InactivityFpsLimit.MINIMIZED);
+                //?} else {
+                /*// (No inactivity limit before 1.21.2.)
+                *///?}
                 settings.shardScreens.set(true);
                 ServerList list = new ServerList(mc);
                 list.load();
