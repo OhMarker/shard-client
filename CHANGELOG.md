@@ -3,7 +3,7 @@
 ## 0.10.0
 
 - **Shard on more Minecraft versions.** The same client, with every module, menu, HUD element and
-  cosmetic, now also runs on Minecraft 1.21.10 and 1.21.9. More versions follow in this release
+  cosmetic, now also runs on Minecraft 26.1, 26.1.1, 26.1.2, 1.21.10 and 1.21.9. More versions follow in this release
   line; Shard Launcher installs the right build for each instance automatically.
 
 ## 0.9.1
