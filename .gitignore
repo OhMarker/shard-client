@@ -19,3 +19,4 @@ bench-out/
 *-run.log
 smoke-*/
 bench-*/
+.extra-mods/

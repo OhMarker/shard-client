@@ -47,6 +47,10 @@ dependencies {
     modRuntimeOnly("maven.modrinth:sodium:$sodiumVersion")
     modRuntimeOnly("maven.modrinth:iris:$irisVersion")
     modRuntimeOnly("maven.modrinth:lithium:$lithiumVersion")
+    // -PextraMods=<folder>: also run with these mod jars (reproducing a player's mod list in dev).
+    if (project.hasProperty("extraMods")) {
+        modRuntimeOnly(fileTree(project.property("extraMods").toString()) { include("*.jar") })
+    }
     modRuntimeOnly("me.shedaniel.cloth:cloth-config-fabric:$clothConfigVersion") {
         exclude(group = "net.fabricmc.fabric-api")
     }
