@@ -764,7 +764,8 @@ public final class SmokeTest {
             }
             case 20 -> {
                 var mode = org.lwjgl.glfw.GLFW.glfwGetVideoMode(org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor());
-                boolean covers = mode != null && w.getScreenWidth() == mode.width() && w.getScreenHeight() == mode.height();
+                // The window is one pixel taller than the monitor on purpose (see DisplayModule.setBorderless).
+                boolean covers = mode != null && w.getX() <= 0 && w.getY() <= 0 && w.getScreenWidth() >= mode.width() && w.getScreenHeight() >= mode.height() && w.getScreenHeight() <= mode.height() + 1;
                 ShardClient.LOGGER.info("Smoke: borderless window {}x{} at {},{}; monitor {}x{}; covers monitor: {}; title \"{}\"",
                         w.getScreenWidth(), w.getScreenHeight(), w.getX(), w.getY(), mode == null ? 0 : mode.width(), mode == null ? 0 : mode.height(),
                         covers, display.titleOverride());

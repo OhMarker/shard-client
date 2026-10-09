@@ -121,6 +121,11 @@ public final class DisplayModule extends Module {
             started = true;
             if (startBorderless.get() && !borderless) setBorderless(true);
         }
+        // Keep the pointer visible in menus while borderless (some drivers hide it after a mode change).
+        Minecraft mc = Minecraft.getInstance();
+        if (borderless && mc.screen != null && GLFW.glfwGetInputMode(mc.getWindow().handle(), GLFW.GLFW_CURSOR) != GLFW.GLFW_CURSOR_NORMAL) {
+            GLFW.glfwSetInputMode(mc.getWindow().handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+        }
     }
 
     private void refreshTitle() {
@@ -185,8 +190,11 @@ public final class DisplayModule extends Module {
             GLFWVidMode mode = GLFW.glfwGetVideoMode(target);
             if (mode == null) return;
             GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
-            GLFW.glfwSetWindowMonitor(handle, 0L, mx[0], my[0], mode.width(), mode.height(), GLFW.GLFW_DONT_CARE);
+            // One pixel taller than the monitor: a borderless window that exactly covers the screen is
+            // treated by Windows as fullscreen, which can hide the mouse cursor in menus.
+            GLFW.glfwSetWindowMonitor(handle, 0L, mx[0], my[0], mode.width(), mode.height() + 1, GLFW.GLFW_DONT_CARE);
             borderless = true;
+            showCursorInMenus(mc, handle);
             ShardClient.LOGGER.info("Borderless fullscreen on {}x{} at {},{}", mode.width(), mode.height(), mx[0], my[0]);
         } else {
             GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
@@ -194,6 +202,14 @@ public final class DisplayModule extends Module {
             int h = savedH > 0 ? savedH : 720;
             GLFW.glfwSetWindowMonitor(handle, 0L, savedX, savedY, w, h, GLFW.GLFW_DONT_CARE);
             borderless = false;
+            showCursorInMenus(mc, handle);
+        }
+    }
+
+    /** Changing the window can leave the cursor hidden; in a menu it must be the normal pointer. */
+    private static void showCursorInMenus(Minecraft mc, long handle) {
+        if (mc.screen != null || mc.player == null) {
+            GLFW.glfwSetInputMode(handle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         }
     }
 

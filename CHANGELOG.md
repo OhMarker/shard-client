@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+- Borderless fullscreen no longer hides the mouse cursor in menus: the window is one pixel taller
+  than the screen so Windows does not treat it as exclusive fullscreen, and the pointer is forced
+  visible whenever a menu is open.
+
 ## 0.9.0
 
 - **OhMarker set: shield and bandana.** Two new cosmetics next to the cape, bought and equipped in
