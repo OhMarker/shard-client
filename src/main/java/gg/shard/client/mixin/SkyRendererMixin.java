@@ -16,8 +16,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(SkyRenderer.class)
 abstract class SkyRendererMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"), require = 0)
+    //? if >=1.21.11 {
     private void shard$skyColour(ClientLevel level, float partialTick, Camera camera, SkyRenderState state, CallbackInfo ci) {
         if (!ShardClient.isReady() || state.skybox != DimensionType.Skybox.OVERWORLD) return;
+    //?} else {
+    /*private void shard$skyColour(ClientLevel level, float partialTick, net.minecraft.world.phys.Vec3 cameraPos, SkyRenderState state, CallbackInfo ci) {
+        if (!ShardClient.isReady() || state.skyType != net.minecraft.client.renderer.DimensionSpecialEffects.SkyType.OVERWORLD) return;
+    *///?}
         SkyModule sky = ShardClient.modules().get(SkyModule.class);
         if (!sky.active(level)) return;
         state.skyColor = sky.sky(state.skyColor, state.sunAngle, level.getRainLevel(partialTick), level.getThunderLevel(partialTick));

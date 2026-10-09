@@ -1,5 +1,6 @@
 package gg.shard.client.mixin;
 
+//? if >=1.21.11 {
 import gg.shard.client.ShardClient;
 import gg.shard.client.modules.visual.HitboxModule;
 import net.minecraft.client.renderer.debug.EntityHitboxDebugRenderer;
@@ -24,3 +25,4 @@ abstract class EntityHitboxDebugRendererMixin {
         ci.cancel();
     }
 }
+//?}

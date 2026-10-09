@@ -75,6 +75,12 @@ loom {
             // -PwindowSize=1920x1080 changes the dev window (the smoke test uses 1280x720 by default).
             val size = (project.findProperty("windowSize")?.toString() ?: "1280x720").split("x")
             programArgs("--width", size[0], "--height", size[1])
+            // -PcountInjections: injectors that match nothing fail start-up (most Shard injectors are
+            // require = 0, so a target that moved between versions would otherwise fail silently).
+            // Applies to every mod's mixins, so run it without the dev companions (Sodium trips it).
+            if (project.hasProperty("countInjections")) {
+                vmArgs("-Dmixin.debug.countInjections=true")
+            }
             // Fixed dev username so the offline smoke server can op it (see .smoke-server/ops.json).
             programArgs("--username", "ShardSmoke")
             // Verification hooks: -PquickPlay=host:port joins a server on start;

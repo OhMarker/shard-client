@@ -95,12 +95,14 @@ public final class ShardClient implements ClientModInitializer {
             if (gg.shard.client.dev.SmokeTest.active() || !gg.shard.client.gui.WelcomeScreen.needed()) return;
             if (client.screen == null) client.setScreen(new gg.shard.client.gui.WelcomeScreen());
         }));
+        //? if >=1.21.10 {
         net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register((ctx, state) ->
-                !isReady() || modules.get(gg.shard.client.modules.visual.BlockOutlineModule.class).render(ctx, state));
+                beforeBlockOutline(gg.shard.client.compat.WorldDraw.of(ctx), state));
+        //?}
         gg.shard.client.modules.utility.GuiScalesModule.registerHudScaling();
-        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
-            if (isReady()) modules.get(gg.shard.client.modules.visual.AnchorGlowModule.class).render(ctx);
-        });
+        //? if >=1.21.10 {
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));
+        //?}
         hud.start();
         modules.start();
         Keybinds.init();
@@ -110,6 +112,20 @@ public final class ShardClient implements ClientModInitializer {
         ready = true;
         LOGGER.info("Shard ready: {} modules", modules.all().size());
         gg.shard.client.dev.SmokeTest.init();
+    }
+
+    /** World overlays drawn after the entities (Fabric's AFTER_ENTITIES; LevelRendererEventsMixin on 1.21.9). */
+    public static void afterEntities(gg.shard.client.compat.WorldDraw draw) {
+        if (!isReady()) return;
+        modules.get(gg.shard.client.modules.visual.AnchorGlowModule.class).render(draw);
+        //? if <1.21.11 {
+        /*modules.get(gg.shard.client.modules.visual.HitboxModule.class).render(draw);
+        *///?}
+    }
+
+    /** Returns false to cancel vanilla's block outline (Fabric's BEFORE_BLOCK_OUTLINE; LevelRendererEventsMixin on 1.21.9). */
+    public static boolean beforeBlockOutline(gg.shard.client.compat.WorldDraw draw, net.minecraft.client.renderer.state.BlockOutlineRenderState state) {
+        return !isReady() || modules.get(gg.shard.client.modules.visual.BlockOutlineModule.class).render(draw, state);
     }
 
     private static String modNameIfLoaded(String id) {

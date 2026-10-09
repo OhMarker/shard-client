@@ -79,7 +79,12 @@ public final class SkyModule extends Module {
 
     /** True when the sky of this level should be recoloured. */
     public boolean active(ClientLevel level) {
+        //? if >=1.21.11 {
         return isEnabled() && preset.get() != Preset.VANILLA && level != null && level.dimensionType().skybox() == DimensionType.Skybox.OVERWORLD;
+        //?} else {
+        /*return isEnabled() && preset.get() != Preset.VANILLA && level != null
+                && level.effects().skyType() == net.minecraft.client.renderer.DimensionSpecialEffects.SkyType.OVERWORLD;
+        *///?}
     }
 
     public boolean tintsFog() {

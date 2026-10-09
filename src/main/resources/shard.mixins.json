@@ -14,11 +14,13 @@
     "ChatComponentMixin",
     "ClientLevelWeatherMixin",
     "ClientPacketListenerMixin",
+    "CompositeRenderTypeMixin",
     "DisplayWindowMixin",
     "EndCrystalModelMixin",
     "EndCrystalRendererMixin",
     "EntityHitboxDebugRendererMixin",
     "EntityRenderDispatcherMixin",
+    "EntityRendererHitboxMixin",
     "EquipmentLayerRendererMixin",
     "FlameFeatureRendererMixin",
     "FontManagerMixin",
@@ -33,6 +35,7 @@
     "ItemModelResolverMixin",
     "JoinMultiplayerScreenAccessor",
     "LevelRendererEntitiesMixin",
+    "LevelRendererEventsMixin",
     "LightTextureMixin",
     "LivingEntityMixin",
     "LivingEntityRendererMixin",
@@ -56,7 +59,10 @@
   ],
   "mixins": [],
   "versioned": {
-    "ExampleOnlyOnSomeVersions": ">=1.21.9 <26.1"
+    "CompositeRenderTypeMixin": "<1.21.11",
+    "EntityHitboxDebugRendererMixin": ">=1.21.11",
+    "EntityRendererHitboxMixin": "<1.21.11",
+    "LevelRendererEventsMixin": "<1.21.10"
   },
   "injectors": {
     "defaultRequire": 1
