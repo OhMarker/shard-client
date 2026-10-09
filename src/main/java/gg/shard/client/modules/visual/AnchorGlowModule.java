@@ -2,6 +2,8 @@ package gg.shard.client.modules.visual;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import gg.shard.client.compat.Lines;
+import gg.shard.client.compat.WorldDraw;
 import gg.shard.client.gui.Fonts;
 import gg.shard.client.gui.PanelPreview;
 import gg.shard.client.gui.Render2D;
@@ -12,11 +14,8 @@ import gg.shard.client.module.setting.BoolSetting;
 import gg.shard.client.module.setting.ColorSetting;
 import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.util.Colors;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
@@ -104,17 +103,17 @@ public final class AnchorGlowModule extends Module implements PanelPreview {
     }
 
     /** Draws the outlines; called from Fabric's world render event after entities. */
-    public void render(WorldRenderContext ctx) {
+    public void render(WorldDraw ctx) {
         if (!isEnabled() || anchors.isEmpty() || ctx.consumers() == null) return;
-        Vec3 cam = ctx.worldState().cameraRenderState.pos;
+        Vec3 cam = ctx.camera();
         PoseStack pose = ctx.matrices();
-        VertexConsumer lines = ctx.consumers().getBuffer(RenderTypes.lines());
+        VertexConsumer lines = ctx.consumers().getBuffer(Lines.type(width.get()));
         float pulseT = (float) (0.75 + 0.25 * Math.sin(System.currentTimeMillis() / 180.0));
         for (long[] a : anchors) {
             BlockPos pos = BlockPos.of(a[0]);
             int color = colorFor((int) a[1]);
             if (a[1] >= 4 && pulse.get()) color = Colors.fade(color, pulseT);
-            ShapeRenderer.renderShape(pose, lines, Shapes.block(), pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, color, width.get());
+            Lines.shape(pose, lines, Shapes.block(), pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, color, width.get());
         }
     }
 

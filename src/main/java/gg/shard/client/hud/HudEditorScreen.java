@@ -97,7 +97,11 @@ public final class HudEditorScreen extends DesignScreen {
         var gui = ShardClient.config().gui();
         if (gui.has("hudGrid")) gridOn = gui.get("hudGrid").getAsBoolean();
         if (panel == null) panel = ClickGuiScreen.embedded(() -> panelOpen = false);
+        //? if >=1.21.11 {
         panel.init(width, height);
+        //?} else {
+        /*panel.init(minecraft, width, height);
+        *///?}
     }
 
     @Override
@@ -537,7 +541,11 @@ public final class HudEditorScreen extends DesignScreen {
 
     /** Opens the side panel for a module (also used by the smoke test). */
     public void openPanel(HudModule m) {
+        //? if >=1.21.11 {
         panel.init(width, height);
+        //?} else {
+        /*panel.init(minecraft, width, height);
+        *///?}
         panel.openModule(m);
         panelOpen = true;
     }
@@ -820,11 +828,19 @@ public final class HudEditorScreen extends DesignScreen {
         return super.charTyped(event);
     }
 
+    //? if >=1.21.11 {
     @Override
     public void resize(int w, int h) {
         super.resize(w, h);
         if (panel != null) panel.init(w, h);
     }
+    //?} else {
+    /*@Override
+    public void resize(net.minecraft.client.Minecraft mc, int w, int h) {
+        super.resize(mc, w, h);
+        if (panel != null) panel.init(mc, w, h);
+    }
+    *///?}
 
     @Override
     public void onClose() {

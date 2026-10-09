@@ -20,3 +20,5 @@ bench-out/
 smoke-*/
 bench-*/
 .extra-mods/
+run-*/
+.smoke-server-*/

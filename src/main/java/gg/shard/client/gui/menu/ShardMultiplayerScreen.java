@@ -25,6 +25,7 @@ import net.minecraft.client.server.LanServer;
 import net.minecraft.client.server.LanServerDetection;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+//? if >=1.21.11
 import net.minecraft.server.network.EventLoopGroupHolder;
 import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
@@ -330,10 +331,16 @@ public final class ShardMultiplayerScreen extends MenuScreen {
         ServerStatusPinger p = pinger;
         PING_POOL.submit(() -> {
             try {
-                p.pingServer(data, () -> minecraft.execute(() -> {
+                Runnable saved = () -> minecraft.execute(() -> {
                     if (servers != null) servers.save();
-                }), () -> data.setState(data.protocol == SharedConstants.getCurrentVersion().protocolVersion()
-                        ? ServerData.State.SUCCESSFUL : ServerData.State.INCOMPATIBLE), EventLoopGroupHolder.remote(minecraft.options.useNativeTransport()));
+                });
+                Runnable pinged = () -> data.setState(data.protocol == SharedConstants.getCurrentVersion().protocolVersion()
+                        ? ServerData.State.SUCCESSFUL : ServerData.State.INCOMPATIBLE);
+                //? if >=1.21.11 {
+                p.pingServer(data, saved, pinged, EventLoopGroupHolder.remote(minecraft.options.useNativeTransport()));
+                //?} else {
+                /*p.pingServer(data, saved, pinged);
+                *///?}
             } catch (UnknownHostException e) {
                 data.setState(ServerData.State.UNREACHABLE);
                 data.motd = Component.translatable("multiplayer.status.cannot_resolve").withColor(0xFFFF5555);

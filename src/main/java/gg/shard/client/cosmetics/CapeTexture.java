@@ -26,8 +26,13 @@ public final class CapeTexture extends AbstractTexture {
         // Usage 5 = copy destination + texture binding, the same as vanilla's DynamicTexture.
         this.texture = device.createTexture(() -> label, GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING,
                 TextureFormat.RGBA8, base.width(), base.height(), 1, levels.size());
+        //? if >=1.21.11 {
         this.sampler = RenderSystem.getSamplerCache().getSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE,
                 FilterMode.LINEAR, FilterMode.LINEAR, true);
+        //?} else {
+        /*this.texture.setAddressMode(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE);
+        this.texture.setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, true);
+        *///?}
         this.textureView = device.createTextureView(this.texture);
         CommandEncoder encoder = device.createCommandEncoder();
         for (int level = 0; level < levels.size(); level++) {

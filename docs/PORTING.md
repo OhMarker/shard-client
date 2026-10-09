@@ -1,0 +1,139 @@
+# Porting Shard Client to other Minecraft versions
+
+Shard Client is one source tree built for every Minecraft release the launcher lists
+(1.21 → 1.21.11 and 26.1 → 26.3) with [Stonecutter](https://stonecutter.kikugie.dev) 0.9.8 and
+loom-back-compat 0.4.2. The goal is full feature parity: every module, screen, cosmetic and HUD
+element that exists on 1.21.11 works on every version.
+
+## Layout
+- `src/` is the shared source, written for **1.21.11** (the `vcsVersion` and `stonecutter active`
+  version). Always commit with 1.21.11 active.
+- `versions/<mc>/gradle.properties`: per-version `mcCompat` (fabric.mod.json range), `mcReleases`,
+  `fabricApiVersion`, `modmenuVersion`, optional dev companions (`sodiumVersion` ...).
+- `stonecutter.gradle.kts`: global string/regex replacements for pure renames.
+- `build.gradle.kts` runs once per node. Minecraft < 26.1 uses fabric-loom-remap with Mojang
+  mappings; 26.1+ is unobfuscated (fabric-loom, Java 25).
+- Jars: `./gradlew :<mc>:build` → `build/libs/<modVersion>/shard-<modVersion>+<mc>.jar` (+ .sha512).
+
+## Workflow for one version
+1. `./gradlew :<mc>:compileJava` compiles the generated copy in
+   `versions/<mc>/build/generated/stonecutter/main/java/...`; the line numbers match `src/`.
+   Do not switch the active version to fix errors; edit `src/` directly.
+2. Fix differences, in this order of preference:
+   - **Pure renames** (class moved package, class renamed) → a global replacement in
+     `stonecutter.gradle.kts`, using regex with word boundaries when the name is short or common.
+   - **Small API differences used in many places** → one helper in
+     `gg.shard.client.compat` (e.g. `Mc.id(ns, path)`), versioned once inside the helper.
+   - **Everything else** → versioned comments in place:
+     ```java
+     //? if >=1.21.11 {
+     newCall();
+     //?} else {
+     /*oldCall();
+     *///?}
+     ```
+     Code for other versions lives inside `/* */`, so the 1.21.11 view stays compilable.
+     Nested conditions use `/^ ^/`.
+3. Mixins: read the real target signatures of that version with `javap -p -c` on the mapped
+   Minecraft jar in the Loom cache (`~/.gradle/caches/fabric-loom/` or `.gradle/loom-cache/`).
+   A mixin whose target only exists on some versions: wrap the whole mixin class body/file in a
+   versioned block (a fully commented-out .java file compiles fine) and list it under
+   `"versioned"` in `src/main/resources/shard.mixins.json`, e.g.
+   `"versioned": { "AvatarRendererMixin": ">=1.21.9", "PlayerRendererMixin": "<1.21.9" }`.
+   The build drops non-matching entries from that version's mixin config (predicates are
+   space-separated and all must match: `>=1.21.6 <26.1`).
+   `defaultRequire: 1` means a failed injection crashes start-up, which is the signal you want.
+4. `./gradlew :1.21.11:build` must still pass (all JUnit tests) after every change.
+5. Run the game on that version (see Verification) and look at the screenshots.
+
+## Verification per version
+- Server: `.smoke-server-<mc>/` with that version's `server.jar` (download URL from Mojang's
+  version manifest), `server.properties` copied from `.smoke-server/` (offline, port 25599,
+  creative), `ops.json` copied, `eula.txt` with `eula=true`. Start it with
+  `java -Xmx2G -jar server.jar nogui` (Java 25 works for all versions).
+- Client: `./gradlew :<mc>:runClient -PquickPlay=localhost:25599 -PsmokeDir=<abs dir>`
+  (run dir `run-<mc>/`). The smoke test writes PNGs and `smoke-summary.json`, then quits.
+- Pass criteria: no crash, no mixin errors in the log, summary checks the same as 1.21.11, and
+  the screenshots look like the 1.21.11 ones.
+- Make the comparison fair: copy `run/config/shard/` into `run-<mc>/config/` (a fresh config has
+  other HUD elements and modules on), and give the new world the 1.21.11 world's obsidian floor
+  at y = -23 (the smoke player is teleported to -22): set `enable-rcon=true`,
+  `rcon.password=...`, `broadcast-rcon-to-ops=false` in that server's properties and send
+  `forceload add -64 -64 63 63`, `fill -60 -23 -60 60 -23 60 minecraft:obsidian`,
+  `forceload remove all`. Without the floor the features pass's zombie falls out of view.
+- Add `-PcountInjections` on versions without the dev companions (Sodium's own mixins trip it).
+- Besides the default pass, run `-PsmokeOnly=features` (Sky, Hitboxes, Shield...),
+  `screens -PfakeBridge` (title screen, server list, accounts), `cosmetics -PequippedPath=...`
+  (mipmapped cape) and `drop2` (capes, shield, bandana; local Shard API seeded with
+  `node tools/smoke-drop2-seed.mjs`, plus `-PapiBase=http://127.0.0.1:8787 -PcatalogueUrl=<meta
+  cosmetics-v2.json>`), and compare with the 1.21.11 folders (smoke-features, smoke-scr,
+  smoke-drop2).
+
+## Version notes
+Record every non-obvious difference here (what changed, which version, how it was handled).
+
+### Tooling
+- Versioned blocks: a commented line must not start with `/*?` (Stonecutter reads it as one of
+  its own comments). Restructure the code (e.g. pull a lambda into a local) instead.
+- Most Shard injectors are `require = 0`, so a moved target fails silently. Dev runs pass
+  `-Dmixin.debug.countInjections=true`; grep the client log for `Injection warning` / `expected`
+  and compare with a 1.21.11 run (the baseline has none for Shard).
+- Quick static check before running: `javap -p -s` every `@Mixin` target and every
+  `method =` / `target =` descriptor on the version's mapped jar (Loom cache
+  `minecraft-merged/<mc>-loom.mappings...`). 1.21.9 and 1.21.10 have identical class lists.
+
+### 1.21.10 (also applies to 1.21.9 unless noted)
+- **Pure renames** (stonecutter.gradle.kts, `moved(...)` helper matches `.` and `/`
+  separators so imports and mixin descriptors both follow): `Identifier` was
+  `ResourceLocation` (regex on the word), `net.minecraft.util.Util` → `net.minecraft.Util`,
+  `client.renderer.rendertype.RenderType` → `client.renderer.RenderType`, `EndCrystalModel`,
+  `ShieldModel`, `PlayerModel` directly in `client.model`, `boss.EnderDragonPart`,
+  `projectile.AbstractArrow`, `monster.Zombie`, `SoundInstance.getIdentifier()` →
+  `getLocation()`, `GuiGraphics.renderOutline` → `submitOutline`, `Screen.init(II)V` →
+  `init(Lnet/minecraft/client/Minecraft;II)V` (mixin descriptor string).
+- `@Nullable`: JSpecify is not on the classpath; mapped to `org.jetbrains.annotations.Nullable`
+  (also TYPE_USE, so `<T> @Nullable T` still compiles).
+- `RenderTypes` (the static factories) does not exist; `compat.RenderTypes` forwards to the
+  static methods on `RenderType` and the import is redirected there. Add a method to it when
+  new code uses another factory.
+- Line width: 1.21.11 passes it per vertex (`ShapeRenderer.renderShape(..., width)`); before,
+  it is one value per draw (`RenderSystem.getShaderLineWidth()`, set by the type's line state;
+  vanilla = max(2.5, windowWidth / 1920 * 2.5)). `compat.Lines.type(width)` returns a cached
+  `RenderType` subclass per width that draws through `RenderType.lines()`, and
+  `CompositeRenderTypeMixin` (<1.21.11) swaps that width in. Use `Lines.type/shape` for any
+  world line drawing.
+- Gizmos (`net.minecraft.gizmos`) and `EntityHitboxDebugRenderer` do not exist. Hitboxes:
+  `EntityRendererHitboxMixin` (<1.21.11) cancels `EntityRenderer.extractHitboxes(T,S,F)` (only
+  called for entities vanilla would box) and clears the state's hitbox fields; the module queues
+  the entity and draws box / fill / eye line / look arrow after the entities with
+  `ShapeRenderer.renderLineBox`, `addChainedFilledBoxVertices` + `RenderType.debugFilledBox()`
+  and plain line pairs (a four-line arrow head stands in for the arrow gizmo).
+- Samplers (`GpuSampler`, `SamplerCache`, `AbstractTexture.sampler`) do not exist: filtering
+  and address mode are set on the `GpuTexture` (`setTextureFilter`, `setAddressMode`). Cape
+  texture and `FontTextureMixin` (wraps `GpuTexture.setTextureFilter` in `FontTexture.<init>`).
+- Environment attributes (`net.minecraft.world.attribute`) do not exist. Sky module:
+  `SkyRenderState.skyType == DimensionSpecialEffects.SkyType.OVERWORLD` (was `skybox`),
+  `level.effects().skyType()` (was `dimensionType().skybox()`), `SkyRenderer.extractRenderState`
+  takes a `Vec3` camera position, sun angle `level.getSunAngle(pt)` (radians, as before),
+  sunrise colour `level.effects().getSunriseOrSunsetColor(level.getTimeOfDay(pt))` when
+  `isSunriseOrSunset`, fog end = render distance, no panoramic-screenshot camera. Fog colour:
+  `getBaseColor` is declared on `AirBasedFogEnvironment` (shared with the dimension/boss fog),
+  so the mixin targets that and checks `instanceof AtmosphericFogEnvironment`.
+- `Screen.init/resize` take a `Minecraft` first (HudEditorScreen versioned).
+- `ServerStatusPinger.pingServer` has no `EventLoopGroupHolder` argument.
+
+Verified on 1.21.10 (2026-10-09): build + all JUnit tests; default, features, screens,
+cosmetics and drop2 passes match 1.21.11 (summaries equal; screenshots compared side by side),
+no injection failures with `-PcountInjections`.
+
+### 1.21.9
+- Same Minecraft code as 1.21.10 for everything Shard touches, but Fabric API (latest
+  0.134.1+1.21.9) has **no world render events** (`rendering.v1.world` arrived in the 1.21.10
+  builds). `LevelRendererEventsMixin` (<1.21.10) hooks the spots Fabric uses on 1.21.10: after
+  `OutlineBufferSource.endOutlineBatch()` in the main-pass lambda `method_62214` (AFTER_ENTITIES)
+  and at the `CameraRenderState.pos` read in `renderBlockOutline` (BEFORE_BLOCK_OUTLINE).
+  Modules take `compat.WorldDraw` (pose, buffers, camera) and ShardClient routes both paths
+  through `afterEntities` / `beforeBlockOutline`. The lambda name is version-specific; check it
+  again (javap) on older versions, where Fabric's older `rendering.v1.WorldRenderEvents` may be
+  usable instead.
+- Verified (2026-10-09): same passes and results as 1.21.10.

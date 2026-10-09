@@ -1,15 +1,14 @@
 package gg.shard.client.modules.visual;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import gg.shard.client.compat.Lines;
+import gg.shard.client.compat.WorldDraw;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
 import gg.shard.client.module.setting.ColorSetting;
 import gg.shard.client.module.setting.IntSetting;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.BlockOutlineRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
@@ -47,15 +46,15 @@ public final class BlockOutlineModule extends Module {
     }
 
     /** Returns false to cancel vanilla's outline after drawing ours. */
-    public boolean render(WorldRenderContext ctx, BlockOutlineRenderState state) {
+    public boolean render(WorldDraw ctx, BlockOutlineRenderState state) {
         if (!isEnabled() || ctx.consumers() == null) return true;
         Minecraft mc = Minecraft.getInstance();
-        Vec3 cam = ctx.worldState().cameraRenderState.pos;
+        Vec3 cam = ctx.camera();
         BlockPos pos = state.pos();
         int c = color.get();
         if (crystalSpot.get() && mc.level != null && freeCrystalSpot(mc, pos)) c = spotColor.get();
-        VertexConsumer lines = ctx.consumers().getBuffer(RenderTypes.lines());
-        ShapeRenderer.renderShape(ctx.matrices(), lines, state.shape(), pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, c, width.get());
+        VertexConsumer lines = ctx.consumers().getBuffer(Lines.type(width.get()));
+        Lines.shape(ctx.matrices(), lines, state.shape(), pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z, c, width.get());
         return false;
     }
 
