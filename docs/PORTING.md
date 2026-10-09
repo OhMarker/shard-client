@@ -375,3 +375,70 @@ For 1.21.5 and older: re-run `tools/mixin-sigdiff.py 1.21.5 1.21.6` and the stat
 1.21.5 still has the pre-1.21.6 GUI (PoseStack GuiGraphics, no render pipelines in GUI, Fabric
 `HudLayerRegistrationCallback`/`HudRenderCallback` instead of `HudElementRegistry`), so expect the
 HUD, screens and the GUI-scale mixins to need the most work there.
+
+### 1.21.5
+- **GUI layer** (the big step; everything Shard draws goes through these, so call sites are unversioned):
+  - `GuiGraphics.pose()` is a 3D `PoseStack`. `compat.Matrix3x2fStack` wraps it with the 2D calls
+    Shard uses (`pushMatrix`, `popMatrix`, `translate(x, y)`, `scale(x, y)`, `m00..m21` read from the
+    4x4 pose); global rules point the `org.joml.Matrix3x2fStack` import there and turn `g.pose()` into
+    `Matrix3x2fStack.of(g)`. GUI code must keep naming its graphics `g` for the rule to apply.
+  - No strata: drawing is immediate (in call order through the shared buffer source) and depth-tested.
+    `g.nextStratum()` becomes `compat.GuiDraw.nextStratum(g)` = `flush()` + clear the main depth
+    buffer (what vanilla does between the HUD and the screen). Shadowed vanilla text sits 0.03 towards
+    the camera, so a later fill at the same depth does not cover it (the HUD editor's element label);
+    the HUD editor starts its chrome with a stratum there (`<1.21.6` only).
+  - Blits take a `Function<ResourceLocation, RenderType>`: `RenderPipelines.GUI_TEXTURED` →
+    `RenderType::guiTextured` (global rule; same argument order for `blit`/`blitSprite`).
+  - `Screen.renderBlurredBackground()` post-processes the main target at once: `renderBlurredBackground(g)`
+    becomes `GuiDraw.blur(g)` (flush, then `GameRenderer.processBlurEffect`).
+  - `Screen.render` draws the background itself and `renderWithTooltip` only calls `render`; Shard's
+    screens never call `super.render`, so ScreenScaleMixin (`<1.21.6`) calls `renderBackground` for
+    `DesignScreen`s at the head of `renderWithTooltip` (without it: no blur, no tint, no HUD editor dim).
+  - Scissor: `enableScissor` already transforms by the pose (`ScreenRectangle.transformAxisAligned`),
+    as on 1.21.11, so design-unit clipping works unchanged.
+  - The inventory player model is drawn in place under the pose (no picture-in-picture):
+    GuiGraphicsEntityMixin is `>=1.21.6`.
+  - `Window.getGuiScale()` is a `double` (rule casts `mc/minecraft/window...getGuiScale()` to int);
+    `WorldVersion` getters are `getName()`/`getProtocolVersion()` (rules).
+- **Fabric API 0.128.2**: no `HudElementRegistry`. HudManager adds its layer with
+  `HudLayerRegistrationCallback` + `IdentifiedLayer.of` (`addLayer` = last root layer, after the
+  subtitles). GUI Scales wraps the coarser vanilla layers with `replaceLayer`: `HOTBAR_AND_BARS`
+  (hotbar, all bars, mount health and held item name together) and `EXPERIENCE_LEVEL` for the hotbar
+  scale; scoreboard, player list, title, overlay message and boss bar as before. Fabric's renderer API
+  6 sets the chunk layer through the material: Low Fire's translucent ground fire copies the quad's
+  material with `BlendMode.TRANSLUCENT`.
+- **Other API**: textures have no usage flags or views (`createTexture(label, format, w, h, mips)`,
+  9-argument `writeToTexture`); `ResolvableProfile.resolve()` future instead of `pollResolve`
+  (AccountSwitcher); `Gui.getMobEffectSprite` → `mc.getMobEffectTextures().get(effect)`;
+  `Gui.shouldRenderDebugCrosshair` does not exist (same condition inlined);
+  `ClientLevel.disconnect()` + `Minecraft.disconnect()`.
+- **Mixins**: no fog environments; AtmosphericFogEnvironmentMixin targets `FogRenderer.computeFogColor`
+  and rewrites the air colour (locals 7-9) where that branch resets `biomeChangedTime`
+  (PUTSTATIC ordinal 4); the shared colour maths is now a static method. Line width is set in the line
+  state's setup lambda (`RenderStateShard$LineStateShard.method_23554`, new LineStateShardMixin;
+  CompositeRenderTypeMixin is `>=1.21.6 <1.21.11`); WideLines also forwards `getRenderPipeline` and
+  `getRenderTarget`. The totem animation is `GameRenderer.renderItemActivationAnimation` (scale
+  `(o, -o, o)`; GameRendererMixin `<1.21.6`). Everything else (world events, entities, crystals,
+  shields, banners, flames, fonts, skins) is the same as 1.21.6.
+- Vanilla differences in the screenshots: clouds (no cloud range option; from below they are flat and
+  take the fog/sky colour, so the Sky module's sunset tints them), title panorama.
+- Smoke tips: the smoke server keeps the player's inventory and placed blocks between passes; clear
+  them (`clear ShardSmoke` once the player is online, air layers above the floor) or the HUD
+  editor/crystal shots are taken looking at a leftover obsidian block. `fill` is limited to 32768
+  blocks, so clear one layer per command.
+
+Verified on 1.21.5 (2026-10-09): build + all JUnit tests; default (`-PcountInjections`), features,
+screens (`-PfakeBridge`), cosmetics and drop2 give the same summaries as 1.21.8 (layouts identical
+across scales, 0 inventory slot misses, same clipped texts, crystal and HUD undo checks), no
+injection failures; screenshots compared side by side. After the shared changes, 1.21.11 (default),
+1.21.8 (default with `-PcountInjections`, features) and 26.3 (default, `-PcountInjections`) were run
+again: same summaries and screenshots. Builds and tests pass on every node 1.21.5 to 26.3.
+For 1.21.4 → 1.21: the whole 1.21.5 GUI layer (`compat.Matrix3x2fStack`, `compat.GuiDraw`, the
+`<1.21.6` rules and blocks, the HUD layer registration and the background mixin) should carry over
+as is; check first that `GuiGraphics.blit`/`blitSprite` still take a RenderType function with the
+same argument order (1.21.2+ added it; 1.21.1 and older blit by texture id with no function),
+`enableScissor` still transforms by the pose, the blur entry point (`processBlurEffect` and its
+arguments), `RenderType.getRenderPipeline` (1.21.5 only: RenderPipeline is new in 1.21.5, so 1.21.4
+world rendering is shader-instance based and Lines/LineStateShardMixin, CapeTexture, FontTextureMixin
+and every world mixin need a fresh look), and Fabric's HUD API (`HudLayerRegistrationCallback` exists
+from 1.21.2; 1.21/1.21.1 only have `HudRenderCallback`).
