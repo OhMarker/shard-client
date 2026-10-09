@@ -32,6 +32,18 @@ public final class Scale {
         return pageScale * Math.max(1, guiScale);
     }
 
+    /**
+     * Physical pixels per design unit for the mod menu: 1.25 on a 1080p window, more on taller
+     * ones, times Interface size (never below 100%), but never so large that a panel of
+     * {@code needW} x {@code needH} units stops fitting. Rounded down to a quarter, which is always
+     * one of the font raster densities, so the menu's text is drawn 1:1. At least 0.75.
+     */
+    public static double menuPixelsPerUnit(int windowW, int windowH, double interfaceSize, int needW, int needH) {
+        double wanted = 1.25 * Math.max(1.0, windowH / 1080.0) * Math.max(1.0, interfaceSize);
+        double fits = Math.min(windowH / (double) needH, windowW / (double) needW);
+        return Math.max(0.75, Math.floor(Math.min(wanted, fits) * 4) / 4);
+    }
+
     /** Size of the window in design units. */
     public static int designSize(int guiSize, double pageScale) {
         return Math.max(1, (int) Math.floor(guiSize / pageScale + 1e-6));
@@ -87,6 +99,11 @@ public final class Scale {
      * below; the largest when none is. Picks font raster densities and icon atlas sizes so
      * nothing is ever stretched up by more than the slack.
      */
+    public static double atLeast(double needed, double[] available, double slack) {
+        for (double v : available) if (v >= needed - slack) return v;
+        return available[available.length - 1];
+    }
+
     public static int atLeast(double needed, int[] available, double slack) {
         for (int v : available) if (v >= needed - slack) return v;
         return available[available.length - 1];

@@ -170,6 +170,11 @@ public final class SmokeTest {
             else finish(mc);
             return;
         }
+        if ("features".equals(only)) {
+            if (t < FEATURES_TICKS) featuresBlock(mc, t);
+            else finish(mc);
+            return;
+        }
         if ("menu".equals(only)) {
             if (t < MENU07_TICKS) menu07Block(mc, t);
             else finish(mc);
@@ -694,6 +699,19 @@ public final class SmokeTest {
             shot(mc, "smoke-hotbar-75.png", null);
         } else if (local == 20 + 47 * SLOT_TICKS + 22) {
             setSetting("gui-scales", "hotbar-scale", "100");
+            // The survival inventory draws the player model; it must sit in its box at scale 3.
+            cmd(mc, "gamemode survival");
+        } else if (local == 20 + 47 * SLOT_TICKS + 26) {
+            setSetting("gui-scales", "inventory-scale", "S3");
+            mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(p));
+        } else if (local == 20 + 47 * SLOT_TICKS + 28) {
+            parkCursor(mc);
+        } else if (local == 20 + 47 * SLOT_TICKS + 40) {
+            shot(mc, "smoke-inventory-model-scale3.png", null);
+        } else if (local == 20 + 47 * SLOT_TICKS + 42) {
+            mc.setScreen(null);
+            setSetting("gui-scales", "inventory-scale", "GAME");
+            cmd(mc, "gamemode creative");
             scales.setEnabled(false);
         }
     }
@@ -1012,6 +1030,235 @@ public final class SmokeTest {
         mc.resizeDisplay();
         ShardClient.LOGGER.info("Smoke: GUI scale {} -> effective {} ({}x{})", scale == 0 ? "auto" : scale, mc.getWindow().getGuiScale(),
                 mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
+    }
+
+
+    private static final int FEATURES_TICKS = 545;
+    private static final String[] FEATURE_MODULES = {"sky", "hitboxes", "small-items", "low-shield", "hit-color", "entity-optimizer", "zoom"};
+    private static final java.util.Map<String, Boolean> featuresEnabledBefore = new java.util.HashMap<>();
+
+    /** A feature screenshot without the command feedback lines in chat. */
+    private static void fshot(Minecraft mc, String name, String zoomName) {
+        mc.gui.getChat().clearMessages(false);
+        shot(mc, name, zoomName);
+    }
+
+    private static void fly(LocalPlayer p) {
+        p.getAbilities().flying = true;
+        p.onUpdateAbilities();
+    }
+
+    private static net.minecraft.world.entity.monster.zombie.Zombie nearestZombie(Minecraft mc, LocalPlayer p) {
+        return mc.level.getEntitiesOfClass(net.minecraft.world.entity.monster.zombie.Zombie.class, p.getBoundingBox().inflate(8)).stream()
+                .min(java.util.Comparator.comparingDouble(p::distanceToSqr)).orElse(null);
+    }
+
+    /**
+     * Visual feature pass (-PsmokeOnly=features): Sky presets, styled hitboxes, Small Items, the
+     * Shield tint and opacity, Hit Color on armour, Entity Optimizer with 200 XP orbs, and Zoom.
+     */
+    private static void featuresBlock(Minecraft mc, int local) {
+        LocalPlayer p = mc.player;
+        if (p == null) return;
+        switch (local) {
+            case 0 -> {
+                mc.setScreen(null);
+                setScale(mc, 2);
+                for (String k : FEATURE_MODULES) featuresEnabledBefore.put(k, module(k).isEnabled());
+                cmd(mc, "difficulty easy");
+                cmd(mc, "time set noon");
+                cmd(mc, "weather clear");
+                cmd(mc, "kill @e[type=minecraft:item]");
+                cmd(mc, "tp @s -5 -22 2 180 12");
+            }
+            case 95 -> {
+                // Clear the earlier passes' obsidian in front of the player and any dropped items.
+                int gy = groundY(mc, p.blockPosition());
+                cmd(mc, "fill -9 %d -14 -1 %d 1 minecraft:air", gy, gy + 3);
+                cmd(mc, "kill @e[type=minecraft:item]");
+            }
+            // ---- Hitboxes on a NoAI zombie three blocks ahead.
+            case 100 -> {
+                int gy = groundY(mc, p.blockPosition());
+                cmd(mc, "summon minecraft:zombie -3.2 %d -2.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Rotation:[60f,0f],Tags:[\"shardfeat\"]}", gy);
+                module("hitboxes").setEnabled(true);
+                setSetting("hitboxes", "fill", "false");
+                setSetting("hitboxes", "look-direction", "false");
+            }
+            case 101 -> p.setXRot(12f);
+            case 125 -> fshot(mc, "features-hitbox-default.png", null);
+            case 127 -> {
+                setSetting("hitboxes", "fill", "true");
+                setSetting("hitboxes", "fill-opacity", "30");
+            }
+            case 140 -> fshot(mc, "features-hitbox-fill.png", null);
+            case 142 -> {
+                setSetting("hitboxes", "fill", "false");
+                setSetting("hitboxes", "fill-opacity", "12");
+                setSetting("hitboxes", "look-direction", "true");
+            }
+            case 155 -> fshot(mc, "features-hitbox-look.png", null);
+            case 157 -> {
+                setSetting("hitboxes", "look-direction", "false");
+                module("hitboxes").setEnabled(featuresEnabledBefore.get("hitboxes"));
+                cmd(mc, "tp @e[type=minecraft:zombie,tag=shardfeat] -5 -200 2");
+            }
+            // ---- Small Items: a sword and a totem at 100% and 50%.
+            case 165 -> {
+                p.getInventory().setSelectedSlot(0);
+                cmd(mc, "item replace entity @s hotbar.0 with minecraft:diamond_sword");
+                cmd(mc, "item replace entity @s weapon.offhand with minecraft:totem_of_undying");
+                p.setXRot(10f);
+                module("small-items").setEnabled(true);
+                setSetting("small-items", "main-hand-size", "100");
+                setSetting("small-items", "offhand-size", "100");
+            }
+            case 185 -> fshot(mc, "features-smallitems-100.png", null);
+            case 187 -> {
+                setSetting("small-items", "main-hand-size", "50");
+                setSetting("small-items", "offhand-size", "50");
+            }
+            case 200 -> fshot(mc, "features-smallitems-50.png", null);
+            // ---- Shield: vanilla, then 50% opacity with the Ice tint, holding and blocking.
+            case 202 -> {
+                setSetting("small-items", "main-hand-size", "75");
+                setSetting("small-items", "offhand-size", "75");
+                module("small-items").setEnabled(featuresEnabledBefore.get("small-items"));
+                cmd(mc, "item replace entity @s hotbar.0 with minecraft:air");
+                cmd(mc, "item replace entity @s weapon.offhand with minecraft:shield");
+                module("low-shield").setEnabled(false);
+            }
+            case 220 -> fshot(mc, "features-shield-vanilla.png", null);
+            case 222 -> {
+                module("low-shield").setEnabled(true);
+                setSetting("low-shield", "opacity", "50");
+                setSetting("low-shield", "tint-preset", "ICE");
+                // Vanilla size and place, so only the opacity and tint differ from the vanilla shot.
+                setSetting("low-shield", "holding-width", "100");
+                setSetting("low-shield", "holding-size", "100");
+                setSetting("low-shield", "holding-lower", "0");
+            }
+            case 237 -> fshot(mc, "features-shield-ice50.png", null);
+            case 239 -> mc.options.keyUse.setDown(true);
+            case 252 -> fshot(mc, "features-shield-ice50-block.png", null);
+            case 254 -> {
+                mc.options.keyUse.setDown(false);
+                setSetting("low-shield", "opacity", "100");
+                setSetting("low-shield", "tint-preset", "CUSTOM");
+                setSetting("low-shield", "tint", "#FFFFFF");
+                setSetting("low-shield", "holding-width", "65");
+                setSetting("low-shield", "holding-size", "75");
+                setSetting("low-shield", "holding-lower", "0.15");
+                module("low-shield").setEnabled(featuresEnabledBefore.get("low-shield"));
+                cmd(mc, "item replace entity @s weapon.offhand with minecraft:air");
+                p.getInventory().setSelectedSlot(8);
+                int gy = groundY(mc, p.blockPosition());
+                cmd(mc, "summon minecraft:zombie -4.5 %d -1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Rotation:[0f,0f],Tags:[\"shardfeat\"],"
+                        + "equipment:{head:{id:\"minecraft:iron_helmet\",count:1},chest:{id:\"minecraft:iron_chestplate\",count:1},"
+                        + "feet:{id:\"minecraft:iron_boots\",count:1}}}", gy);
+                module("hit-color").setEnabled(true);
+                setSetting("hit-color", "tint-armor", "true");
+            }
+            // ---- Hit Color: an armoured zombie just after a hit, armour tint on and off.
+            case 255 -> p.setXRot(8f);
+            case 272 -> fshot(mc, "features-hitcolor-before.png", null);
+            case 275, 300 -> {
+                var z = nearestZombie(mc, p);
+                if (z != null) {
+                    mc.gameMode.attack(p, z);
+                    p.swing(InteractionHand.MAIN_HAND);
+                } else {
+                    ShardClient.LOGGER.error("Smoke: no zombie to hit for Hit Color");
+                }
+            }
+            case 278 -> {
+                var z = nearestZombie(mc, p);
+                ShardClient.LOGGER.info("Smoke: hit colour (armour tint on): zombie hurtTime {} health {}", z == null ? -1 : z.hurtTime, z == null ? -1 : z.getHealth());
+                fshot(mc, "features-hitcolor-armor-on.png", null);
+            }
+            case 285 -> setSetting("hit-color", "tint-armor", "false");
+            case 303 -> {
+                var z = nearestZombie(mc, p);
+                ShardClient.LOGGER.info("Smoke: hit colour (armour tint off): zombie hurtTime {} health {}", z == null ? -1 : z.hurtTime, z == null ? -1 : z.getHealth());
+                fshot(mc, "features-hitcolor-armor-off.png", null);
+            }
+            case 310 -> {
+                setSetting("hit-color", "tint-armor", "true");
+                module("hit-color").setEnabled(featuresEnabledBefore.get("hit-color"));
+                cmd(mc, "tp @e[type=minecraft:zombie,tag=shardfeat] -5 -200 2");
+                // Spectators do not pull orbs in, so they stay where they were summoned.
+                cmd(mc, "gamemode spectator");
+                module("entity-optimizer").setEnabled(false);
+            }
+            // ---- Entity Optimizer: 200 XP orbs (distinct values so vanilla does not merge them) on a 3x3 patch.
+            case 312, 313, 314, 315, 316, 317, 318, 319, 320, 321 -> {
+                int gy = groundY(mc, p.blockPosition());
+                for (int i = 0; i < 20; i++) {
+                    int n = (local - 312) * 20 + i;
+                    double x = -6 + (n % 3) + 0.25 + 0.5 * ((n / 3) % 2);
+                    double z = -2 - ((n / 6) % 3) + 0.25 + 0.5 * ((n / 18) % 2);
+                    cmd(mc, "summon minecraft:experience_orb %.2f %d %.2f {Value:%ds}", x, gy, z, n + 1);
+                }
+            }
+            case 322 -> p.setXRot(30f);
+            case 345 -> {
+                int orbs = 0;
+                for (Entity e : mc.level.entitiesForRendering()) if (e instanceof net.minecraft.world.entity.ExperienceOrb) orbs++;
+                ShardClient.LOGGER.info("Smoke: {} experience orbs in the client world", orbs);
+                SUMMARY.addProperty("featuresOrbs", orbs);
+                fshot(mc, "features-orbs-off.png", null);
+            }
+            case 347 -> {
+                module("entity-optimizer").setEnabled(true);
+                setSetting("entity-optimizer", "orbs-per-block", "2");
+            }
+            case 370 -> fshot(mc, "features-orbs-on.png", null);
+            case 372 -> {
+                module("entity-optimizer").setEnabled(featuresEnabledBefore.get("entity-optimizer"));
+                cmd(mc, "kill @e[type=minecraft:experience_orb]");
+                cmd(mc, "gamemode creative");
+            }
+            // ---- Zoom: the same view unzoomed and held.
+            case 380 -> {
+                p.setXRot(2f);
+                int gy = groundY(mc, p.blockPosition());
+                cmd(mc, "summon minecraft:zombie -4.5 %d -14.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"shardfeat\"],"
+                        + "equipment:{head:{id:\"minecraft:diamond_helmet\",count:1},chest:{id:\"minecraft:diamond_chestplate\",count:1}}}", gy);
+                module("zoom").setEnabled(true);
+            }
+            case 400 -> fshot(mc, "features-zoom-off.png", null);
+            case 402 -> ShardClient.modules().get(gg.shard.client.modules.visual.ZoomModule.class).forceHeldForSmoke(true);
+            case 430 -> fshot(mc, "features-zoom-on.png", null);
+            case 432 -> {
+                ShardClient.modules().get(gg.shard.client.modules.visual.ZoomModule.class).forceHeldForSmoke(false);
+                module("zoom").setEnabled(featuresEnabledBefore.get("zoom"));
+                cmd(mc, "tp @e[type=minecraft:zombie,tag=shardfeat] -5 -200 2");
+                cmd(mc, "difficulty peaceful");
+                p.getInventory().setSelectedSlot(0);
+            }
+            // ---- Sky, last so the rain has faded: out above the arena roof, looking up past the horizon.
+            case 440 -> {
+                cmd(mc, "tp @s -5 60 2 180 -25");
+                module("sky").setEnabled(false);
+            }
+            case 441, 450, 470, 490, 510 -> fly(p);
+            case 480 -> fshot(mc, "features-sky-off.png", null);
+            case 482 -> {
+                module("sky").setEnabled(true);
+                setSetting("sky", "preset", "SUNSET");
+            }
+            case 495 -> fshot(mc, "features-sky-sunset.png", null);
+            case 497 -> setSetting("sky", "preset", "NIGHT");
+            case 512 -> fshot(mc, "features-sky-night.png", null);
+            case 514 -> setSetting("sky", "preset", "PASTEL");
+            case 529 -> fshot(mc, "features-sky-pastel.png", null);
+            case 531 -> {
+                module("sky").setEnabled(featuresEnabledBefore.get("sky"));
+                cmd(mc, "tp @s -5 -22 2 180 30");
+            }
+            default -> {
+            }
+        }
     }
 
     private static final int MENU07_TICKS = 150;

@@ -22,7 +22,7 @@ public final class AppearanceModule extends Module {
     public final BoolSetting launcherAccent = add(new BoolSetting("Launcher accent", "Use the accent colour Shard Launcher sends with the game", true)
             .details("Switch it off to pick your own accent below. Without the launcher the default is crystal cyan."));
     public final ColorSetting accent = add(new ColorSetting("Accent colour", "The one colour used for active switches, focus, the selected category and the primary button", 0xFF22D3EE, false));
-    public final IntSetting interfaceSize = add(new IntSetting("Interface size", "Size of the mod menu and its settings; 100% is the compact size at 1080p", 100, 75, 150, 5, "%")
+    public final IntSetting interfaceSize = add(new IntSetting("Interface size", "Size of the mod menu and its settings (it always stays inside the window)", 100, 100, 150, 5, "%")
             .details("The page keeps the same layout at every Minecraft GUI scale; this is the only size knob you need."));
     public final EnumSetting<FontMode> font = add(new EnumSetting<>("Font", "Smooth is Inter, the launcher's font; Vanilla is the Minecraft bitmap font", FontMode.SMOOTH)
             .details("HUD elements follow this choice too. Symbols Inter lacks always fall back to vanilla."));

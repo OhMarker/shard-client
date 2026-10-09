@@ -48,11 +48,18 @@ public final class SmallItemsModule extends Module {
      * {scale, x, y, z} for the item in {@code hand}, or null to leave it. x points towards that
      * hand's screen edge, so one offset mirrors correctly for both hands.
      */
+    static final float LIFT_UP = 0.45f;
+    static final float LIFT_IN = 0.15f;
+
     public float[] transformFor(InteractionHand hand, HumanoidArm arm, ItemStack stack) {
         if (!applies(stack)) return null;
         float scale = ItemTints.itemScale(hand == InteractionHand.MAIN_HAND ? mainSize.get() : offSize.get());
-        float x = offsetX.get().floatValue() * (arm == HumanoidArm.RIGHT ? 1f : -1f);
-        float y = offsetY.get().floatValue();
+        float side = arm == HumanoidArm.RIGHT ? 1f : -1f;
+        // Shrinking pivots on the grip at the bottom corner, which would sink the item off-screen;
+        // lift it and pull it in by what it lost so a smaller item stays where you can see it.
+        float shrink = 1f - scale;
+        float x = (offsetX.get().floatValue() - LIFT_IN * shrink) * side;
+        float y = offsetY.get().floatValue() + LIFT_UP * shrink;
         float z = offsetZ.get().floatValue();
         if (scale == 1f && x == 0f && y == 0f && z == 0f) return null;
         return new float[]{scale, x, y, z};

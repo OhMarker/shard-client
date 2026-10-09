@@ -40,6 +40,8 @@ public final class ZoomModule extends Module {
     private double held = -1;
     private boolean wasHeld;
     private Boolean savedSmoothCamera;
+    /** Dev smoke test only: behave as if the key were held (the unfocused dev window gets no key input). */
+    private boolean forcedHeld;
 
     public ZoomModule() {
         super("Zoom", "Hold a key to zoom in, scroll to adjust.", ModuleCategory.VISUALS);
@@ -61,7 +63,12 @@ public final class ZoomModule extends Module {
 
     private boolean held() {
         Minecraft mc = Minecraft.getInstance();
-        return isEnabled() && mc.screen == null && key.isBound() && InputConstants.isKeyDown(mc.getWindow(), key.get());
+        return isEnabled() && mc.screen == null && (forcedHeld || key.isBound() && InputConstants.isKeyDown(mc.getWindow(), key.get()));
+    }
+
+    /** Dev smoke test only: hold or release the zoom without a real key press. */
+    public void forceHeldForSmoke(boolean held) {
+        forcedHeld = held;
     }
 
     /** Multiplies the vanilla FOV; 1.0 means no zoom. Called every frame from the mixin. */

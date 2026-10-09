@@ -305,13 +305,16 @@ public final class ClickGuiScreen extends DesignScreen {
     }
 
     /**
-     * The menu is drawn at one design unit per physical pixel on a 1080p screen, more on taller
-     * windows, times Interface size; the HUD editor's embedded column keeps the usual density.
+     * Physical pixels per design unit for the menu: 1.25 on a 1080p screen, more on taller windows,
+     * times Interface size, but never so large that the panel no longer fits. Rounded down to a
+     * quarter so it is always one of the font raster densities and text is drawn 1:1. The HUD
+     * editor's embedded column keeps the usual density.
      */
     @Override
     protected double pageScaleFor(int guiScale, double interfaceSize) {
         if (embedded) return super.pageScaleFor(guiScale, interfaceSize);
-        double perUnit = Math.max(1.0, minecraft.getWindow().getHeight() / 1080.0) * interfaceSize;
+        double perUnit = Scale.menuPixelsPerUnit(minecraft.getWindow().getWidth(), minecraft.getWindow().getHeight(), interfaceSize,
+                MENU_W + 2 * PAD, MENU_H + 2 * PAD);
         return perUnit / Math.max(1, guiScale);
     }
 
@@ -1471,6 +1474,9 @@ public final class ClickGuiScreen extends DesignScreen {
         y += section(g, "favorites", "Quick setup", "One click to a setup made for crystal PvP; change anything afterwards", x, y, sectionW, this::renderQuickSetupBody) + GRID_GAP;
         y += section(g, "appearance", "Appearance", "Accent, interface size, font, blur and motion", x, y, sectionW,
                 (ix, iy, iw) -> renderSettingRows(g, ShardClient.appearance(), ShardClient.appearance().settings(), ix, iy, iw)) + GRID_GAP;
+        var display = ShardClient.modules().get(gg.shard.client.modules.utility.DisplayModule.class);
+        y += section(g, "window", "Window", "Borderless fullscreen, frame caps, window title, raw input and VSync", x, y, sectionW,
+                (ix, iy, iw) -> renderSettingRows(g, display, display.settings(), ix, iy, iw)) + GRID_GAP;
         y += section(g, "hud", "HUD", "Scale and the style every HUD element inherits", x, y, sectionW,
                 (ix, iy, iw) -> renderSettingRows(g, ShardClient.hudDefaults(), ShardClient.hudDefaults().settings(), ix, iy, iw)) + GRID_GAP;
         y += section(g, "keybind", "Keybinds", "Every module keybind in one list, with conflict warnings", x, y, sectionW, this::renderKeybindsBody) + GRID_GAP;

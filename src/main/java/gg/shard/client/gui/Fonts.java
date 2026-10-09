@@ -52,7 +52,7 @@ public final class Fonts {
      * smallest at or above the current on-screen density ({@link Render2D#pixelsPerUnit}), so
      * glyphs are never stretched up; {@code FontTextureMixin} smooths the small rest.
      */
-    public static final int[] DENSITIES = {1, 2, 3, 4, 6};
+    public static final double[] DENSITIES = {0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5, 6};
     /** Inter 4.1 metrics relative to the em. */
     static final double CAP_HEIGHT = 0.7275;
     static final double ASCENT = 0.9688;
@@ -85,22 +85,22 @@ public final class Fonts {
     }
 
     /** Density for the given on-screen pixels per design unit (pure, tested). */
-    public static int densityFor(double pixelsPerUnit) {
-        return Scale.atLeast(pixelsPerUnit, DENSITIES, 0.15);
+    public static double densityFor(double pixelsPerUnit) {
+        return Scale.atLeast(pixelsPerUnit, DENSITIES, 0.05);
     }
 
     public static Identifier id(Weight weight, int size) {
         return id(weight, size, densityFor(Render2D.pixelsPerUnit()));
     }
 
-    static Identifier id(Weight weight, int size, int density) {
-        String suffix = density == 2 ? "" : "-x" + density;
+    static Identifier id(Weight weight, int size, double density) {
+        String suffix = density == 2 ? "" : "-x" + (density % 1 == 0 ? Integer.toString((int) density) : Double.toString(density).replace('.', '_'));
         return Identifier.fromNamespaceAndPath("shard", "ui-" + weight.id + "-" + nearestSize(size) + suffix);
     }
 
     public static Style style(Weight weight, int size) {
-        int density = densityFor(Render2D.pixelsPerUnit());
-        int key = (density * 10 + weight.ordinal()) * 100 + nearestSize(size);
+        double density = densityFor(Render2D.pixelsPerUnit());
+        int key = ((int) Math.round(density * 100) * 10 + weight.ordinal()) * 100 + nearestSize(size);
         return STYLES.computeIfAbsent(key, k -> Style.EMPTY.withFont(new FontDescription.Resource(id(weight, size, density))));
     }
 

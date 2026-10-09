@@ -22,6 +22,7 @@
     "FramerateLimitTrackerMixin",
     "FontTextureMixin",
     "GameRendererMixin",
+    "GuiGraphicsEntityMixin",
     "GuiMixin",
     "GuiOverlaysMixin",
     "ItemInHandRendererMixin",

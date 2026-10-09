@@ -5,7 +5,8 @@
 Minecraft fixes a TTF provider's size and oversample per definition. `Fonts` picks the
 definition whose oversample (pixels per design unit) is closest above the real on-screen
 density, so glyphs are rasterised at, or slightly above, the size they are shown at.
-Density 2 keeps the 0.3.0 file names (ui-<weight>-<size>.json); others add -x<density>.
+Density 2 keeps the 0.3.0 file names (ui-<weight>-<size>.json); others add -x<density>
+(quarter steps written as -x1_25). The mod menu's density is always one of these, so its text is drawn 1:1.
 """
 import json
 from pathlib import Path
@@ -13,7 +14,7 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parents[2] / "src/main/resources/assets/shard/font"
 WEIGHTS = ("regular", "medium", "semibold")
 SIZES = (10, 11, 12, 13, 14, 15, 16, 18, 20, 24)
-DENSITIES = (1, 2, 3, 4, 6)
+DENSITIES = (0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5, 6)
 
 
 def definition(weight, size, density):
@@ -26,7 +27,7 @@ def definition(weight, size, density):
 for weight in WEIGHTS:
     for size in SIZES:
         for density in DENSITIES:
-            suffix = "" if density == 2 else f"-x{density}"
+            suffix = "" if density == 2 else "-x" + (str(density).replace(".", "_") if density % 1 else str(int(density)))
             path = OUT / f"ui-{weight}-{size}{suffix}.json"
             path.write_text(json.dumps(definition(weight, size, density), indent=2) + "\n", encoding="utf-8")
 print(len(WEIGHTS) * len(SIZES) * len(DENSITIES), "definitions")

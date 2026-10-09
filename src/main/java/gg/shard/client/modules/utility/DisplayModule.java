@@ -81,6 +81,17 @@ public final class DisplayModule extends Module {
         return true;
     }
 
+    /** Window options live on Settings → Window, always in effect. */
+    @Override
+    public boolean hidden() {
+        return true;
+    }
+
+    @Override
+    public boolean alwaysOn() {
+        return true;
+    }
+
     @Override
     public String icon() {
         return "window";

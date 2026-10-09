@@ -111,4 +111,17 @@ class ScaleTest {
         assertEquals(128, Scale.atLeast(20 * 6.0, atlases, 0.5));
         assertEquals(128, Scale.atLeast(400, atlases, 0.5));
     }
+
+    @org.junit.jupiter.api.Test
+    void menuDensityIsAQuarterStepThatFits() {
+        assertEquals(1.25, Scale.menuPixelsPerUnit(1920, 1080, 1.0, 992, 612), "1080p");
+        assertEquals(1.25, Scale.menuPixelsPerUnit(1920, 1080, 0.75, 992, 612), "old 75% setting is ignored");
+        assertEquals(1.75, Scale.menuPixelsPerUnit(1920, 1080, 1.5, 992, 612), "150% capped to what fits");
+        assertEquals(1.5, Scale.menuPixelsPerUnit(2560, 1440, 1.0, 992, 612), "1440p");
+        assertEquals(1.0, Scale.menuPixelsPerUnit(1280, 720, 1.0, 992, 612), "720p fits");
+        assertEquals(0.75, Scale.menuPixelsPerUnit(800, 500, 1.0, 992, 612), "tiny window floor");
+        for (double d : new double[]{0.75, 1.0, 1.25, 1.5, 1.75}) {
+            assertEquals(d, Fonts.densityFor(d), "menu densities have their own raster");
+        }
+    }
 }

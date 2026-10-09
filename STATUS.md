@@ -1,5 +1,15 @@
 # Status (handoff for a new session)
 
+## 0.7.1: bigger menu, inventory model, Settings → Window (2026-10-08, released)
+- Menu density: `Scale.menuPixelsPerUnit` (1.25 px/unit at 1080p, quarter steps, capped to fit);
+  font rasters in quarter steps (`tools/fonts/gen_fonts.py`, 330 definitions).
+- Inventory scale: `GuiGraphicsEntityMixin` runs the player model's picture-in-picture box through
+  the pose (1.21.11 ignores the pose for it). Smoke: scales pass now shoots
+  smoke-inventory-model-scale3.png in survival.
+- `-PsmokeOnly=features` screenshots Sky, Hitboxes, Small Items, Shield, armour Hit Color,
+  Entity Optimizer and Zoom (docs/screenshots/0.7.1/). All looked right.
+- Verified: 115 JUnit tests; menu and scales passes at 1920x1080; features pass.
+
 ## 0.7.0: compact menu and visual mods (2026-10-08, released)
 - https://github.com/OhMarker/shard-client/releases/tag/v0.7.0 (downloaded jar's sha512 matches), merged into main, meta `latest` 0.7.0. Jar: build/libs/shard-0.7.0.jar. What changed:
   CHANGELOG.md 0.7.0; why: DECISIONS.md "0.7.0". Screenshots: docs/screenshots/0.7.0/.
