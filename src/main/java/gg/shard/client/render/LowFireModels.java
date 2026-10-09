@@ -10,7 +10,12 @@ import net.fabricmc.fabric.api.renderer.v1.mesh.MutableQuadView;
 import net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
+//? if >=1.21.6 {
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+//?} else {
+/*import net.fabricmc.fabric.api.renderer.v1.Renderer;
+import net.fabricmc.fabric.api.renderer.v1.material.BlendMode;
+*///?}
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.core.BlockPos;
@@ -162,9 +167,12 @@ public final class LowFireModels {
                 }
                 //? if >=26.1 {
                 /*if (alpha < 255) q.chunkLayer(ChunkSectionLayer.TRANSLUCENT);
-                *///?} else {
+                *///?} else if >=1.21.6 {
                 if (alpha < 255) q.renderLayer(ChunkSectionLayer.TRANSLUCENT);
-                //?}
+                //?} else {
+                /*// Before 1.21.6 the layer is the material's blend mode.
+                if (alpha < 255) q.material(Renderer.get().materialFinder().copyFrom(q.material()).blendMode(BlendMode.TRANSLUCENT).find());
+                *///?}
 
                 return true;
             });

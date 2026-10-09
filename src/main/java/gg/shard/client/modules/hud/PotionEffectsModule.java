@@ -81,8 +81,14 @@ public final class PotionEffectsModule extends HudModule {
             int tint = 0xFF000000 | (effects.get(i).getEffect().value().getColor() & 0xFFFFFF);
             int x = alignX(st, pad, innerW, barW + 6 + textW(lines.get(i)));
             if (icons.get()) {
+                //? if >=1.21.6 {
                 g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                         net.minecraft.client.gui.Gui.getMobEffectSprite(effects.get(i).getEffect()), x, lineY + (lineH() - 9) / 2, 9, 9);
+                //?} else {
+                /*// Before 1.21.6 effect icons are sprites of the mob effect atlas.
+                g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                        net.minecraft.client.Minecraft.getInstance().getMobEffectTextures().get(effects.get(i).getEffect()), x, lineY + (lineH() - 9) / 2, 9, 9);
+                *///?}
             } else Render2D.fill(g, x, lineY + 2, barW, lineH() - 4, tint);
             text(g, st, lines.get(i), x + barW + 6, lineY, colors.get(i));
         }

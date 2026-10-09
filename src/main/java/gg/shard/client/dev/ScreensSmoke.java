@@ -45,9 +45,12 @@ final class ScreensSmoke {
                 ShardClient.LOGGER.info("Smoke screens: leaving the world first");
                 //? if >=1.21.9 {
                 mc.disconnectFromWorld(Component.literal("Smoke: screens pass"));
-                //?} else {
+                //?} else if >=1.21.6 {
                 /*mc.level.disconnect(Component.literal("Smoke: screens pass"));
                 mc.disconnectWithProgressScreen();
+                *///?} else {
+                /*mc.level.disconnect();
+                mc.disconnect();
                 *///?}
                 mc.setScreen(new TitleScreen());
                 outTicks = 0;

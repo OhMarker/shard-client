@@ -7,9 +7,15 @@ import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.EnumSetting;
 import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.module.setting.Labeled;
+//? if >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+//?} else {
+/*import net.fabricmc.fabric.api.client.rendering.v1.HudLayerRegistrationCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.IdentifiedLayer;
+import net.minecraft.client.gui.LayeredDraw;
+*///?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -96,6 +102,7 @@ public final class GuiScalesModule extends Module {
             return self[0];
         };
         IntSupplier hot = () -> pct(mod.get(), m -> m.hotbar.get());
+        //? if >=1.21.6 {
         for (Identifier id : new Identifier[]{VanillaHudElements.HOTBAR, VanillaHudElements.ARMOR_BAR, VanillaHudElements.HEALTH_BAR,
                 VanillaHudElements.FOOD_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.MOUNT_HEALTH, VanillaHudElements.INFO_BAR,
                 VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.HELD_ITEM_TOOLTIP}) {
@@ -106,6 +113,19 @@ public final class GuiScalesModule extends Module {
         wrap(VanillaHudElements.TITLE_AND_SUBTITLE, () -> pct(mod.get(), m -> m.titles.get()), 0.5f, 0.5f);
         wrap(VanillaHudElements.OVERLAY_MESSAGE, () -> pct(mod.get(), m -> m.titles.get()), 0.5f, 1f);
         wrap(VanillaHudElements.BOSS_BAR, () -> pct(mod.get(), m -> m.bossBar.get()), 0.5f, 0f);
+        //?} else {
+        /*// Before 1.21.6 Fabric names Gui's coarser layers: the hotbar, its bars, the mount health and
+        // the held item name are one layer (the XP level number is its own).
+        HudLayerRegistrationCallback.EVENT.register(drawer -> {
+            wrap(drawer, IdentifiedLayer.HOTBAR_AND_BARS, hot, 0.5f, 1f);
+            wrap(drawer, IdentifiedLayer.EXPERIENCE_LEVEL, hot, 0.5f, 1f);
+            wrap(drawer, IdentifiedLayer.SCOREBOARD, () -> pct(mod.get(), m -> m.scoreboard.get()), 1f, 0.5f);
+            wrap(drawer, IdentifiedLayer.PLAYER_LIST, () -> pct(mod.get(), m -> m.tabList.get()), 0.5f, 0f);
+            wrap(drawer, IdentifiedLayer.TITLE_AND_SUBTITLE, () -> pct(mod.get(), m -> m.titles.get()), 0.5f, 0.5f);
+            wrap(drawer, IdentifiedLayer.OVERLAY_MESSAGE, () -> pct(mod.get(), m -> m.titles.get()), 0.5f, 1f);
+            wrap(drawer, IdentifiedLayer.BOSS_BAR, () -> pct(mod.get(), m -> m.bossBar.get()), 0.5f, 0f);
+        });
+        *///?}
     }
 
     private static int pct(GuiScalesModule m, java.util.function.ToIntFunction<GuiScalesModule> f) {
@@ -113,8 +133,13 @@ public final class GuiScalesModule extends Module {
     }
 
     /** Replaces a vanilla element with one drawn scaled around the anchor (fractions of the screen). */
+    //? if >=1.21.6 {
     private static void wrap(Identifier id, IntSupplier percent, float ax, float ay) {
         HudElementRegistry.replaceElement(id, original -> (HudElement) (g, delta) -> {
+    //?} else {
+    /*private static void wrap(net.fabricmc.fabric.api.client.rendering.v1.LayeredDrawerWrapper drawer, Identifier id, IntSupplier percent, float ax, float ay) {
+        drawer.replaceLayer(id, original -> IdentifiedLayer.of(id, (g, delta) -> {
+    *///?}
             int p = percent.getAsInt();
             if (p == 100) {
                 draw(original, g, delta);
@@ -127,10 +152,18 @@ public final class GuiScalesModule extends Module {
             pose.scale(s, s);
             draw(original, g, delta);
             pose.popMatrix();
+        //? if >=1.21.6 {
         });
+        //?} else {
+        /*}));
+        *///?}
     }
 
+    //? if >=1.21.6 {
     private static void draw(HudElement element, net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.DeltaTracker delta) {
+    //?} else {
+    /*private static void draw(LayeredDraw.Layer element, net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.DeltaTracker delta) {
+    *///?}
         //? if >=26.1 {
         /*element.extractRenderState(g, delta);
         *///?} else {

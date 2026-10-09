@@ -75,6 +75,8 @@ abstract class ScreenEffectRendererMixin {
     }
     //?}
 
+    // Before 1.21.6 the totem animation is drawn by GameRenderer (GameRendererMixin).
+    //? if >=1.21.6 {
     /** Totem Pops, animation size: vanilla scales the floating item by 0.8 on every axis; this multiplies that. */
     @ModifyArgs(method = "renderItemActivationAnimation", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;scale(FFF)V"), require = 0)
     private void shard$totemSize(Args args) {
@@ -83,4 +85,5 @@ abstract class ScreenEffectRendererMixin {
         if (f == 1f) return;
         for (int i = 0; i < 3; i++) args.set(i, args.<Float>get(i) * f);
     }
+    //?}
 }

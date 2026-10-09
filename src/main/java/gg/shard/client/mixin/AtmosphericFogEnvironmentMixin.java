@@ -7,14 +7,23 @@ import gg.shard.client.modules.visual.SkyPalette;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+//? if >=1.21.6
 import net.minecraft.client.renderer.fog.environment.AtmosphericFogEnvironment;
 //? if >=1.21.11 <26.1
 import net.minecraft.client.renderer.PanoramicScreenshotParameters;
 //? if >=1.21.11 {
 import net.minecraft.world.attribute.EnvironmentAttributes;
-//?} else {
+//?} else if >=1.21.6 {
 
 /*import net.minecraft.client.renderer.fog.environment.AirBasedFogEnvironment;
+*///?} else {
+/*import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.sugar.ref.LocalFloatRef;
+import net.minecraft.client.renderer.FogRenderer;
+import org.joml.Vector4f;
+import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 *///?}
 import org.joml.Vector3fc;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,29 +36,48 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 //? if >=1.21.11 {
 @Mixin(AtmosphericFogEnvironment.class)
-//?} else {
+//?} else if >=1.21.6 {
 /*// Before 1.21.11 getBaseColor lives in the shared superclass (also the nether / boss fog).
 @Mixin(AirBasedFogEnvironment.class)
+*///?} else {
+/*// Before 1.21.6 there are no fog environments: FogRenderer.computeFogColor works the air colour
+// out inline (slots 7-9, finished where the branch resets biomeChangedTime) and then darkens it.
+@Mixin(FogRenderer.class)
 *///?}
 abstract class AtmosphericFogEnvironmentMixin {
     // 26.3 returns the colour as a float vector.
     //? if >=26.3 {
     /*@ModifyReturnValue(method = "getBaseColor", at = @At("RETURN"), require = 0)
     private Vector3fc shard$fogColour(Vector3fc original, ClientLevel level, Camera camera, int renderDistance, float partialTick) {
+        if (!((Object) this instanceof AtmosphericFogEnvironment)) return original;
         int vanilla = net.minecraft.util.ARGB.colorFromVector3f(original);
         int colour = shard$fog(vanilla, level, camera, renderDistance, partialTick);
         return colour == vanilla ? original : net.minecraft.util.ARGB.vector3fFromRGB24(colour);
     }
-    *///?} else {
+    *///?} else if >=1.21.6 {
     @ModifyReturnValue(method = "getBaseColor", at = @At("RETURN"), require = 0)
     private int shard$fogColour(int original, ClientLevel level, Camera camera, int renderDistance, float partialTick) {
+        if (!((Object) this instanceof AtmosphericFogEnvironment)) return original;
         return shard$fog(original, level, camera, renderDistance, partialTick);
     }
-    //?}
+    //?} else {
+    /*@Inject(method = "computeFogColor", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/FogRenderer;biomeChangedTime:J",
+            opcode = Opcodes.PUTSTATIC, ordinal = 4), require = 0)
+    private static void shard$fogColour(Camera camera, float partialTick, ClientLevel level, int renderDistance, float darken,
+                                        CallbackInfoReturnable<Vector4f> cir, @Local(index = 7) LocalFloatRef r,
+                                        @Local(index = 8) LocalFloatRef g, @Local(index = 9) LocalFloatRef b) {
+        int original = net.minecraft.util.ARGB.colorFromFloat(1f, r.get(), g.get(), b.get());
+        int colour = shard$fog(original, level, camera, renderDistance, partialTick);
+        if (colour == original) return;
+        r.set(net.minecraft.util.ARGB.redFloat(colour));
+        g.set(net.minecraft.util.ARGB.greenFloat(colour));
+        b.set(net.minecraft.util.ARGB.blueFloat(colour));
+    }
+    *///?}
 
     @org.spongepowered.asm.mixin.Unique
-    private int shard$fog(int original, ClientLevel level, Camera camera, int renderDistance, float partialTick) {
-        if (!ShardClient.isReady() || !((Object) this instanceof AtmosphericFogEnvironment)) return original;
+    private static int shard$fog(int original, ClientLevel level, Camera camera, int renderDistance, float partialTick) {
+        if (!ShardClient.isReady()) return original;
         SkyModule sky = ShardClient.modules().get(SkyModule.class);
         if (!sky.active(level) || !sky.tintsFog()) return original;
         //? if >=1.21.11 {

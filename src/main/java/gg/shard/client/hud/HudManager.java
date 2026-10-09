@@ -8,7 +8,12 @@ import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleManager;
 import gg.shard.client.modules.visual.CrosshairModule;
 import gg.shard.client.modules.visual.TotemPopModule;
+//? if >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+//?} else {
+/*import net.fabricmc.fabric.api.client.rendering.v1.HudLayerRegistrationCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.IdentifiedLayer;
+*///?}
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -42,7 +47,12 @@ public final class HudManager {
     }
 
     public void start() {
+        //? if >=1.21.6 {
         HudElementRegistry.addLast(LAYER, this::renderLayer);
+        //?} else {
+        /*// Before 1.21.6 Fabric wraps Gui's LayeredDraw; the last root layer draws after the subtitles.
+        HudLayerRegistrationCallback.EVENT.register(drawer -> drawer.addLayer(IdentifiedLayer.of(LAYER, this::renderLayer)));
+        *///?}
     }
 
     public List<HudModule> hudModules() {

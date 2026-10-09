@@ -27,4 +27,16 @@ abstract class GameRendererMixin {
         return ShardClient.modules().get(ZoomModule.class).applyFov(original);
     }
     //?}
+
+    //? if <1.21.6 {
+    /*/^* Totem Pops, animation size (before 1.21.6 GameRenderer draws the floating item, scaled (o, -o, o)). ^/
+    @org.spongepowered.asm.mixin.injection.ModifyArgs(method = "renderItemActivationAnimation", at = @At(value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/vertex/PoseStack;scale(FFF)V"), require = 0)
+    private void shard$totemSize(org.spongepowered.asm.mixin.injection.invoke.arg.Args args) {
+        if (!ShardClient.isReady()) return;
+        float f = ShardClient.modules().get(gg.shard.client.modules.visual.TotemPopModule.class).animationScale();
+        if (f == 1f) return;
+        for (int i = 0; i < 3; i++) args.set(i, args.<Float>get(i) * f);
+    }
+    *///?}
 }

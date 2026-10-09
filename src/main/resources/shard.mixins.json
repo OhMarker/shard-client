@@ -40,6 +40,7 @@
     "LevelRendererEntitiesMixin",
     "LevelRendererEventsMixin",
     "LightTextureMixin",
+    "LineStateShardMixin",
     "LivingEntityMixin",
     "LivingEntityRendererMixin",
     "MinecraftMixin",
@@ -65,12 +66,14 @@
   "versioned": {
     "CameraMixin": ">=26.1",
     "ClientClockManagerMixin": ">=26.1",
-    "CompositeRenderTypeMixin": "<1.21.11",
+    "CompositeRenderTypeMixin": ">=1.21.6 <1.21.11",
     "EntityHitboxDebugRendererMixin": ">=1.21.11",
     "EntityRendererHitboxMixin": "<1.21.11",
     "FirstPersonHandsMixin": ">=26.3",
+    "GuiGraphicsEntityMixin": ">=1.21.6",
     "ItemInHandRendererMixin": "<26.3",
-    "LevelRendererEventsMixin": ">=1.21.9 <1.21.10"
+    "LevelRendererEventsMixin": ">=1.21.9 <1.21.10",
+    "LineStateShardMixin": "<1.21.6"
   },
   "injectors": {
     "defaultRequire": 1

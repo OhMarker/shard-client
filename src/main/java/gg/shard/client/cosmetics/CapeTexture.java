@@ -23,9 +23,14 @@ public final class CapeTexture extends AbstractTexture {
     public CapeTexture(String label, List<MipChain.Level> levels) {
         GpuDevice device = RenderSystem.getDevice();
         MipChain.Level base = levels.get(0);
+        //? if >=1.21.6 {
         // Usage 5 = copy destination + texture binding, the same as vanilla's DynamicTexture.
         this.texture = device.createTexture(() -> label, GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING,
                 TextureFormat.RGBA8, base.width(), base.height(), 1, levels.size());
+        //?} else {
+        /*// Before 1.21.6 textures have no usage flags, layers or views.
+        this.texture = device.createTexture(() -> label, TextureFormat.RGBA8, base.width(), base.height(), levels.size());
+        *///?}
         //? if >=1.21.11 {
         this.sampler = RenderSystem.getSamplerCache().getSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE,
                 FilterMode.LINEAR, FilterMode.LINEAR, true);
@@ -33,7 +38,9 @@ public final class CapeTexture extends AbstractTexture {
         /*this.texture.setAddressMode(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE);
         this.texture.setTextureFilter(FilterMode.LINEAR, FilterMode.LINEAR, true);
         *///?}
+        //? if >=1.21.6 {
         this.textureView = device.createTextureView(this.texture);
+        //?}
         CommandEncoder encoder = device.createCommandEncoder();
         for (int level = 0; level < levels.size(); level++) {
             MipChain.Level l = levels.get(level);
@@ -45,9 +52,11 @@ public final class CapeTexture extends AbstractTexture {
                 }
                 //? if >=26.2 {
                 /*encoder.writeToTexture(this.texture, image, level, 0, 0, 0);
-                *///?} else {
+                *///?} else if >=1.21.6 {
                 encoder.writeToTexture(this.texture, image, level, 0, 0, 0, l.width(), l.height(), 0, 0);
-                //?}
+                //?} else {
+                /*encoder.writeToTexture(this.texture, image, level, 0, 0, l.width(), l.height(), 0, 0);
+                *///?}
             }
         }
     }
