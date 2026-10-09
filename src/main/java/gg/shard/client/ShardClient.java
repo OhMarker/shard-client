@@ -95,14 +95,22 @@ public final class ShardClient implements ClientModInitializer {
             if (gg.shard.client.dev.SmokeTest.active() || !gg.shard.client.gui.WelcomeScreen.needed()) return;
             if (client.screen == null) client.setScreen(new gg.shard.client.gui.WelcomeScreen());
         }));
-        //? if >=1.21.10 {
+        //? if >=26.1 {
+        /*net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.BEFORE_BLOCK_OUTLINE.register((ctx, state) ->
+                beforeBlockOutline(gg.shard.client.compat.WorldDraw.of(ctx), state));
+        *///?} else if >=1.21.10 {
         net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register((ctx, state) ->
                 beforeBlockOutline(gg.shard.client.compat.WorldDraw.of(ctx), state));
         //?}
         gg.shard.client.modules.utility.GuiScalesModule.registerHudScaling();
-        //? if >=1.21.10 {
+        //? if >=26.1 {
+        /*// 26.1 renders entities as solid then translucent features; AFTER_ENTITIES fired where
+        // AFTER_TRANSLUCENT_FEATURES fires now (after both, before the block outline).
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));
+        *///?} else if >=1.21.10 {
         net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));
         //?}
+
         hud.start();
         modules.start();
         Keybinds.init();

@@ -23,10 +23,14 @@ abstract class ClientLevelWeatherMixin {
         return ShardClient.modules().get(WeatherTimeModule.class).clearWeather() ? 0f : original;
     }
 
+    // 26.1 has no day time on the level; ClientClockManagerMixin pins the client's world clocks.
+    //? if <26.1 {
     @ModifyReturnValue(method = "getDayTime", at = @At("RETURN"), require = 0)
     private long shard$time(long original) {
         if (!((Object) this instanceof ClientLevel) || !ShardClient.isReady()) return original;
         long fixed = ShardClient.modules().get(WeatherTimeModule.class).fixedTime();
         return fixed >= 0 ? fixed : original;
     }
+    //?}
+
 }

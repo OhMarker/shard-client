@@ -15,8 +15,8 @@ import java.util.List;
 
 /** Cooldowns: pearls, wind charges, chorus fruit and your shield, from vanilla's item cooldowns. */
 public final class CooldownsModule extends HudModule {
-    private static final ItemStack[] ITEMS = {new ItemStack(Items.ENDER_PEARL), new ItemStack(Items.WIND_CHARGE), new ItemStack(Items.CHORUS_FRUIT),
-            new ItemStack(Items.SHIELD), new ItemStack(Items.GOLDEN_APPLE), new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)};
+    /** Built on first use: 26.1 refuses ItemStacks before the item components are bound (mod init runs earlier). */
+    private static ItemStack[] items;
     private final BoolSetting hideIdle = add(new BoolSetting("Hide when ready", "Only show items that are cooling down", true));
 
     public CooldownsModule() {
@@ -41,7 +41,12 @@ public final class CooldownsModule extends HudModule {
         float pt = delta.getGameTimeDeltaPartialTick(true);
         List<ItemStack> shown = new ArrayList<>();
         List<Float> left = new ArrayList<>();
-        for (ItemStack s : ITEMS) {
+        if (items == null) {
+            items = new ItemStack[]{new ItemStack(Items.ENDER_PEARL), new ItemStack(Items.WIND_CHARGE), new ItemStack(Items.CHORUS_FRUIT),
+                    new ItemStack(Items.SHIELD), new ItemStack(Items.GOLDEN_APPLE), new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)};
+        }
+        for (ItemStack s : items) {
+
             float f = p.getCooldowns().getCooldownPercent(s, pt);
             if (f <= 0 && hideIdle.get()) continue;
             if (f <= 0 && p.getInventory().countItem(s.getItem()) == 0) continue;

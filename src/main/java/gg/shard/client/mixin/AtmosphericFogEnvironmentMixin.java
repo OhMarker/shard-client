@@ -8,10 +8,12 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.fog.environment.AtmosphericFogEnvironment;
-//? if >=1.21.11 {
+//? if >=1.21.11 <26.1
 import net.minecraft.client.renderer.PanoramicScreenshotParameters;
+//? if >=1.21.11 {
 import net.minecraft.world.attribute.EnvironmentAttributes;
 //?} else {
+
 /*import net.minecraft.client.renderer.fog.environment.AirBasedFogEnvironment;
 *///?}
 import org.joml.Vector3fc;
@@ -45,10 +47,13 @@ abstract class AtmosphericFogEnvironmentMixin {
         int fog = sky.horizon(sunAngle, rain, thunder);
         if (renderDistance >= 4 && sky.keepsSunriseGlow()) {
             float side = Math.sin(sunAngle) > 0 ? -1f : 1f;
-            //? if >=1.21.11 {
+            //? if >=26.1 {
+            /*Vector3fc forward = camera.isPanoramicMode() ? camera.panoramicForwards() : camera.forwardVector();
+            *///?} else if >=1.21.11 {
             PanoramicScreenshotParameters pano = Minecraft.getInstance().gameRenderer.getPanoramicScreenshotParameters();
             Vector3fc forward = pano != null ? pano.forwardVector() : camera.forwardVector();
             //?} else {
+
             /*Vector3fc forward = camera.getLookVector();
             *///?}
             float facing = forward.dot(side, 0f, 0f);
