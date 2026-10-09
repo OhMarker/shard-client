@@ -43,7 +43,12 @@ final class ScreensSmoke {
             if (mc.getOverlay() != null) return;
             if (mc.level != null) {
                 ShardClient.LOGGER.info("Smoke screens: leaving the world first");
+                //? if >=1.21.9 {
                 mc.disconnectFromWorld(Component.literal("Smoke: screens pass"));
+                //?} else {
+                /*mc.level.disconnect(Component.literal("Smoke: screens pass"));
+                mc.disconnectWithProgressScreen();
+                *///?}
                 mc.setScreen(new TitleScreen());
                 outTicks = 0;
                 return;

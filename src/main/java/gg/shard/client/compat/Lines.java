@@ -85,10 +85,12 @@ public final class Lines {
             return base.mode();
         }
 
+        //? if >=1.21.9 {
         @Override
         public RenderPipeline pipeline() {
             return base.pipeline();
         }
+        //?}
     }
     *///?}
 }

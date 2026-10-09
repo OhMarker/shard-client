@@ -7,10 +7,14 @@ import gg.shard.client.ShardClient;
 import gg.shard.client.modules.visual.HitColorModule;
 import gg.shard.client.render.ItemTints;
 import net.minecraft.client.model.Model;
+//? if >=1.21.9 {
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
-import net.minecraft.client.renderer.entity.layers.EquipmentLayerRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+//?} else {
+/*import com.mojang.blaze3d.vertex.VertexConsumer;
+*///?}
+import net.minecraft.client.renderer.entity.layers.EquipmentLayerRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -40,7 +44,7 @@ abstract class EquipmentLayerRendererMixin {
         }
         original.call(collector, model, state, pose, type, light, overlay, color, uv, outline);
     }
-    *///?} else {
+    *///?} else if >=1.21.9 {
     @WrapOperation(method = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;II)V",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/OrderedSubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
@@ -53,5 +57,30 @@ abstract class EquipmentLayerRendererMixin {
         }
         original.call(collector, model, state, pose, type, light, overlay, color, sprite, outline, crumbling);
     }
-    //?}
+    //?} else {
+    /*// Before 1.21.9 the layers are drawn straight into buffers (the glint rides on the armour's foil
+    // buffer, so only the colour changes); the wearer's hurt state comes from ItemTints.
+    @WrapOperation(method = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/resources/Identifier;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/Model;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"),
+            require = 0)
+    private void shard$hitTintArmor(Model model, PoseStack pose, VertexConsumer buffer, int light, int overlay, int color, Operation<Void> original) {
+        original.call(model, pose, buffer, light, overlay, shard$tint(color));
+    }
+
+    /^* Armour trims (drawn without a colour). ^/
+    @WrapOperation(method = "renderLayers(Lnet/minecraft/client/resources/model/EquipmentClientInfo$LayerType;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/client/model/Model;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/resources/Identifier;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/Model;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"),
+            require = 0)
+    private void shard$hitTintTrim(Model model, PoseStack pose, VertexConsumer buffer, int light, int overlay, Operation<Void> original) {
+        int color = shard$tint(-1);
+        if (color == -1) original.call(model, pose, buffer, light, overlay);
+        else model.renderToBuffer(pose, buffer, light, overlay, color);
+    }
+
+    private static int shard$tint(int color) {
+        if (!ShardClient.isReady() || !ItemTints.wearerHurt()) return color;
+        int tint = ShardClient.modules().get(HitColorModule.class).armorTint();
+        return tint == ItemTints.NONE ? color : ItemTints.multiply(color, tint);
+    }
+    *///?}
 }

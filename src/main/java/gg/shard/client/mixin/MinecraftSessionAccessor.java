@@ -72,6 +72,9 @@ public interface MinecraftSessionAccessor {
     @Accessor("proxy")
     Proxy shard$proxy();
 
+    // 1.21.9 added the offline developer mode (--offline-developer-mode); before, there is none.
+    //? if >=1.21.9 {
     @Accessor("offlineDeveloperMode")
     boolean shard$offlineDeveloperMode();
+    //?}
 }

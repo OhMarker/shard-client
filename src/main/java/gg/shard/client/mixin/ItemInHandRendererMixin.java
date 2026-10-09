@@ -12,7 +12,11 @@ import gg.shard.client.modules.visual.SmallItemsModule;
 import gg.shard.client.render.ItemTints;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
+//? if >=1.21.9 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+//?} else {
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
@@ -23,6 +27,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+// Before 1.21.9 hands and items are drawn into a MultiBufferSource instead of submitted; the
+// hooks are the same with that argument type.
 /**
  * Small Items: just before the held item is drawn it is moved and shrunk in hand space. Shield
  * tint/opacity: the colour is published to {@link ItemTints} for the duration of the shield's
@@ -38,7 +44,11 @@ abstract class ItemInHandRendererMixin {
 
     /** Small Items (Small Items mod look): the empty arm is drawn at 60% too, like that mod. */
     @Inject(method = "renderPlayerArm", at = @At("HEAD"), require = 0)
+    //? if >=1.21.9 {
     private void shard$smallArm(PoseStack poseStack, SubmitNodeCollector collector, int light, float equipProgress, float swingProgress,
+    //?} else {
+    /*private void shard$smallArm(PoseStack poseStack, MultiBufferSource collector, int light, float equipProgress, float swingProgress,
+    *///?}
                                 HumanoidArm arm, CallbackInfo ci) {
         shard$armScaled = false;
         if (!ShardClient.isReady()) return;
@@ -50,7 +60,11 @@ abstract class ItemInHandRendererMixin {
     }
 
     @Inject(method = "renderPlayerArm", at = @At("RETURN"), require = 0)
+    //? if >=1.21.9 {
     private void shard$smallArmEnd(PoseStack poseStack, SubmitNodeCollector collector, int light, float equipProgress, float swingProgress,
+    //?} else {
+    /*private void shard$smallArmEnd(PoseStack poseStack, MultiBufferSource collector, int light, float equipProgress, float swingProgress,
+    *///?}
                                    HumanoidArm arm, CallbackInfo ci) {
         if (!shard$armScaled) return;
         shard$armScaled = false;
@@ -61,17 +75,28 @@ abstract class ItemInHandRendererMixin {
             at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V", ordinal = 0, shift = At.Shift.AFTER),
             require = 0)
     private void shard$moveShield(AbstractClientPlayer player, float partialTick, float pitch, InteractionHand hand, float swingProgress,
+    //? if >=1.21.9 {
                                   ItemStack stack, float equipProgress, PoseStack poseStack, SubmitNodeCollector collector, int light, CallbackInfo ci) {
+    //?} else {
+    /*ItemStack stack, float equipProgress, PoseStack poseStack, MultiBufferSource collector, int light, CallbackInfo ci) {
+    *///?}
         if (!ShardClient.isReady()) return;
         float[] offset = ShardClient.modules().get(LowShieldModule.class).offsetFor(player, hand, stack);
         if (offset != null) poseStack.translate(offset[0], offset[1], 0f);
     }
 
     @WrapOperation(method = "renderArmWithItem", at = @At(value = "INVOKE",
+    //? if >=1.21.9 {
             target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"),
             require = 0)
     private void shard$scaleShield(ItemInHandRenderer self, LivingEntity entity, ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
                                    SubmitNodeCollector collector, int light, Operation<Void> original,
+    //?} else {
+    /*target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"),
+            require = 0)
+    private void shard$scaleShield(ItemInHandRenderer self, LivingEntity entity, ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
+                                   MultiBufferSource collector, int light, Operation<Void> original,
+    *///?}
                                    @Local(argsOnly = true) AbstractClientPlayer player, @Local(argsOnly = true) InteractionHand hand) {
         if (!ShardClient.isReady()) {
             original.call(self, entity, stack, context, poseStack, collector, light);

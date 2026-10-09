@@ -12,7 +12,9 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DirectJoinServerScreen;
 import net.minecraft.client.gui.screens.FaviconTexture;
+//? if >=1.21.9 {
 import net.minecraft.client.gui.screens.ManageServerScreen;
+//?}
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.multiplayer.ServerData;
@@ -190,7 +192,7 @@ public final class ShardMultiplayerScreen extends MenuScreen {
 
     private void addServer() {
         editing = new ServerData(I18n.get("selectServer.defaultName"), "", ServerData.Type.OTHER);
-        minecraft.setScreen(new ManageServerScreen(this, Component.translatable("manageServer.add.title"), ok -> {
+        minecraft.setScreen(serverEditor("manageServer.add.title", ok -> {
             if (ok) {
                 ServerData unhidden = servers.unhide(editing.ip);
                 if (unhidden != null) {
@@ -203,7 +205,16 @@ public final class ShardMultiplayerScreen extends MenuScreen {
                 tab = Tab.SERVERS;
             }
             minecraft.setScreen(this);
-        }, editing));
+        }));
+    }
+
+    /** Vanilla's add/edit server screen for {@link #editing}. */
+    private Screen serverEditor(String titleKey, it.unimi.dsi.fastutil.booleans.BooleanConsumer done) {
+        //? if >=1.21.9 {
+        return new ManageServerScreen(this, Component.translatable(titleKey), done, editing);
+        //?} else {
+        /*return new net.minecraft.client.gui.screens.EditServerScreen(this, done, editing);
+        *///?}
     }
 
     private void editServer() {
@@ -211,7 +222,7 @@ public final class ShardMultiplayerScreen extends MenuScreen {
         if (data == null) return;
         editing = new ServerData(data.name, data.ip, ServerData.Type.OTHER);
         editing.copyFrom(data);
-        minecraft.setScreen(new ManageServerScreen(this, Component.translatable("manageServer.edit.title"), ok -> {
+        minecraft.setScreen(serverEditor("manageServer.edit.title", ok -> {
             if (ok) {
                 data.name = editing.name;
                 data.ip = editing.ip;
@@ -219,7 +230,7 @@ public final class ShardMultiplayerScreen extends MenuScreen {
                 servers.save();
             }
             minecraft.setScreen(this);
-        }, editing));
+        }));
     }
 
     private void deleteServer() {

@@ -6,8 +6,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import gg.shard.client.render.ItemTints;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.object.equipment.ShieldModel;
+//? if >=1.21.9 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+//?} else {
+/*import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+*///?}
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.ShieldSpecialRenderer;
@@ -117,7 +123,7 @@ abstract class ShieldSpecialRendererMixin {
         }
         original.call(collector, model, state, pose, light, overlay, tinted, base, sprites, outline, crumbling);
     }
-    *///?} else {
+    *///?} else if >=1.21.9 {
     @Inject(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
             at = @At("HEAD"), cancellable = true)
     private void shard$submitCosmetic(DataComponentMap components, ItemDisplayContext context, PoseStack pose, SubmitNodeCollector collector,
@@ -150,5 +156,39 @@ abstract class ShieldSpecialRendererMixin {
                                   int outline, Operation<Void> original) {
         original.call(collector, part, pose, type, light, overlay, sprite, sheeted, foil, ItemTints.multiply(color, ItemTints.shield()), crumbling, outline);
     }
-    //?}
+    //?} else {
+    /*// Before 1.21.9 the shield is drawn straight into a (foil) buffer: handle and plate, the plate
+    // through BannerRenderer.renderPatterns when it has patterns (BannerRendererMixin tints those).
+    @Inject(method = "render(Lnet/minecraft/core/component/DataComponentMap;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IIZ)V",
+            at = @At("HEAD"), cancellable = true)
+    private void shard$submitCosmetic(DataComponentMap components, ItemDisplayContext context, PoseStack pose, MultiBufferSource buffers,
+                                      int light, int overlay, boolean foil, CallbackInfo ci) {
+        if (!(components instanceof ShieldCosmetics.Skinned skinned)) return;
+        ci.cancel();
+        int color = ItemTints.multiply(-1, ItemTints.shield());
+        RenderType type = ItemTints.shieldTranslucent() ? RenderTypes.entityTranslucent(skinned.texture()) : RenderTypes.entitySolid(skinned.texture());
+        VertexConsumer buffer = ItemRenderer.getFoilBuffer(buffers, type, context == ItemDisplayContext.GUI, foil);
+        pose.pushPose();
+        pose.scale(1.0F, -1.0F, -1.0F);
+        model.handle().render(pose, buffer, light, overlay, color);
+        model.plate().render(pose, buffer, light, overlay, color);
+        pose.popPose();
+    }
+
+    @WrapOperation(method = "render(Lnet/minecraft/core/component/DataComponentMap;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IIZ)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/object/equipment/ShieldModel;renderType(Lnet/minecraft/resources/Identifier;)Lnet/minecraft/client/renderer/rendertype/RenderType;"),
+            require = 0)
+    private RenderType shard$translucentShield(ShieldModel model, Identifier atlas, Operation<RenderType> original) {
+        return ItemTints.shieldTranslucent() ? RenderTypes.entityTranslucent(atlas) : original.call(model, atlas);
+    }
+
+    @WrapOperation(method = "render(Lnet/minecraft/core/component/DataComponentMap;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IIZ)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/geom/ModelPart;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"),
+            require = 0)
+    private void shard$tintShield(ModelPart part, PoseStack pose, VertexConsumer buffer, int light, int overlay, Operation<Void> original) {
+        int tint = ItemTints.shield();
+        if (tint == ItemTints.NONE) original.call(part, pose, buffer, light, overlay);
+        else part.render(pose, buffer, light, overlay, ItemTints.multiply(-1, tint));
+    }
+    *///?}
 }

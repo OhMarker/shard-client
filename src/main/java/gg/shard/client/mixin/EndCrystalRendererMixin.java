@@ -4,10 +4,17 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import gg.shard.client.ShardClient;
 import gg.shard.client.modules.combat.CrystalOptimizerModule;
 import gg.shard.client.modules.visual.CrystalTweaksModule;
+//? if >=1.21.9 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.CameraRenderState;
+//?} else {
+/*import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.EndCrystalModel;
+import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 import net.minecraft.client.renderer.entity.EndCrystalRenderer;
 import net.minecraft.client.renderer.entity.state.EndCrystalRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,9 +27,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(EndCrystalRenderer.class)
 abstract class EndCrystalRendererMixin {
+    //? if >=1.21.9 {
     @Inject(method = "submit", at = @At("HEAD"))
     private void shard$scaleCrystal(EndCrystalRenderState state, PoseStack poseStack, SubmitNodeCollector collector,
                                     CameraRenderState camera, CallbackInfo ci) {
+    //?} else {
+    /*// Before 1.21.9 the crystal is drawn straight into a buffer (render, not submit).
+    @Inject(method = "render(Lnet/minecraft/client/renderer/entity/state/EndCrystalRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("HEAD"))
+    private void shard$scaleCrystal(EndCrystalRenderState state, PoseStack poseStack, MultiBufferSource buffers, int light, CallbackInfo ci) {
+    *///?}
         if (!ShardClient.isReady()) return;
         float s = ShardClient.modules().get(CrystalTweaksModule.class).renderScale()
                 * ShardClient.modules().get(CrystalOptimizerModule.class).highlightScale(state.x, state.y, state.z);
@@ -35,13 +49,20 @@ abstract class EndCrystalRendererMixin {
     private void shard$highlight(net.minecraft.world.entity.boss.enderdragon.EndCrystal crystal, EndCrystalRenderState state, float partialTick, CallbackInfo ci) {
         if (!ShardClient.isReady()) return;
         ShardClient.modules().get(CrystalTweaksModule.class).adjustState(crystal, state);
+        // Before 1.21.9 outlines follow the entity, not its render state (CrystalTweaksModule.outline).
+        //? if >=1.21.9 {
         int outline = ShardClient.modules().get(CrystalOptimizerModule.class).highlightOutline(state.x, state.y, state.z);
         if (outline != 0) state.outlineColor = outline;
+        //?}
     }
 
     private static final net.minecraft.resources.Identifier SHARD$TEXTURE = net.minecraft.resources.Identifier.withDefaultNamespace("textures/entity/end_crystal/end_crystal.png");
 
+    //? if >=1.21.9 {
     @com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(method = "submit(Lnet/minecraft/client/renderer/entity/state/EndCrystalRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+    //?} else {
+    /*@com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(method = "render(Lnet/minecraft/client/renderer/entity/state/EndCrystalRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+    *///?}
     //? if >=26.3 {
             /*// 26.3: no crumbling argument (crumbling is its own submit).
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/resources/Identifier;III)V"),
@@ -72,7 +93,7 @@ abstract class EndCrystalRendererMixin {
             return;
         }
         net.minecraft.client.renderer.rendertype.RenderType type = model.renderType(texture);
-    *///?} else {
+    *///?} else if >=1.21.9 {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
             require = 0)
     private void shard$recolour(SubmitNodeCollector collector, net.minecraft.client.model.Model<?> model, Object state, PoseStack pose,
@@ -84,9 +105,30 @@ abstract class EndCrystalRendererMixin {
             original.call(collector, model, state, pose, type, light, overlay, outline, crumbling);
             return;
         }
-    //?}
+    //?} else {
+    /*// Before 1.21.9 the model is drawn into the buffer vanilla took for the crystal's render type;
+    // recoloured crystals draw the two tinted models instead (translucent from their own buffer).
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/EndCrystalModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"),
+            require = 0)
+    private void shard$recolour(EndCrystalModel model, PoseStack pose, VertexConsumer buffer, int light, int overlay,
+                                com.llamalad7.mixinextras.injector.wrapoperation.Operation<Void> original,
+                                @Local(argsOnly = true) EndCrystalRenderState crystal, @Local(argsOnly = true) MultiBufferSource buffers) {
+        CrystalTweaksModule tweaks = ShardClient.isReady() ? ShardClient.modules().get(CrystalTweaksModule.class) : null;
+        if (tweaks == null || !tweaks.recolours()) {
+            original.call(model, pose, buffer, light, overlay);
+            return;
+        }
+        VertexConsumer vc = tweaks.translucent() ? buffers.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(SHARD$TEXTURE)) : buffer;
+        EndCrystalModel frame = tweaks.frameModel();
+        frame.setupAnim(crystal);
+        frame.renderToBuffer(pose, vc, light, overlay, tweaks.frameTint());
+        EndCrystalModel core = tweaks.coreModel();
+        core.setupAnim(crystal);
+        core.renderToBuffer(pose, vc, light, overlay, tweaks.coreTint());
+    }
+    *///?}
 
-    //? if <26.3 {
+    //? if >=1.21.9 <26.3 {
         var rt = tweaks.translucent() ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(SHARD$TEXTURE) : type;
         collector.submitModel(tweaks.frameModel(), crystal, pose, rt, light, overlay, tweaks.frameTint(), null, outline, crumbling);
         collector.submitModel(tweaks.coreModel(), crystal, pose, rt, light, overlay, tweaks.coreTint(), null, outline, crumbling);

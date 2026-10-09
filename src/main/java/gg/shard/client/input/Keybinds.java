@@ -15,7 +15,12 @@ import org.lwjgl.glfw.GLFW;
 public final class Keybinds {
     private Keybinds() {}
 
+    //? if >=1.21.9 {
     public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(Identifier.fromNamespaceAndPath(ShardClient.MOD_ID, "main"));
+    //?} else {
+    /*// Before 1.21.9 a category is its translation key.
+    public static final String CATEGORY = "key.categories.shard.main";
+    *///?}
 
     public static KeyMapping openGui;
     public static KeyMapping hudEditor;

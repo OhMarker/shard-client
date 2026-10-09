@@ -5,9 +5,15 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import gg.shard.client.render.ItemTints;
 import net.minecraft.client.model.Model;
+//? if >=1.21.9 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.blockentity.BannerRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+//?} else {
+/*import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
+import net.minecraft.client.renderer.blockentity.BannerRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -26,9 +32,38 @@ import java.util.function.Function;
  */
 @Mixin(BannerRenderer.class)
 abstract class BannerRendererMixin {
+    //? if <1.21.9 {
+    /*// Before 1.21.9 the base and the layers are drawn straight into buffers (renderPatterns).
+    @WrapOperation(method = "renderPatterns(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/model/geom/ModelPart;Lnet/minecraft/client/resources/model/Material;ZLnet/minecraft/world/item/DyeColor;Lnet/minecraft/world/level/block/entity/BannerPatternLayers;ZZ)V",
+            at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;ZZ)Lcom/mojang/blaze3d/vertex/VertexConsumer;"),
+            require = 0)
+    private static VertexConsumer shard$translucentBase(Material material, MultiBufferSource buffers, Function<net.minecraft.resources.Identifier, RenderType> factory,
+                                                        boolean sheeted, boolean foil, Operation<VertexConsumer> original) {
+        return original.call(material, buffers, ItemTints.shieldTranslucent() ? (Function<net.minecraft.resources.Identifier, RenderType>) RenderTypes::entityTranslucent : factory,
+                sheeted, foil);
+    }
+
+    @WrapOperation(method = "renderPatterns(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/model/geom/ModelPart;Lnet/minecraft/client/resources/model/Material;ZLnet/minecraft/world/item/DyeColor;Lnet/minecraft/world/level/block/entity/BannerPatternLayers;ZZ)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/geom/ModelPart;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"),
+            require = 0)
+    private static void shard$tintBase(ModelPart part, PoseStack pose, VertexConsumer buffer, int light, int overlay, Operation<Void> original) {
+        int tint = ItemTints.shield();
+        if (tint == ItemTints.NONE) original.call(part, pose, buffer, light, overlay);
+        else part.render(pose, buffer, light, overlay, ItemTints.multiply(-1, tint));
+    }
+
+    @WrapOperation(method = "renderPatternLayer", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/model/geom/ModelPart;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"),
+            require = 0)
+    private static void shard$tintLayer(ModelPart part, PoseStack pose, VertexConsumer buffer, int light, int overlay, int color, Operation<Void> original) {
+        original.call(part, pose, buffer, light, overlay, ItemTints.multiply(color, ItemTints.shield()));
+    }
+    *///?}
+
     // 26.1: submitPatterns no longer draws the shield base (ShieldSpecialRendererMixin tints it);
     // only the pattern layers are left here.
-    //? if <26.1 {
+    //? if >=1.21.9 <26.1 {
     @WrapOperation(method = "submitPatterns", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/resources/model/Material;renderType(Ljava/util/function/Function;)Lnet/minecraft/client/renderer/rendertype/RenderType;"),
             require = 0)
@@ -63,7 +98,7 @@ abstract class BannerRendererMixin {
                                         TextureAtlasSprite sprite, int outline, ModelFeatureRenderer.CrumblingOverlay crumbling, Operation<Void> original) {
         original.call(collector, model, state, pose, type, light, overlay, ItemTints.multiply(color, ItemTints.shield()), sprite, outline, crumbling);
     }
-    *///?} else {
+    *///?} else if >=1.21.9 {
     @WrapOperation(method = "submitPatternLayer", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
             require = 0)

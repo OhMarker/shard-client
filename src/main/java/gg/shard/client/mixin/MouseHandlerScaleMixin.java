@@ -15,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(MouseHandler.class)
 abstract class MouseHandlerScaleMixin {
+    //? if >=1.21.9 {
     private static MouseButtonEvent shard$scale(Screen screen, MouseButtonEvent e) {
         double f = ScaledScreen.factorOf(screen);
         return f == 1.0 ? e : new MouseButtonEvent(e.x() / f, e.y() / f, e.buttonInfo());
@@ -35,6 +36,26 @@ abstract class MouseHandlerScaleMixin {
         double f = ScaledScreen.factorOf(screen);
         return original.call(screen, shard$scale(screen, e), dx / f, dy / f);
     }
+    //?} else {
+    /*// Before 1.21.9 the handler passes loose coordinates.
+    @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseClicked(DDI)Z"), require = 0)
+    private boolean shard$clicked(Screen screen, double x, double y, int button, Operation<Boolean> original) {
+        double f = ScaledScreen.factorOf(screen);
+        return original.call(screen, x / f, y / f, button);
+    }
+
+    @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseReleased(DDI)Z"), require = 0)
+    private boolean shard$released(Screen screen, double x, double y, int button, Operation<Boolean> original) {
+        double f = ScaledScreen.factorOf(screen);
+        return original.call(screen, x / f, y / f, button);
+    }
+
+    @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseDragged(DDIDD)Z"), require = 0)
+    private boolean shard$dragged(Screen screen, double x, double y, int button, double dx, double dy, Operation<Boolean> original) {
+        double f = ScaledScreen.factorOf(screen);
+        return original.call(screen, x / f, y / f, button, dx / f, dy / f);
+    }
+    *///?}
 
     @WrapOperation(method = "*", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;mouseMoved(DD)V"), require = 0)
     private void shard$moved(Screen screen, double x, double y, Operation<Void> original) {

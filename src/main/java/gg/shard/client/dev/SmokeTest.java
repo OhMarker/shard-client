@@ -970,9 +970,15 @@ public final class SmokeTest {
                 SUMMARY.addProperty("apiSaysOtherWears", String.valueOf(cosmetics.wornSnapshot().get(OTHER_PLAYER)));
                 var account = cosmetics.account();
                 SUMMARY.addProperty("shardAccount", account == null ? "not signed in" : account.name() + " " + account.tokens() + " tokens");
+                //? if >=1.21.9 {
                 SUMMARY.addProperty("otherPlayerHasShardCape", otherPlayer != null
                         && otherPlayer.getSkin().cape() != null
                         && otherPlayer.getSkin().cape().texturePath().getNamespace().equals(ShardClient.MOD_ID));
+                //?} else {
+                /*SUMMARY.addProperty("otherPlayerHasShardCape", otherPlayer != null
+                        && otherPlayer.getSkin().capeTexture() != null
+                        && otherPlayer.getSkin().capeTexture().getNamespace().equals(ShardClient.MOD_ID));
+                *///?}
                 ShardClient.LOGGER.info("Smoke: cosmetics {}", cosmetics.status());
                 shot(mc, "smoke-cape-back.png", null);
             }

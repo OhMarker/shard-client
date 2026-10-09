@@ -44,7 +44,11 @@ public record WorldDraw(PoseStack matrices, MultiBufferSource consumers, Vec3 ca
     public static WorldDraw of(net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext ctx) {
         return new WorldDraw(ctx.matrices(), ctx.consumers(), ctx.worldState().cameraRenderState.pos);
     }
-    //?}
+    //?} else if <1.21.9 {
+    /*public static WorldDraw of(net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext ctx) {
+        return new WorldDraw(ctx.matrixStack(), ctx.consumers(), ctx.camera().getPosition());
+    }
+    *///?}
 
     public boolean ready() {
         return consumers != null;

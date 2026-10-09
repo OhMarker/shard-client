@@ -34,8 +34,19 @@ abstract class FontManagerMixin {
     @Shadow @Final private Map<Identifier, FontSet> fontSets;
     @Shadow @Final private List<GlyphProvider> providersToClose;
 
+    //? if >=1.21.9 {
     @Shadow
     protected abstract FontSet createFontSet(Identifier id, List<GlyphProvider.Conditional> providers, Set<FontOption> options);
+    //?} else {
+    /*// Before 1.21.9 font sets are built in place (no createFontSet / glyph stitcher).
+    @Shadow @Final private net.minecraft.client.renderer.texture.TextureManager textureManager;
+
+    private FontSet createFontSet(Identifier id, List<GlyphProvider.Conditional> providers, Set<FontOption> options) {
+        FontSet set = new FontSet(textureManager, id);
+        set.reload(providers, options);
+        return set;
+    }
+    *///?}
 
     @Shadow
     private static Set<FontOption> getFontOptions(Options options) {

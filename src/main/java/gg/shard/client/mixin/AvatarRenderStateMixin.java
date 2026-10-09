@@ -1,13 +1,21 @@
 package gg.shard.client.mixin;
 
 import gg.shard.client.render.BandanaState;
+//? if >=1.21.9 {
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+*///?}
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 /** Carries the bandana texture from extraction to BandanaLayer. */
+//? if >=1.21.9 {
 @Mixin(AvatarRenderState.class)
+//?} else {
+/*@Mixin(PlayerRenderState.class)
+*///?}
 abstract class AvatarRenderStateMixin implements BandanaState {
     @Unique private Identifier shard$bandanaTexture;
 

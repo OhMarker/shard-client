@@ -86,7 +86,11 @@ public final class ShardClient implements ClientModInitializer {
         gg.shard.client.render.LowFireModels.init();
         // Bandana cosmetic on every player renderer (wide and slim).
         net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, ctx) -> {
+            //? if >=1.21.9 {
             if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {
+            //?} else {
+            /*if (renderer instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer avatar) {
+            *///?}
                 helper.register(new gg.shard.client.render.BandanaLayer(avatar));
             }
         });
@@ -101,7 +105,11 @@ public final class ShardClient implements ClientModInitializer {
         *///?} else if >=1.21.10 {
         net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_BLOCK_OUTLINE.register((ctx, state) ->
                 beforeBlockOutline(gg.shard.client.compat.WorldDraw.of(ctx), state));
-        //?}
+        //?} else if <1.21.9 {
+        /*// Fabric's pre-1.21.9 world render events: BLOCK_OUTLINE fires once the outline is drawn this pass.
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BLOCK_OUTLINE.register((ctx, outline) ->
+                beforeBlockOutline(gg.shard.client.compat.WorldDraw.of(ctx), gg.shard.client.compat.BlockOutlineRenderState.of(ctx, outline)));
+        *///?}
         gg.shard.client.modules.utility.GuiScalesModule.registerHudScaling();
         //? if >=26.2 {
         /*// 26.2 has no immediate buffers in the level pass: overlays are submitted with the frame's
@@ -113,7 +121,9 @@ public final class ShardClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));
         *///?} else if >=1.21.10 {
         net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));
-        //?}
+        //?} else if <1.21.9 {
+        /*net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));
+        *///?}
 
         hud.start();
         modules.start();

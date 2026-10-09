@@ -70,7 +70,7 @@
     "EntityRendererHitboxMixin": "<1.21.11",
     "FirstPersonHandsMixin": ">=26.3",
     "ItemInHandRendererMixin": "<26.3",
-    "LevelRendererEventsMixin": "<1.21.10"
+    "LevelRendererEventsMixin": ">=1.21.9 <1.21.10"
   },
   "injectors": {
     "defaultRequire": 1

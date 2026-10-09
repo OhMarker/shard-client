@@ -8,8 +8,10 @@ import gg.shard.client.module.setting.DoubleSetting;
 import gg.shard.client.module.setting.IntSetting;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.Minecraft;
+//? if >=1.21.9 {
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
 import net.minecraft.client.gui.components.debug.DebugScreenEntryStatus;
+//?}
 //? if >=1.21.11 {
 import net.minecraft.gizmos.GizmoStyle;
 import net.minecraft.gizmos.Gizmos;
@@ -52,7 +54,12 @@ public final class HitboxModule extends Module {
     private final BoolSetting playersOnly = add(new BoolSetting("Players only", "Only draw boxes for other players", false).group("Entities"));
     private final BoolSetting livingOnly = add(new BoolSetting("Living only", "Skip items, arrows, orbs and other non-living entities", false).group("Entities"));
 
+    //? if >=1.21.9 {
     private DebugScreenEntryStatus previous;
+    //?} else {
+    /*// Before 1.21.9 F3+B is a flag on the entity render dispatcher.
+    private Boolean previous;
+    *///?}
 
     public HitboxModule() {
         super("Hitboxes", "Hitboxes in your style: colour, opacity, line width, fill, eye line and look arrow.", ModuleCategory.VISUALS);
@@ -72,16 +79,25 @@ public final class HitboxModule extends Module {
     @Override
     protected void onEnable() {
         Minecraft mc = Minecraft.getInstance();
+        //? if >=1.21.9 {
         if (mc.debugEntries == null) return;
         previous = mc.debugEntries.getStatus(DebugScreenEntries.ENTITY_HITBOXES);
         mc.debugEntries.setStatus(DebugScreenEntries.ENTITY_HITBOXES, DebugScreenEntryStatus.ALWAYS_ON);
+        //?} else {
+        /*previous = mc.getEntityRenderDispatcher().shouldRenderHitBoxes();
+        mc.getEntityRenderDispatcher().setRenderHitBoxes(true);
+        *///?}
     }
 
     @Override
     protected void onDisable() {
         Minecraft mc = Minecraft.getInstance();
+        //? if >=1.21.9 {
         if (mc.debugEntries == null) return;
         mc.debugEntries.setStatus(DebugScreenEntries.ENTITY_HITBOXES, previous == null ? DebugScreenEntryStatus.NEVER : previous);
+        //?} else {
+        /*mc.getEntityRenderDispatcher().setRenderHitBoxes(previous != null && previous);
+        *///?}
         previous = null;
     }
 
@@ -162,7 +178,12 @@ public final class HitboxModule extends Module {
                     rel.minX, rel.minY, rel.minZ, rel.maxX, rel.maxY, rel.maxZ,
                     ARGB.redFloat(fillColour), ARGB.greenFloat(fillColour), ARGB.blueFloat(fillColour), ARGB.alphaFloat(fillColour));
         }
-        ShapeRenderer.renderLineBox(pose.last(), frame.consumers().getBuffer(Lines.type(width)), rel,
+        //? if >=1.21.9 {
+        PoseStack.Pose linePose = pose.last();
+        //?} else {
+        /^PoseStack linePose = pose;
+        ^///?}
+        ShapeRenderer.renderLineBox(linePose, frame.consumers().getBuffer(Lines.type(width)), rel,
                 ARGB.redFloat(stroke), ARGB.greenFloat(stroke), ARGB.blueFloat(stroke), ARGB.alphaFloat(stroke));
     }
 

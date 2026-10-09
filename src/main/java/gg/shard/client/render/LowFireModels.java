@@ -1,6 +1,7 @@
 package gg.shard.client.render;
 
 import gg.shard.client.ShardClient;
+import gg.shard.client.compat.Atlases;
 import gg.shard.client.modules.visual.LowFireModule;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
@@ -79,15 +80,14 @@ public final class LowFireModels {
     /** Sprites change identity on every resource reload; pick the new ones up on the next tick. */
     private static void refreshSprites() {
         try {
-            var atlas = Minecraft.getInstance().getAtlasManager();
-            TextureAtlasSprite f0 = atlas.get(ModelBakery.FIRE_0);
+            TextureAtlasSprite f0 = Atlases.sprite(ModelBakery.FIRE_0);
             Sprites s = sprites;
             if (s != null && s.fire0() == f0) return;
-            TextureAtlasSprite c0 = atlas.get(LowFireModule.CUSTOM_FIRE_0);
-            TextureAtlasSprite c1 = atlas.get(LowFireModule.CUSTOM_FIRE_1);
+            TextureAtlasSprite c0 = Atlases.sprite(LowFireModule.CUSTOM_FIRE_0);
+            TextureAtlasSprite c1 = Atlases.sprite(LowFireModule.CUSTOM_FIRE_1);
             // A missing custom sprite (atlas not stitched yet) keeps vanilla's.
             boolean ok = !c0.contents().name().getPath().contains("missingno");
-            sprites = new Sprites(f0, atlas.get(ModelBakery.FIRE_1), ok ? c0 : null, ok ? c1 : null);
+            sprites = new Sprites(f0, Atlases.sprite(ModelBakery.FIRE_1), ok ? c0 : null, ok ? c1 : null);
             if (s != null && current.customTexture()) {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.level != null) mc.levelRenderer.allChanged();
