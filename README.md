@@ -194,4 +194,4 @@ Add `-PsmokeBench` to run the `BENCHMARKS.md` scenario instead; results land in 
   players would need a Shard server and is not planned yet.
 - Environment colours (sky, water, foliage) in the spirit of Ambience; shield state colours;
   totem pop ghosts.
-- Later versions: 1.21.x and 26.x targets.
+- Every Minecraft version from 1.21 to 26.3 is supported since 0.10.0 (docs/PORTING.md).

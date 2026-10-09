@@ -1,5 +1,23 @@
 # Status (handoff for a new session)
 
+## 0.10.0: every Minecraft version from 1.21 to 26.3 (2026-10-10, released)
+- One source tree, built for 17 Minecraft versions with Stonecutter (1.21, 1.21.1 … 1.21.11,
+  26.1, 26.1.1, 26.1.2, 26.2, 26.3). `src/` is written for 1.21.11; per-version code uses
+  versioned comments, rules in `stonecutter.gradle.kts` and helpers in `gg.shard.client.compat`.
+  **Read docs/PORTING.md** ("Maintaining every version" and the Version notes) before changing
+  anything: a new feature must build and smoke-test on every node.
+- Build one: `./gradlew :<mc>:build` → `build/libs/<modVersion>/shard-<modVersion>+<mc>.jar`
+  (+ .sha512). All: `./gradlew build --continue`. Run: `./gradlew :<mc>:runClient ...` (run dir
+  `run-<mc>/`; 1.21.11 keeps `run/`), with `.smoke-server-<mc>/` for that version.
+- Released: https://github.com/OhMarker/shard-client/releases/tag/v0.10.0 with one jar per version
+  (`shard-0.10.0-mc<mc>.jar`); meta's shard-manifest.json has one 0.10.0 build per version and
+  `latest` 0.10.0. Each version was smoke-tested in-game (default pass with -PcountInjections,
+  plus features/screens/cosmetics/drop2 on at least one version per group) and compared to
+  1.21.11 screenshots. Launcher 0.6.0 installed and started Shard on 26.3 and 1.21 end to end
+  (with the bundled Sodium/Iris/Lithium set) and reached the title screen.
+- Also fixed in 0.10.0: Low Fire's see-through flames on burning mobs were invisible on 1.21.11.
+- Branch `multiversion` is merged into `main`.
+
 ## 0.9.0: OhMarker set, shield and bandana (2026-10-09, committed locally, not released)
 - Shield cosmetic retextures held shields (first and third person, both hands, banner shields too;
   Shield module tint/opacity on top); bandana is a head feature layer (BandanaMesh/BandanaLayer).
