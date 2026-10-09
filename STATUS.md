@@ -1,7 +1,7 @@
 # Status (handoff for a new session)
 
-## 0.7.0: compact menu and visual mods (2026-10-08, built, NOT released)
-- Branch `v0.7.0` (not merged, not pushed). Jar: build/libs/shard-0.7.0.jar. What changed:
+## 0.7.0: compact menu and visual mods (2026-10-08, released)
+- https://github.com/OhMarker/shard-client/releases/tag/v0.7.0 (downloaded jar's sha512 matches), merged into main, meta `latest` 0.7.0. Jar: build/libs/shard-0.7.0.jar. What changed:
   CHANGELOG.md 0.7.0; why: DECISIONS.md "0.7.0". Screenshots: docs/screenshots/0.7.0/.
 - New mod menu matching the owner's mockup (launcher repo design/lunar-style-mockup.png): tabs
   Mods/Settings/Cosmetics/Friends, category tabs, 6-column tiles, settings view in the panel,
@@ -12,8 +12,6 @@
   log. `-PsmokeOnly=menu` shoots the new menu (tabs, hover, settings view, search, eased scroll).
 - Not verified in-game by a person: Sky colours, Hitbox styling, Entity Optimizer limits, Small
   Items, shield tint/opacity and armour hit tint have no smoke screenshots yet.
-- To release: merge to main, push, `gh release create v0.7.0 ...` and add the build to meta
-  (steps under "Releasing a new client version later").
 
 ## 0.6.0: Shard online (2026-10-08, released)
 - https://github.com/OhMarker/shard-client/releases/tag/v0.6.0, meta `latest` 0.6.0. Everyone's
