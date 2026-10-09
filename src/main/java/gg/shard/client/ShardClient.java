@@ -84,7 +84,6 @@ public final class ShardClient implements ClientModInitializer {
 
         hud = new HudManager(modules);
         gg.shard.client.render.LowFireModels.init();
-        gg.shard.client.modules.visual.LowFireModule.registerFirePack();
         gg.shard.client.combat.CombatTracker.init();
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> {
             if (gg.shard.client.dev.SmokeTest.active() || !gg.shard.client.gui.WelcomeScreen.needed()) return;

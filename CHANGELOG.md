@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased (branch `fonts`)
+
+- **Faster start-up and resource pack changes:** the start-up resource reload went from about 10-12 s
+  to about 1.5 s on the dev machine (fonts 4.2 s to 0.4 s), so the Mojang screen no longer hangs
+  ("Not Responding"). Shard's fonts are now built the first time they are used.
+- **No second reload at start-up:** the custom fire texture is no longer a resource pack ("Shard fire"
+  is gone from Options > Resource Packs); switching it is instant and never reloads resources.
+- **Sharp HUD at every HUD scale:** text is rasterised at exactly the size it is shown and placed on
+  whole pixels, so small HUD scales no longer blur or lose thin strokes, and menu text is pixel-exact.
+- **Small Items looks exactly like the Small Items mod by default** (everything in your hands, and
+  your empty hand, at 60%); the old sliders are under Look: Custom.
+
 ## 0.7.1
 
 - **Bigger mod menu:** 1200x725 on a 1080p screen (it grows on bigger screens and always fits the

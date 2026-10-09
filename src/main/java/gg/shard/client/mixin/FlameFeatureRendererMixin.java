@@ -23,6 +23,15 @@ abstract class FlameFeatureRendererMixin {
         return ShardClient.isReady() ? y * ShardClient.modules().get(LowFireModule.class).entityHeightFactor() : y;
     }
 
+    /** Custom fire texture: Shard's sprites instead of vanilla's FIRE_0 / FIRE_1. */
+    @WrapOperation(method = "renderFlame", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/resources/model/AtlasManager;get(Lnet/minecraft/client/resources/model/Material;)Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;"), require = 0)
+    private net.minecraft.client.renderer.texture.TextureAtlasSprite shard$flameSprite(net.minecraft.client.resources.model.AtlasManager atlas,
+            net.minecraft.client.resources.model.Material material, Operation<net.minecraft.client.renderer.texture.TextureAtlasSprite> original) {
+        if (!ShardClient.isReady()) return original.call(atlas, material);
+        return original.call(atlas, ShardClient.modules().get(LowFireModule.class).fireMaterial(material));
+    }
+
     @WrapOperation(method = "renderFlame", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Sheets;cutoutBlockSheet()Lnet/minecraft/client/renderer/rendertype/RenderType;"), require = 0)
     private RenderType shard$flameSheet(Operation<RenderType> original) {
         if (ShardClient.isReady() && ShardClient.modules().get(LowFireModule.class).entityTranslucent()) return Sheets.translucentItemSheet();
