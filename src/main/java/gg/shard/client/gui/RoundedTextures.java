@@ -47,7 +47,11 @@ final class RoundedTextures {
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) image.setPixel(x, y, mask[y * size + x]);
         }
+        //? if >=1.21.5 {
         DynamicTexture texture = new DynamicTexture(() -> "shard rounded " + r + "/" + ringPx, image);
+        //?} else {
+        /*DynamicTexture texture = new DynamicTexture(image);
+        *///?}
         Minecraft.getInstance().getTextureManager().register(id, texture);
         CACHE.put(key, id);
         return id;
@@ -83,7 +87,11 @@ final class RoundedTextures {
         Identifier newId = Identifier.fromNamespaceAndPath("shard", "box/" + (boxSerial++));
         int fw = wPx;
         int fh = hPx;
+        //? if >=1.21.5 {
         Minecraft.getInstance().getTextureManager().register(newId, new DynamicTexture(() -> "shard box " + fw + "x" + fh, image));
+        //?} else {
+        /*Minecraft.getInstance().getTextureManager().register(newId, new DynamicTexture(image));
+        *///?}
         BOXES.put(key, newId);
         if (BOXES.size() > MAX_BOXES) {
             var it = BOXES.entrySet().iterator();

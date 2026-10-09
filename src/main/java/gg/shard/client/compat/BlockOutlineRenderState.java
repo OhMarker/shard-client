@@ -14,7 +14,13 @@ public record BlockOutlineRenderState(BlockPos pos, VoxelShape shape, boolean is
     public static BlockOutlineRenderState of(WorldRenderContext ctx, WorldRenderContext.BlockOutlineContext outline) {
         BlockPos pos = outline.blockPos();
         VoxelShape shape = outline.blockState().getShape(ctx.world(), pos, CollisionContext.of(outline.entity()));
+        //? if >=1.21.4 {
         return new BlockOutlineRenderState(pos, shape, ctx.translucentBlockOutline());
+        //?} else {
+        /^// Fabric fires BLOCK_OUTLINE only in the pass vanilla draws this block's outline in.
+        boolean translucent = net.minecraft.client.renderer.ItemBlockRenderTypes.getChunkRenderType(outline.blockState()).sortOnUpload();
+        return new BlockOutlineRenderState(pos, shape, translucent);
+        ^///?}
     }
 }
 *///?}

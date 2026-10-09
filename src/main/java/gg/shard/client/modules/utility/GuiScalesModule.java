@@ -11,10 +11,12 @@ import gg.shard.client.module.setting.Labeled;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-//?} else {
+//?} else if >=1.21.4 {
 /*import net.fabricmc.fabric.api.client.rendering.v1.HudLayerRegistrationCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.IdentifiedLayer;
 import net.minecraft.client.gui.LayeredDraw;
+*///?} else {
+/*import net.minecraft.client.gui.LayeredDraw;
 *///?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -94,14 +96,61 @@ public final class GuiScalesModule extends Module {
         return ScreenScale.factor(inventory.get().value, window.getGuiScale(), max);
     }
 
+    /** HUD parts with their own scale; before 1.21.4 GuiLayersMixin wraps vanilla's Gui methods with these. */
+    public enum Part {
+        HOTBAR(0.5f, 1f), SCOREBOARD(1f, 0.5f), TAB_LIST(0.5f, 0f), TITLE(0.5f, 0.5f), OVERLAY_MESSAGE(0.5f, 1f), BOSS_BAR(0.5f, 0f);
+
+        final float ax;
+        final float ay;
+
+        Part(float ax, float ay) {
+            this.ax = ax;
+            this.ay = ay;
+        }
+    }
+
+    private static GuiScalesModule self;
+
+    private static GuiScalesModule module() {
+        if (self == null && ShardClient.isReady()) self = ShardClient.modules().get(GuiScalesModule.class);
+        return self;
+    }
+
+    private int percent(Part part) {
+        return switch (part) {
+            case HOTBAR -> hotbar.get();
+            case SCOREBOARD -> scoreboard.get();
+            case TAB_LIST -> tabList.get();
+            case TITLE, OVERLAY_MESSAGE -> titles.get();
+            case BOSS_BAR -> bossBar.get();
+        };
+    }
+
+    /** Draws one vanilla HUD part ({@code draw}) at its own scale around its anchor. */
+    public static void drawPart(Part part, net.minecraft.client.gui.GuiGraphics g, Runnable draw) {
+        drawScaled(g, pct(module(), m -> m.percent(part)), part.ax, part.ay, draw);
+    }
+
+    private static void drawScaled(net.minecraft.client.gui.GuiGraphics g, int p, float ax, float ay, Runnable draw) {
+        if (p == 100) {
+            draw.run();
+            return;
+        }
+        float s = p / 100f;
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.translate((float) ScreenScale.anchorShift(g.guiWidth() * ax, s), (float) ScreenScale.anchorShift(g.guiHeight() * ay, s));
+        pose.scale(s, s);
+        draw.run();
+        pose.popMatrix();
+    }
+
     /** Wraps the vanilla HUD parts once at start-up; each reads its scale every frame. */
     public static void registerHudScaling() {
-        GuiScalesModule[] self = new GuiScalesModule[1];
-        java.util.function.Supplier<GuiScalesModule> mod = () -> {
-            if (self[0] == null && ShardClient.isReady()) self[0] = ShardClient.modules().get(GuiScalesModule.class);
-            return self[0];
-        };
+        //? if >=1.21.4 {
+        java.util.function.Supplier<GuiScalesModule> mod = GuiScalesModule::module;
         IntSupplier hot = () -> pct(mod.get(), m -> m.hotbar.get());
+        //?}
         //? if >=1.21.6 {
         for (Identifier id : new Identifier[]{VanillaHudElements.HOTBAR, VanillaHudElements.ARMOR_BAR, VanillaHudElements.HEALTH_BAR,
                 VanillaHudElements.FOOD_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.MOUNT_HEALTH, VanillaHudElements.INFO_BAR,
@@ -113,7 +162,7 @@ public final class GuiScalesModule extends Module {
         wrap(VanillaHudElements.TITLE_AND_SUBTITLE, () -> pct(mod.get(), m -> m.titles.get()), 0.5f, 0.5f);
         wrap(VanillaHudElements.OVERLAY_MESSAGE, () -> pct(mod.get(), m -> m.titles.get()), 0.5f, 1f);
         wrap(VanillaHudElements.BOSS_BAR, () -> pct(mod.get(), m -> m.bossBar.get()), 0.5f, 0f);
-        //?} else {
+        //?} else if >=1.21.4 {
         /*// Before 1.21.6 Fabric names Gui's coarser layers: the hotbar, its bars, the mount health and
         // the held item name are one layer (the XP level number is its own).
         HudLayerRegistrationCallback.EVENT.register(drawer -> {
@@ -126,12 +175,14 @@ public final class GuiScalesModule extends Module {
             wrap(drawer, IdentifiedLayer.BOSS_BAR, () -> pct(mod.get(), m -> m.bossBar.get()), 0.5f, 0f);
         });
         *///?}
+        // Before 1.21.4 Fabric has no HUD layer API: GuiLayersMixin and BossHealthOverlayMixin call drawPart.
     }
 
     private static int pct(GuiScalesModule m, java.util.function.ToIntFunction<GuiScalesModule> f) {
         return m == null || !m.isEnabled() ? 100 : f.applyAsInt(m);
     }
 
+    //? if >=1.21.4 {
     /** Replaces a vanilla element with one drawn scaled around the anchor (fractions of the screen). */
     //? if >=1.21.6 {
     private static void wrap(Identifier id, IntSupplier percent, float ax, float ay) {
@@ -140,18 +191,7 @@ public final class GuiScalesModule extends Module {
     /*private static void wrap(net.fabricmc.fabric.api.client.rendering.v1.LayeredDrawerWrapper drawer, Identifier id, IntSupplier percent, float ax, float ay) {
         drawer.replaceLayer(id, original -> IdentifiedLayer.of(id, (g, delta) -> {
     *///?}
-            int p = percent.getAsInt();
-            if (p == 100) {
-                draw(original, g, delta);
-                return;
-            }
-            float s = p / 100f;
-            var pose = g.pose();
-            pose.pushMatrix();
-            pose.translate((float) ScreenScale.anchorShift(g.guiWidth() * ax, s), (float) ScreenScale.anchorShift(g.guiHeight() * ay, s));
-            pose.scale(s, s);
-            draw(original, g, delta);
-            pose.popMatrix();
+            drawScaled(g, percent.getAsInt(), ax, ay, () -> draw(original, g, delta));
         //? if >=1.21.6 {
         });
         //?} else {
@@ -170,5 +210,6 @@ public final class GuiScalesModule extends Module {
         element.render(g, delta);
         //?}
     }
+    //?}
 
 }

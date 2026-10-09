@@ -1,5 +1,7 @@
 package gg.shard.client.mixin;
 
+// Item models and special renderers arrived in 1.21.4 (ShieldItemRendererMixin before).
+//? if >=1.21.4 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -192,3 +194,4 @@ abstract class ShieldSpecialRendererMixin {
     }
     *///?}
 }
+//?}

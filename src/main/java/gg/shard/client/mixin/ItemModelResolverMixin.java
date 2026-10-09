@@ -1,5 +1,7 @@
 package gg.shard.client.mixin;
 
+// Item models and special renderers arrived in 1.21.4 (ShieldItemRendererMixin before).
+//? if >=1.21.4 {
 import gg.shard.client.render.ShieldCosmetics;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -46,3 +48,4 @@ abstract class ItemModelResolverMixin {
     }
     *///?}
 }
+//?}
