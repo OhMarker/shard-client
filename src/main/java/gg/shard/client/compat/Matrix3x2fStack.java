@@ -1,7 +1,7 @@
 package gg.shard.client.compat;
 
 // Before 1.21.6 GuiGraphics.pose() is a 3D PoseStack, not JOML's 2D Matrix3x2fStack. The
-// stonecutter rules point the org.joml import here and turn `g.pose()` into `Matrix3x2fStack.of(g)`
+// stonecutter rules point the org.joml import here and turn GuiGraphics.pose() calls into Matrix3x2fStack.of
 // on those versions, so the GUI code keeps its 2D push/translate/scale calls. The wrapper holds
 // no state of its own (every call goes to the graphics' PoseStack), so creating one per call is fine.
 //? if <1.21.6 {

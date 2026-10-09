@@ -101,9 +101,11 @@ stonecutter parameters {
         replace("""\bnet\.minecraft\.client\.renderer\.RenderType::guiTextured\b""", "RenderPipelines.GUI_TEXTURED",
             """\b(?:net\.minecraft\.client\.renderer\.)?RenderPipelines\.GUI_TEXTURED\b""", "net.minecraft.client.renderer.RenderType::guiTextured")
     }
-    // Screen.renderBlurredBackground() blurs the main target right away before 1.21.6 (no graphics argument).
+    // Before 1.21.6 the blur post-processes the main target right away (no graphics argument), so
+    // what is drawn before it (the panorama) must be flushed first: compat.GuiDraw.blur(g).
     replacements.regex(current.parsed >= "1.21.6") {
-        replace("""\brenderBlurredBackground\(\)""", "renderBlurredBackground(g)", """\brenderBlurredBackground\(g\)""", "renderBlurredBackground()")
+        replace("""\bgg\.shard\.client\.compat\.GuiDraw\.blur\((\w+)\)""", "renderBlurredBackground(\$1)",
+            """\brenderBlurredBackground\((g)\)""", "gg.shard.client.compat.GuiDraw.blur(\$1)")
     }
     // WorldVersion became a record in 1.21.6 (getName() -> name(), getProtocolVersion() -> protocolVersion()).
     replacements.regex(current.parsed >= "1.21.6") {
