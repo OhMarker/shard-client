@@ -91,6 +91,10 @@ loom {
             if (project.hasProperty("apiBase")) {
                 vmArgs("-Dshard.dev.apiBase=" + project.property("apiBase").toString())
             }
+            // -PfakeBridge serves a stand-in for Shard Launcher's account bridge (three dev accounts).
+            if (project.hasProperty("fakeBridge")) {
+                vmArgs("-Dshard.dev.fakeBridge=1")
+            }
             // -PmetaBase=<url> serves the shared cape list from somewhere else (smoke test: a local folder).
             if (project.hasProperty("metaBase")) {
                 vmArgs("-Dshard.dev.metaBase=" + project.property("metaBase").toString())

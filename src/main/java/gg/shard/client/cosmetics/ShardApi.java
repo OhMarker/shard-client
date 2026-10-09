@@ -70,6 +70,12 @@ public final class ShardApi {
         return session != null;
     }
 
+    /** Forgets the session (the game switched to another Minecraft account). */
+    public void signOut() {
+        session = null;
+        me = null;
+    }
+
     /** Signs in as the game's current Minecraft account. */
     public CompletableFuture<Me> signIn() {
         return CompletableFuture.supplyAsync(() -> {

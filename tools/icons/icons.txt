@@ -106,3 +106,15 @@ redo                redo-2
 grid-on             grid-3x3
 save                save
 cape                shirt
+language            globe
+accessibility       accessibility
+power               power
+refresh             refresh-cw
+pencil              pencil
+user-plus           user-plus
+wifi                wifi
+link                link
+play                play
+cloud               cloud
+puzzle              puzzle
+chevron-up          chevron-up

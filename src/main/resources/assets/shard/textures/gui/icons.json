@@ -1,6 +1,6 @@
 {
  "columns": 16,
- "rows": 7,
+ "rows": 8,
  "sizes": [
   32,
   64,
@@ -112,6 +112,18 @@
   "redo": 102,
   "grid-on": 103,
   "save": 104,
-  "cape": 105
+  "cape": 105,
+  "language": 106,
+  "accessibility": 107,
+  "power": 108,
+  "refresh": 109,
+  "pencil": 110,
+  "user-plus": 111,
+  "wifi": 112,
+  "link": 113,
+  "play": 114,
+  "cloud": 115,
+  "puzzle": 116,
+  "chevron-up": 117
  }
 }

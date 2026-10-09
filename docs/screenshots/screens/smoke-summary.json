@@ -1,0 +1,18 @@
+{
+  "screensTitleIsShard": true,
+  "screensBridge": true,
+  "screensSwitchedTo": "OhMarkerr",
+  "screensSwitchedUuid": "4f0e8d1c-2b3a-49f8-a7c6-d5e4f3a2b1c0",
+  "screensExpiredError": "sign in again in Shard Launcher",
+  "screensAccountsAfterAdd": 4,
+  "screensBackTo": "ShardSmoke",
+  "screensMultiplayerIsShard": true,
+  "screensPings": "1/2 answered",
+  "screensFallbackIsVanilla": true,
+  "screensJoinedFromList": true,
+  "screensCanSwitchInWorld": false,
+  "layouts": [],
+  "layoutIdenticalAcrossScales": true,
+  "clippedTexts": [],
+  "configSchemaLoaded": 3
+}
