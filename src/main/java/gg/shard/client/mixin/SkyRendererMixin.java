@@ -45,7 +45,7 @@ abstract class SkyRendererMixin {
         //?}
     }
 }
-//?} else {
+//?} else if >=1.21.2 {
 /*// Before 1.21.9 there is no sky render state: the sky pass (a lambda in LevelRenderer.addSkyPass,
 // the only caller of these two in LevelRenderer) reads the colours itself.
 @Mixin(LevelRenderer.class)
@@ -67,6 +67,29 @@ abstract class SkyRendererMixin {
         if (!ShardClient.isReady()) return vanilla;
         SkyModule sky = ShardClient.modules().get(SkyModule.class);
         return sky.active(net.minecraft.client.Minecraft.getInstance().level) && !sky.keepsSunriseGlow() ? 0 : vanilla;
+    }
+}
+*///?} else {
+/*// Before 1.21.2 LevelRenderer.renderSky draws the dome itself: the sky colour is a Vec3 and the
+// sunrise glow an RGBA float array (null = none).
+@Mixin(LevelRenderer.class)
+abstract class SkyRendererMixin {
+    @WrapOperation(method = "renderSky", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getSkyColor(Lnet/minecraft/world/phys/Vec3;F)Lnet/minecraft/world/phys/Vec3;"))
+    private Vec3 shard$skyColour(ClientLevel level, Vec3 pos, float partialTick, Operation<Vec3> original) {
+        Vec3 vanilla = original.call(level, pos, partialTick);
+        if (!ShardClient.isReady()) return vanilla;
+        SkyModule sky = ShardClient.modules().get(SkyModule.class);
+        if (!sky.active(level)) return vanilla;
+        int colour = net.minecraft.util.ARGB.colorFromFloat(1f, (float) vanilla.x, (float) vanilla.y, (float) vanilla.z);
+        return Vec3.fromRGB24(sky.sky(colour, level.getSunAngle(partialTick), level.getRainLevel(partialTick), level.getThunderLevel(partialTick)));
+    }
+
+    @WrapOperation(method = "renderSky", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/DimensionSpecialEffects;getSunriseColor(FF)[F"))
+    private float[] shard$sunriseGlow(DimensionSpecialEffects effects, float timeOfDay, float partialTick, Operation<float[]> original) {
+        float[] vanilla = original.call(effects, timeOfDay, partialTick);
+        if (!ShardClient.isReady()) return vanilla;
+        SkyModule sky = ShardClient.modules().get(SkyModule.class);
+        return sky.active(net.minecraft.client.Minecraft.getInstance().level) && !sky.keepsSunriseGlow() ? null : vanilla;
     }
 }
 *///?}

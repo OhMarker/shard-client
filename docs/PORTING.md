@@ -15,6 +15,45 @@ element that exists on 1.21.11 works on every version.
   mappings; 26.1+ is unobfuscated (fabric-loom, Java 25).
 - Jars: `./gradlew :<mc>:build` → `build/libs/<modVersion>/shard-<modVersion>+<mc>.jar` (+ .sha512).
 
+## Maintaining every version
+All 17 nodes (1.21 → 1.21.11, 26.1 → 26.3) are ported and released from the same `src/`; every
+change has to keep all of them building and behaving the same.
+
+**Adding a feature**
+1. Write it in `src/` against 1.21.11 (never switch the active version). Use what already absorbs
+   the version differences: GUI code draws through `Render2D`/`Fonts` and names its graphics `g`
+   (the `g.pose()`, `g.blit(...)`, `g.enableScissor(...)` and `g.nextStratum()` rules depend on it),
+   world lines go through `compat.Lines`/`compat.WorldDraw`, pixels through `image.setPixel`
+   (`compat.NativeImages` before 1.21.2), colours through `ARGB` (`compat.Argb`, `FastColor`), and
+   so on. Anything else that differs gets a helper in `compat` or a versioned block.
+2. A new mixin: `javap` the target on the oldest (1.21) and newest (26.3) jars and on the nodes
+   where Shard's code paths split; add `"versioned"` entries when the target only exists on some.
+   Then `./gradlew :<mc>:compileJava :<mc>:processResources` and `python tools/mixin-targets.py <mc>`
+   on those nodes (it checks `method`/`target`, including `method = "*"`, but not @Shadow,
+   @Accessor or handler argument types).
+3. `./gradlew build --continue`: all 17 nodes must compile and pass the JUnit tests.
+4. Run the smoke pass that exercises the feature (default, `features`, `screens -PfakeBridge`,
+   `cosmetics`, `drop2`; see Verification) with `-PcountInjections` (not on 1.21.11, whose dev
+   companions trip it) on one node of every family the change touches. The families, where the
+   code paths split: 26.3 · 26.2 · 26.1.x · 1.21.11 · 1.21.9-1.21.10 · 1.21.6-1.21.8 · 1.21.5 ·
+   1.21.4 · 1.21.2-1.21.3 · 1.21-1.21.1. Unversioned code: at least 1.21.11, 1.21.5 (PoseStack
+   GUI), 1.21.1 (no render states, texture-id blits) and 26.3. A new versioned block: both sides of
+   its boundary. Compare summaries and screenshots with that node's previous run.
+
+**Adding the next Minecraft release as a node**
+1. `versions/<mc>/gradle.properties` (copy the newest node's; set `mcCompat`, `mcReleases`,
+   `fabricApiVersion`, `modmenuVersion`) and the version in `settings.gradle.kts` `versions(...)`.
+2. `./gradlew :<mc>:genSources`, then `python tools/mixin-sigdiff.py <previous> <mc>` and
+   `python tools/mixin-targets.py <mc>`; diff the sources of every mixin target and of the classes
+   the compile errors name against the previous node.
+3. Fix in the order of the workflow below: global rules (`since` = the new version, so they stay in
+   force after it), `compat` helpers, then `//? if >=<mc>` blocks. 1.21.11 stays the active version.
+4. Runtime: a `.smoke-server-<mc>/` from Mojang's manifest and the full pass set with
+   `-PcountInjections`, compared with the previous newest node; then the default pass on 1.21.11
+   and on the previous newest node, and `./gradlew build --continue`.
+5. Notes here, CHANGELOG.md and the release notes. The launcher picks the build per instance from
+   `mcReleases` (shard-manifest.json); publishing it is a separate step.
+
 ## Workflow for one version
 1. `./gradlew :<mc>:compileJava` compiles the generated copy in
    `versions/<mc>/build/generated/stonecutter/main/java/...`; the line numbers match `src/`.
@@ -509,3 +548,79 @@ pose, buffers, light)), `GuiGraphics.blit`/`blitSprite` take a texture id and no
 the blur is `processBlurEffect(float)`, and `NativeImage.setPixel` is ABGR (`setPixelRGBA`).
 Start with `-PcountInjections`, `tools/mixin-targets.py` and `tools/mixin-sigdiff.py 1.21.1 1.21.2`;
 bare `method = "name"` selectors that become ambiguous only show at run time.
+
+### 1.21.1 and 1.21
+- 1.21.1 is a hotfix: for everything Shard touches the two jars are the same (the differences are
+  `DetectedVersion`, `SharedConstants`, command arguments, tags and a few server-side classes), and
+  Fabric API 0.102.0 (1.21) and 0.116.17 (1.21.1) are signature-compatible for Shard. Same source,
+  no code between them.
+- **No render states** (they arrived in 1.21.2); renderers and layers get the entity:
+  - Bandana: BandanaLayer is a `RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>`,
+    looks the texture up itself, hides under any head-slot item, and runs inside the body transform
+    (no `model.root()`). AvatarRendererMixin / AvatarRenderStateMixin are `>=1.21.2`.
+  - Crystals: no `EndCrystalModel`; the renderer draws its own base, two glass frames and cube.
+    EndCrystalRendererMixin's `<1.21.2` body scales at the head of `render(EndCrystal, ...)`, spins
+    through `@ModifyConstant(3.0F)`, stops the bounce at the static `getY(EndCrystal, F)`, hides the
+    base at `showsBottom()` (`CrystalTweaksModule.hidesBase`) and recolours by tinting each
+    `ModelPart.render` (the `cube` field gets the core tint, the rest the frame tint) into the same or
+    a translucent buffer. EndCrystalModelMixin is `>=1.21.2`.
+  - Glow outlines and the Entity Optimizer frame: `renderLevel` walks and draws the entities itself
+    (LevelRendererEntitiesMixin wraps `shouldEntityAppearGlowing` / `getTeamColor` there and starts
+    the frame at `entitiesForRendering()`).
+  - No Death Animation / Hit Color: LivingEntityRendererMixin reads `deathTime` out of
+    `setupRotations` (@ModifyExpressionValue) and packs the overlay without red at `getOverlayCoords`
+    in `render`; the armour tint's wearer flag is set around `render`.
+  - Armour: `HumanoidArmorLayer.renderModel` (coloured) and `renderTrim` (plain; the glint pass is left
+    alone); elytra have their own layer (ElytraLayerMixin, `<1.21.2`).
+  - Third-person shield holder: `ItemInHandLayer.renderArmWithItem` takes the LivingEntity
+    (ItemInHandLayerMixin `<1.21.2` block); LivingEntityRenderStateMixin is `>=1.21.2 <1.21.4`.
+  - Hitboxes: `EntityRenderDispatcher.render(Entity, DDDFF, PoseStack, MultiBufferSource, I)` (with
+    the yaw, no renderer argument); `renderHitbox` is unchanged.
+- **GUI**: `blit`/`blitSprite` take a texture id (or sprite id) and no RenderType function or colour.
+  Rules turn `g.blit(GUI_TEXTURED, ...)` / `g.blitSprite(GUI_TEXTURED, ...)` into
+  `compat.GuiDraw.blit/blitSprite(g, GuiDraw.GUI_TEXTURED, ...)` with 1.21.2's argument order; they
+  draw a POSITION_TEX_COLOR quad with blending, as vanilla's coloured `innerBlit`. The blur is
+  `processBlurEffect(partialTick)`, `RenderSystem.clear` takes `ON_OSX`. Everything else of the
+  1.21.5 GUI layer carries over (Gui.layers exists, so GuiLayersMixin works with Fabric's
+  `HudRenderCallback`-only API).
+- **Mouse**: MouseHandler sends clicks, releases and moves from **static** lambdas. A non-static
+  handler with `method = "*"` silently skips static targets ("Scanned 0 target(s)" under
+  `-PcountInjections`), so MouseHandlerScaleMixin has static handlers there.
+- **Sky and fog**: `LevelRenderer.renderSky` reads `ClientLevel.getSkyColor` (a `Vec3`) and
+  `DimensionSpecialEffects.getSunriseColor(FF)` (RGBA `float[]`, null = none); the Overworld sky type
+  is `NORMAL`. The fog colour is computed in `FogRenderer.setupColor` into the static
+  `fogRed/Green/Blue` (shadowed), finished at the same PUTSTATIC (ordinal 4) as 1.21.2-1.21.5.
+- **Explosions**: `handleExplosion` finalizes an `Explosion`, which plays the sound and adds the
+  particle through `Level`; ClientPacketListenerMixin marks that call (`compat.ServerExplosions`) and
+  ExplosionMixin (`<1.21.2`) applies the Anchor and Explosion Optimizer filters. The packet has
+  loose `getX/Y/Z`.
+- **Smaller API differences**: no `FramerateLimitTracker` (the mixin targets
+  `Minecraft.getFramerateLimit`; no inactivity limit option); `GameRenderer.getFov` returns a
+  double; `AbstractArrow.inGround` is a field (accessor); totem event 35 is `TALISMAN_ACTIVATE`;
+  `ClientboundSetTimePacket.getGameTime()`; item cooldowns per `Item`; `Input.up`;
+  `getViewYRot(pt)`; no `ShapeRenderer` (its line helpers are on `LevelRenderer`, rule; the shape
+  outline is private there, so `Lines.shape` draws the edges itself); `FastColor.ARGB32` (rule);
+  `getToasts()`, `getTimer()` (rules); NativeImage only has ABGR `setPixelRGBA/getPixelRGBA`
+  (`compat.NativeImages`, rule) and `makePixelArray()` instead of `getPixels()`;
+  `Inventory.selected` is a public field with no setter (rule); `BannerRenderer.renderPatterns` and
+  `Material.buffer` have no "sheeted" flag; the BEWLR shield uses `getFoilBufferDirect`; no
+  `Window.isIconified/isMinimized`; `ParticleStatus` is in `net.minecraft.client`.
+- Tooling: `tools/mixin-targets.py` now checks `method = "*"` injectors (any method of the target,
+  skipping static ones for non-static handlers) and reads `src/` for the active version. It would
+  have caught SkyRendererMixin and MouseHandlerScaleMixin, which only failed at start-up; it still
+  does not check @Shadow / @Accessor (`AbstractArrow.isInGround` was found with `javap`).
+- Smoke tip: the run folder of 1.21.11 is `run/`, which is also where the reference config comes
+  from; a script that refreshes `run-<mc>/config/shard` must skip `run/` itself. `.smoke-server/`
+  (1.21.11) has RCON off; enable it for the pass and restore the file afterwards.
+- Vanilla differences in the screenshots: same trial-chambers panorama as 1.21.2; whether the killed
+  zombie is still on screen in `smoke-step7-recap` (and whether its drop was picked up) depends on
+  tick timing and varies between runs of the same version.
+
+Verified (2026-10-09): build + all JUnit tests on every node 1.21 to 26.3 (`./gradlew build
+--continue`). 1.21.1: default (`-PcountInjections`), features, screens (`-PfakeBridge`), cosmetics
+and drop2 give the same summaries as 1.21.2, no injection failures; screenshots compared side by
+side with 1.21.2 and 1.21.3. 1.21: default, features and drop2 with `-PcountInjections`, same
+summaries as 1.21.1. After the shared changes the generated sources of every node from 1.21.2 on
+differ only in unused new classes, comments and two inlined method-descriptor constants, and
+1.21.11 (default), 1.21.2 and 26.3 (default, `-PcountInjections`) were run again: same summaries
+and screenshots.

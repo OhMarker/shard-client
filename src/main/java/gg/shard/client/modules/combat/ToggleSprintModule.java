@@ -32,7 +32,12 @@ public final class ToggleSprintModule extends HudModule {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (p == null) return;
+        //? if >=1.21.2 {
         boolean moving = !onlyWhenMoving.get() || p.input.keyPresses.forward();
+        //?} else {
+        /*// Before 1.21.2 the movement keys are loose booleans on Input.
+        boolean moving = !onlyWhenMoving.get() || p.input.up;
+        *///?}
         if (moving && !p.isUsingItem()) mc.options.keySprint.setDown(true);
     }
 

@@ -3,8 +3,9 @@
 ## 0.10.0
 
 - **Shard on more Minecraft versions.** The same client, with every module, menu, HUD element and
-  cosmetic, now also runs on Minecraft 26.3, 26.2, 26.1, 26.1.1, 26.1.2, 1.21.10, 1.21.9, 1.21.8, 1.21.7, 1.21.6, 1.21.5, 1.21.4, 1.21.3 and 1.21.2. More versions follow in this release
-  line; Shard Launcher installs the right build for each instance automatically.
+  cosmetic, now also runs on Minecraft 26.3, 26.2, 26.1, 26.1.1, 26.1.2, 1.21.10, 1.21.9, 1.21.8, 1.21.7, 1.21.6, 1.21.5, 1.21.4, 1.21.3, 1.21.2, 1.21.1 and 1.21:
+  every version from 1.21 to 26.3. Shard Launcher installs the right build for each instance automatically.
+- Fixed: the see-through flames on burning mobs (Low Fire) were invisible on 1.21.11.
 
 ## 0.9.1
 

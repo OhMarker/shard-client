@@ -21,7 +21,10 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import gg.shard.client.compat.Lines;
 import gg.shard.client.compat.WorldDraw;
 import net.minecraft.client.renderer.ShapeRenderer;
+// No ARGB before 1.21.2 (its float getters are compat.Argb there).
+//? if >=1.21.2 {
 import net.minecraft.util.ARGB;
+//?}
 *///?}
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;

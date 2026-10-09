@@ -1,6 +1,6 @@
 package gg.shard.client.mixin;
 
-//? if <1.21.4 {
+//? if >=1.21.2 <1.21.4 {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import gg.shard.client.render.ShieldCosmetics;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -30,6 +30,35 @@ abstract class ItemInHandLayerMixin {
 
     @Inject(method = "renderArmWithItem", at = @At("RETURN"))
     private void shard$holderEnd(LivingEntityRenderState state, BakedModel model, ItemStack stack, ItemDisplayContext context, HumanoidArm arm,
+                                 PoseStack pose, MultiBufferSource buffers, int light, CallbackInfo ci) {
+        ShieldCosmetics.pop();
+    }
+}
+*///?} else if <1.21.2 {
+/*import com.mojang.blaze3d.vertex.PoseStack;
+import gg.shard.client.render.ShieldCosmetics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+/^* Before 1.21.2 the layer draws from the holder itself (no render state). ^/
+@Mixin(ItemInHandLayer.class)
+abstract class ItemInHandLayerMixin {
+    @Inject(method = "renderArmWithItem", at = @At("HEAD"))
+    private void shard$holder(LivingEntity holder, ItemStack stack, ItemDisplayContext context, HumanoidArm arm,
+                              PoseStack pose, MultiBufferSource buffers, int light, CallbackInfo ci) {
+        ShieldCosmetics.push(holder, context);
+    }
+
+    @Inject(method = "renderArmWithItem", at = @At("RETURN"))
+    private void shard$holderEnd(LivingEntity holder, ItemStack stack, ItemDisplayContext context, HumanoidArm arm,
                                  PoseStack pose, MultiBufferSource buffers, int light, CallbackInfo ci) {
         ShieldCosmetics.pop();
     }

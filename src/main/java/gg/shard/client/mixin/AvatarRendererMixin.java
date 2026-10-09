@@ -1,5 +1,7 @@
 package gg.shard.client.mixin;
 
+// Render states arrived in 1.21.2; before, BandanaLayer looks the bandana up from the player itself.
+//? if >=1.21.2 {
 import gg.shard.client.ShardClient;
 import gg.shard.client.modules.visual.CosmeticsModule;
 import gg.shard.client.render.BandanaState;
@@ -48,3 +50,4 @@ abstract class AvatarRendererMixin {
         ((BandanaState) state).shard$setBandana(texture);
     }
 }
+//?}

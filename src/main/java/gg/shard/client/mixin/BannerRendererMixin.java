@@ -34,7 +34,9 @@ import java.util.function.Function;
 abstract class BannerRendererMixin {
     //? if <1.21.9 {
     /*// Before 1.21.9 the base and the layers are drawn straight into buffers (renderPatterns).
-    @WrapOperation(method = "renderPatterns(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/model/geom/ModelPart;Lnet/minecraft/client/resources/model/Material;ZLnet/minecraft/world/item/DyeColor;Lnet/minecraft/world/level/block/entity/BannerPatternLayers;ZZ)V",
+    //? if >=1.21.2 {
+    private static final String RENDER_PATTERNS = "renderPatterns(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/model/geom/ModelPart;Lnet/minecraft/client/resources/model/Material;ZLnet/minecraft/world/item/DyeColor;Lnet/minecraft/world/level/block/entity/BannerPatternLayers;ZZ)V";
+    @WrapOperation(method = RENDER_PATTERNS,
             at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;ZZ)Lcom/mojang/blaze3d/vertex/VertexConsumer;"),
             require = 0)
@@ -43,8 +45,21 @@ abstract class BannerRendererMixin {
         return original.call(material, buffers, ItemTints.shieldTranslucent() ? (Function<net.minecraft.resources.Identifier, RenderType>) RenderTypes::entityTranslucent : factory,
                 sheeted, foil);
     }
+    //?} else {
+    /^// Before 1.21.2 renderPatterns has no "sheeted" flag and the base buffer takes none either.
+    private static final String RENDER_PATTERNS = "renderPatterns(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/model/geom/ModelPart;Lnet/minecraft/client/resources/model/Material;ZLnet/minecraft/world/item/DyeColor;Lnet/minecraft/world/level/block/entity/BannerPatternLayers;Z)V";
+    @WrapOperation(method = RENDER_PATTERNS,
+            at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/resources/model/Material;buffer(Lnet/minecraft/client/renderer/MultiBufferSource;Ljava/util/function/Function;Z)Lcom/mojang/blaze3d/vertex/VertexConsumer;"),
+            require = 0)
+    private static VertexConsumer shard$translucentBase(Material material, MultiBufferSource buffers, Function<net.minecraft.resources.Identifier, RenderType> factory,
+                                                        boolean foil, Operation<VertexConsumer> original) {
+        return original.call(material, buffers, ItemTints.shieldTranslucent() ? (Function<net.minecraft.resources.Identifier, RenderType>) RenderTypes::entityTranslucent : factory,
+                foil);
+    }
+    ^///?}
 
-    @WrapOperation(method = "renderPatterns(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IILnet/minecraft/client/model/geom/ModelPart;Lnet/minecraft/client/resources/model/Material;ZLnet/minecraft/world/item/DyeColor;Lnet/minecraft/world/level/block/entity/BannerPatternLayers;ZZ)V",
+    @WrapOperation(method = RENDER_PATTERNS,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/geom/ModelPart;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V"),
             require = 0)
     private static void shard$tintBase(ModelPart part, PoseStack pose, VertexConsumer buffer, int light, int overlay, Operation<Void> original) {

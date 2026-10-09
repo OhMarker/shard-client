@@ -57,7 +57,12 @@ abstract class ClientPacketListenerMixin {
     private void shard$onEntityEvent(ClientboundEntityEventPacket packet, CallbackInfo ci) {
         if (!ShardClient.isReady() || level == null) return;
         byte id = packet.getEventId();
+        //? if >=1.21.2 {
         if (id != EntityEvent.PROTECTED_FROM_DEATH && id != EntityEvent.DEATH) return;
+        //?} else {
+        /*// Before 1.21.2 the totem event (35) is TALISMAN_ACTIVATE.
+        if (id != EntityEvent.TALISMAN_ACTIVATE && id != EntityEvent.DEATH) return;
+        *///?}
         Entity entity = packet.getEntity(level);
         if (!(entity instanceof LivingEntity living)) return;
         if (id == EntityEvent.DEATH) ShardEvents.fireDeath(living);
@@ -97,7 +102,11 @@ abstract class ClientPacketListenerMixin {
 
     @Inject(method = "handleSetTime", at = @At(value = "INVOKE", target = SAME_THREAD, shift = At.Shift.AFTER), require = 0)
     private void shard$onTime(net.minecraft.network.protocol.game.ClientboundSetTimePacket packet, CallbackInfo ci) {
+        //? if >=1.21.2 {
         gg.shard.client.modules.hud.TpsModule.ESTIMATOR.onTimePacket(packet.gameTime(), System.nanoTime());
+        //?} else {
+        /*gg.shard.client.modules.hud.TpsModule.ESTIMATOR.onTimePacket(packet.getGameTime(), System.nanoTime());
+        *///?}
     }
 
     // ---- crystal prediction readout ------------------------------------------------------------
@@ -115,10 +124,18 @@ abstract class ClientPacketListenerMixin {
     private void shard$onExplosion(ClientboundExplodePacket packet, CallbackInfo ci) {
         shard$anchorPredicted = false;
         if (!ShardClient.isReady() || level == null) return;
+        //? if >=1.21.2 {
         shard$anchorPredicted = ShardClient.modules().get(AnchorOptimizerModule.class).consumeServerExplosion(packet.center());
         ShardClient.modules().get(CrystalOptimizerModule.class).onExplosion(level, packet.center());
+        //?} else {
+        /*// Before 1.21.2 the packet has loose coordinates.
+        net.minecraft.world.phys.Vec3 center = new net.minecraft.world.phys.Vec3(packet.getX(), packet.getY(), packet.getZ());
+        shard$anchorPredicted = ShardClient.modules().get(AnchorOptimizerModule.class).consumeServerExplosion(center);
+        ShardClient.modules().get(CrystalOptimizerModule.class).onExplosion(level, center);
+        *///?}
     }
 
+    //? if >=1.21.2 {
     @WrapOperation(method = "handleExplosion", at = @At(value = "INVOKE", target = PLAY_LOCAL_SOUND))
     private void shard$explosionSound(ClientLevel instance, double x, double y, double z, SoundEvent sound, SoundSource source,
                                       float volume, float pitch, boolean delay, Operation<Void> original) {
@@ -141,6 +158,19 @@ abstract class ClientPacketListenerMixin {
         }
         original.call(instance, options, x, y, z, dx, dy, dz);
     }
+    //?} else {
+    /*// Before 1.21.2 the client finalizes an Explosion, which plays the sound and adds the particle
+    // itself (ExplosionMixin, which reads this context).
+    @WrapOperation(method = "handleExplosion", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Explosion;finalizeExplosion(Z)V"))
+    private void shard$serverExplosion(net.minecraft.world.level.Explosion explosion, boolean particles, Operation<Void> original) {
+        gg.shard.client.compat.ServerExplosions.begin(shard$anchorPredicted);
+        try {
+            original.call(explosion, particles);
+        } finally {
+            gg.shard.client.compat.ServerExplosions.end();
+        }
+    }
+    *///?}
 
     // ---- entity spawns -----------------------------------------------------------------------
 

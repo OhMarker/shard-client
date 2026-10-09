@@ -64,20 +64,34 @@ final class Benchmark {
                     center = player.blockPosition();
                     // Measure real frame times: no vsync, no idle limiter, every particle (vanilla 120 fps cap stays).
                     mc.options.enableVsync().set(false);
+                    //? if >=1.21.2 {
                     mc.options.inactivityFpsLimit().set(net.minecraft.client.InactivityFpsLimit.MINIMIZED);
                     mc.options.particles().set(net.minecraft.server.level.ParticleStatus.ALL);
+                    //?} else {
+                    /*// Before 1.21.2 there is no inactivity limit and ParticleStatus is a client class.
+                    mc.options.particles().set(net.minecraft.client.ParticleStatus.ALL);
+                    *///?}
                     // The Gradle-launched window starts behind everything; a minimised or inactive
                     // window makes vanilla throttle to 10 fps, which would swamp the measurement.
                     long handle = mc.getWindow().handle();
                     org.lwjgl.glfw.GLFW.glfwRestoreWindow(handle);
                     org.lwjgl.glfw.GLFW.glfwShowWindow(handle);
                     org.lwjgl.glfw.GLFW.glfwFocusWindow(handle);
+                    //? if >=1.21.2 {
                     ShardClient.LOGGER.info("Bench: window minimized={} iconified={} focused={} visible={} fpsLimit={} vsync={} inactivity={}",
                             mc.getWindow().isMinimized(),
                             org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(handle, org.lwjgl.glfw.GLFW.GLFW_ICONIFIED),
                             org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(handle, org.lwjgl.glfw.GLFW.GLFW_FOCUSED),
                             org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(handle, org.lwjgl.glfw.GLFW.GLFW_VISIBLE),
                             mc.options.framerateLimit().get(), mc.options.enableVsync().get(), mc.options.inactivityFpsLimit().get());
+                    //?} else {
+                    /*// No Window.isMinimized/isIconified or inactivity limit before 1.21.2.
+                    ShardClient.LOGGER.info("Bench: window iconified={} focused={} visible={} fpsLimit={} vsync={}",
+                            org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(handle, org.lwjgl.glfw.GLFW.GLFW_ICONIFIED),
+                            org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(handle, org.lwjgl.glfw.GLFW.GLFW_FOCUSED),
+                            org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(handle, org.lwjgl.glfw.GLFW.GLFW_VISIBLE),
+                            mc.options.framerateLimit().get(), mc.options.enableVsync().get());
+                    *///?}
                     send(player, "attribute @s minecraft:block_interaction_range base set 64");
                     send(player, "attribute @s minecraft:entity_interaction_range base set 64");
                     send(player, "gamemode creative");

@@ -41,8 +41,20 @@ public final class Lines {
     public static void shape(PoseStack pose, VertexConsumer consumer, VoxelShape shape, double x, double y, double z, int color, float width) {
         //? if >=1.21.11 {
         ShapeRenderer.renderShape(pose, consumer, shape, x, y, z, color, width);
-        //?} else {
+        //?} else if >=1.21.2 {
         /*ShapeRenderer.renderShape(pose, consumer, shape, x, y, z, color);
+        *///?} else {
+        /*// Before 1.21.2 the shape outline is LevelRenderer's private renderShape (float colour).
+        PoseStack.Pose last = pose.last();
+        shape.forAllEdges((x0, y0, z0, x1, y1, z1) -> {
+            float nx = (float) (x1 - x0), ny = (float) (y1 - y0), nz = (float) (z1 - z0);
+            float len = net.minecraft.util.Mth.sqrt(nx * nx + ny * ny + nz * nz);
+            nx /= len;
+            ny /= len;
+            nz /= len;
+            consumer.addVertex(last, (float) (x0 + x), (float) (y0 + y), (float) (z0 + z)).setColor(color).setNormal(last, nx, ny, nz);
+            consumer.addVertex(last, (float) (x1 + x), (float) (y1 + y), (float) (z1 + z)).setColor(color).setNormal(last, nx, ny, nz);
+        });
         *///?}
     }
     //?}

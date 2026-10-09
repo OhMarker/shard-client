@@ -854,7 +854,12 @@ public final class SmokeTest {
                 }
             }
             case 62 -> {
+                //? if >=1.21.2 {
                 p.getCooldowns().addCooldown(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL), 200);
+                //?} else {
+                /*// Before 1.21.2 cooldowns are per item, not per stack cooldown group.
+                p.getCooldowns().addCooldown(net.minecraft.world.item.Items.ENDER_PEARL, 200);
+                *///?}
                 mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: chat line"));
                 mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));
                 mc.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Shard smoke: repeated line"));

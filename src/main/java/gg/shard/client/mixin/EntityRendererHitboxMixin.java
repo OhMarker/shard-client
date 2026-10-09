@@ -48,7 +48,14 @@ import org.spongepowered.asm.mixin.injection.At;
  ^/
 @Mixin(EntityRenderDispatcher.class)
 abstract class EntityRendererHitboxMixin {
-    @WrapWithCondition(method = "render(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/renderer/entity/EntityRenderer;)V",
+    //? if >=1.21.2 {
+    private static final String RENDER = "render(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/renderer/entity/EntityRenderer;)V";
+    //?} else {
+    /^// Before 1.21.2 the one render method also takes the yaw.
+    private static final String RENDER = "render(Lnet/minecraft/world/entity/Entity;DDDFFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V";
+    ^///?}
+
+    @WrapWithCondition(method = RENDER,
             at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;renderHitbox(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/entity/Entity;FFFF)V"))
     private boolean shard$styledHitbox(PoseStack pose, VertexConsumer consumer, Entity entity, float partialTick, float r, float g, float b) {

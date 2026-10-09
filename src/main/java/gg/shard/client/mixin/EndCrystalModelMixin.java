@@ -1,5 +1,7 @@
 package gg.shard.client.mixin;
 
+// EndCrystalModel arrived in 1.21.2; before, EndCrystalRendererMixin handles spin and bounce.
+//? if >=1.21.2 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import gg.shard.client.ShardClient;
@@ -23,3 +25,4 @@ abstract class EndCrystalModelMixin {
         return original.call(age);
     }
 }
+//?}

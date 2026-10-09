@@ -16,6 +16,10 @@ import net.minecraft.world.attribute.EnvironmentAttributes;
 //?} else if >=1.21.6 {
 
 /*import net.minecraft.client.renderer.fog.environment.AirBasedFogEnvironment;
+*///?} else if <1.21.2 {
+/*import net.minecraft.client.renderer.FogRenderer;
+import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.injection.Inject;
 *///?} else {
 /*import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalFloatRef;
@@ -60,7 +64,7 @@ abstract class AtmosphericFogEnvironmentMixin {
         if (!((Object) this instanceof AtmosphericFogEnvironment)) return original;
         return shard$fog(original, level, camera, renderDistance, partialTick);
     }
-    //?} else {
+    //?} else if >=1.21.2 {
     /*@Inject(method = "computeFogColor", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/FogRenderer;biomeChangedTime:J",
             opcode = Opcodes.PUTSTATIC, ordinal = 4), require = 0)
     private static void shard$fogColour(Camera camera, float partialTick, ClientLevel level, int renderDistance, float darken,
@@ -72,6 +76,23 @@ abstract class AtmosphericFogEnvironmentMixin {
         r.set(net.minecraft.util.ARGB.redFloat(colour));
         g.set(net.minecraft.util.ARGB.greenFloat(colour));
         b.set(net.minecraft.util.ARGB.blueFloat(colour));
+    }
+    *///?} else {
+    /*// Before 1.21.2 setupColor keeps the colour in static fields (same branch, same PUTSTATIC).
+    @org.spongepowered.asm.mixin.Shadow private static float fogRed;
+    @org.spongepowered.asm.mixin.Shadow private static float fogGreen;
+    @org.spongepowered.asm.mixin.Shadow private static float fogBlue;
+
+    @Inject(method = "setupColor", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/FogRenderer;biomeChangedTime:J",
+            opcode = Opcodes.PUTSTATIC, ordinal = 4))
+    private static void shard$fogColour(Camera camera, float partialTick, ClientLevel level, int renderDistance, float darken,
+                                        org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        int original = net.minecraft.util.ARGB.colorFromFloat(1f, fogRed, fogGreen, fogBlue);
+        int colour = shard$fog(original, level, camera, renderDistance, partialTick);
+        if (colour == original) return;
+        fogRed = net.minecraft.util.ARGB.redFloat(colour);
+        fogGreen = net.minecraft.util.ARGB.greenFloat(colour);
+        fogBlue = net.minecraft.util.ARGB.blueFloat(colour);
     }
     *///?}
 
@@ -105,9 +126,12 @@ abstract class AtmosphericFogEnvironmentMixin {
                 /*int glow = net.minecraft.util.ARGB.colorFromVector4f(camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, partialTick));
                 *///?} else if >=1.21.11 {
                 int glow = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, partialTick);
-                //?} else {
+                //?} else if >=1.21.2 {
                 /*float time = level.getTimeOfDay(partialTick);
                 int glow = level.effects().isSunriseOrSunset(time) ? level.effects().getSunriseOrSunsetColor(time) : 0;
+                *///?} else {
+                /*float[] rgba = level.effects().getSunriseColor(level.getTimeOfDay(partialTick), partialTick);
+                int glow = rgba == null ? 0 : net.minecraft.util.ARGB.colorFromFloat(rgba[3], rgba[0], rgba[1], rgba[2]);
                 *///?}
                 float a = ((glow >>> 24) & 0xFF) / 255f;
                 if (a > 0) fog = SkyPalette.lerp(facing * a, fog, glow);

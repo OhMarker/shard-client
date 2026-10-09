@@ -20,13 +20,20 @@ abstract class GameRendererMixin {
     }
 
     // 26.1 computes the world FOV in Camera.calculateFov (CameraMixin).
-    //? if <26.1 {
+    //? if >=1.21.2 <26.1 {
     @ModifyReturnValue(method = "getFov", at = @At("RETURN"))
     private float shard$zoomFov(float original, Camera camera, float partialTick, boolean useFovSetting) {
         if (!ShardClient.isReady() || !useFovSetting) return original;
         return ShardClient.modules().get(ZoomModule.class).applyFov(original);
     }
-    //?}
+    //?} else if <1.21.2 {
+    /*// Before 1.21.2 getFov returns a double.
+    @ModifyReturnValue(method = "getFov", at = @At("RETURN"))
+    private double shard$zoomFov(double original, Camera camera, float partialTick, boolean useFovSetting) {
+        if (!ShardClient.isReady() || !useFovSetting) return original;
+        return ShardClient.modules().get(ZoomModule.class).applyFov((float) original);
+    }
+    *///?}
 
     //? if <1.21.6 {
     /*/^* Totem Pops, animation size (before 1.21.6 GameRenderer draws the floating item, scaled (o, -o, o)). ^/

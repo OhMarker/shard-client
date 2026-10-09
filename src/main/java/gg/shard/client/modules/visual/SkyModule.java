@@ -81,9 +81,13 @@ public final class SkyModule extends Module {
     public boolean active(ClientLevel level) {
         //? if >=1.21.11 {
         return isEnabled() && preset.get() != Preset.VANILLA && level != null && level.dimensionType().skybox() == DimensionType.Skybox.OVERWORLD;
-        //?} else {
+        //?} else if >=1.21.2 {
         /*return isEnabled() && preset.get() != Preset.VANILLA && level != null
                 && level.effects().skyType() == net.minecraft.client.renderer.DimensionSpecialEffects.SkyType.OVERWORLD;
+        *///?} else {
+        /*// Before 1.21.2 the Overworld sky type is NORMAL.
+        return isEnabled() && preset.get() != Preset.VANILLA && level != null
+                && level.effects().skyType() == net.minecraft.client.renderer.DimensionSpecialEffects.SkyType.NORMAL;
         *///?}
     }
 
