@@ -71,12 +71,22 @@ abstract class ClientPacketListenerMixin {
         original.call(instance, x, y, z, sound, source, volume, pitch, delay);
     }
 
+    // 26.3: the floating totem belongs to the local player (LocalPlayer.displayItemActivation).
+    //? if >=26.3 {
+    /*@WrapOperation(method = "handleEntityEvent", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/player/LocalPlayer;displayItemActivation(Lnet/minecraft/world/item/ItemStack;)V"))
+    private void shard$totemAnimation(net.minecraft.client.player.LocalPlayer player, ItemStack stack, Operation<Void> original) {
+        if (ShardClient.isReady() && ShardClient.modules().get(TotemPopModule.class).hideAnimation()) return;
+        original.call(player, stack);
+    }
+    *///?} else {
     @WrapOperation(method = "handleEntityEvent", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/GameRenderer;displayItemActivation(Lnet/minecraft/world/item/ItemStack;)V"))
     private void shard$totemAnimation(GameRenderer renderer, ItemStack stack, Operation<Void> original) {
         if (ShardClient.isReady() && ShardClient.modules().get(TotemPopModule.class).hideAnimation()) return;
         original.call(renderer, stack);
     }
+    //?}
 
     // ---- TPS estimate ---------------------------------------------------------------------------
 

@@ -217,4 +217,38 @@ stonecutter parameters {
     // authlib 10: profile results moved to authlib.services (YggdrasilAuthenticationService is gone;
     // AccountManager uses MinecraftServicesDiscoveryService in place).
     moved("26.3", "ProfileResult", "com.mojang.authlib.yggdrasil", "com.mojang.authlib.services")
+    // 26.3 runs on SDL3 instead of GLFW. gg.shard.client.compat.GLFW stands in for the parts of
+    // LWJGL's GLFW class Shard uses (key, button and modifier constants carry Minecraft's SDL
+    // values; window and monitor calls go to SDL). Keys and saved keybinds stay in GLFW codes
+    // (compat.KeyCodes converts), so a config works on every version.
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\borg\.lwjgl\.glfw\.GLFWVidMode\b""", "gg.shard.client.compat.GLFW.GLFWVidMode",
+            """\bgg\.shard\.client\.compat\.GLFW\.GLFWVidMode\b""", "org.lwjgl.glfw.GLFWVidMode")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\borg\.lwjgl\.glfw\.GLFW\b""", "gg.shard.client.compat.GLFW", """\bgg\.shard\.client\.compat\.GLFW\b(?!\.GLFWVidMode)""", "org.lwjgl.glfw.GLFW")
+    }
+    // InputConstants: keys are KEYBOARD (scancodes), isKeyDown reads SDL's keyboard state.
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\bInputConstants\.Type\.KEYSYM\b""", "InputConstants.Type.KEYBOARD", """\bInputConstants\.Type\.KEYBOARD\b""", "InputConstants.Type.KEYSYM")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\bInputConstants\.isKeyDown\(mc\.getWindow\(\), """, "InputConstants.isKeyDown(", """\bInputConstants\.isKeyDown\((?!mc\.getWindow)""", "InputConstants.isKeyDown(mc.getWindow(), ")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\.getWindow\(\)\.isMinimized\(\)""", ".getWindow().isIconified()", """\.getWindow\(\)\.isIconified\(\)""", ".getWindow().isMinimized()")
+    }
+    // A swing names its animation and whether the swinging player is told (the server drives swings).
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\.swing\(((?:net\.minecraft\.world\.)?InteractionHand\.MAIN_HAND)\)""", ".swing(\$1, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false)",
+            """\.swing\(((?:net\.minecraft\.world\.)?InteractionHand\.MAIN_HAND), net\.minecraft\.world\.item\.component\.SwingAnimation\.DEFAULT, false\)""", ".swing(\$1)")
+    }
+    replacements.regex(current.parsed >= "26.3") {
+        // MouseHandlerInvoker.shard$onMove(window, x, y) callers ('.' stands for the '$').
+        replace("""(?<=\.shard.)onMove\(([^;]+)\);""", "onMove(\$1, 0, 0);", """(?<=\.shard.)onMove\(([^;]+), 0, 0\);""", "onMove(\$1);")
+    }
+    // The remove-entities packet is a record.
+    replacements.regex(current.parsed >= "26.3") {
+        replace("""\bpacket\.getEntityIds\(\)""", "packet.entityIds()", """\bpacket\.entityIds\(\)""", "packet.getEntityIds()")
+    }
 }

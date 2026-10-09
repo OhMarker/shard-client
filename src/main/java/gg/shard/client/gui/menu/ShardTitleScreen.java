@@ -91,7 +91,8 @@ public final class ShardTitleScreen extends MenuScreen {
         int w = (COLUMN_W - (count - 1) * GAP) / count;
         int bx = x;
         button(g, "options", bx, y, w, SMALL_H, "settings", I18n.get("menu.options").replace("...", "").replace("…", ""), 13, Style.NORMAL, true,
-                //? if >=26.1 {
+                // 26.1 and 26.2 take an in-world flag (gone again in 26.3).
+                //? if >=26.1 <26.3 {
                 /*b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options, false)));
                 *///?} else {
                 b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options)));

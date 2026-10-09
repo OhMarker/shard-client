@@ -13,7 +13,11 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(EntityRenderDispatcher.class)
 abstract class EntityRenderDispatcherMixin {
     @ModifyReturnValue(method = "shouldRender", at = @At("RETURN"), require = 0)
+    //? if >=26.3 {
+    /*private boolean shard$entityOptimizer(boolean original, Entity entity, Frustum frustum, double camX, double camY, double camZ, float partialTick) {
+    *///?} else {
     private boolean shard$entityOptimizer(boolean original, Entity entity, Frustum frustum, double camX, double camY, double camZ) {
+    //?}
         if (!original || !ShardClient.isReady()) return original;
         return !ShardClient.modules().get(EntityOptimizerModule.class).hides(entity);
     }

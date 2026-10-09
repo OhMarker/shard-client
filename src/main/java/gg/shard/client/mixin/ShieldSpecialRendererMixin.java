@@ -49,7 +49,47 @@ abstract class ShieldSpecialRendererMixin {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=26.3 {
+    /*// 26.3: no crumbling argument and a UvMapping; the glint is the base's own render type
+    // (entity_solid_glint) when there are no patterns.
+    @Inject(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
+            at = @At("HEAD"), cancellable = true)
+    private void shard$submitCosmetic(DataComponentMap components, PoseStack pose, SubmitNodeCollector collector,
+                                      int light, int overlay, boolean foil, int outline, CallbackInfo ci) {
+        if (!(components instanceof ShieldCosmetics.Skinned skinned)) return;
+        ci.cancel();
+        int color = ItemTints.multiply(-1, ItemTints.shield());
+        Identifier texture = skinned.texture();
+        RenderType type = ItemTints.shieldTranslucent()
+                ? (foil ? RenderTypes.itemTranslucentGlint(texture) : RenderTypes.entityTranslucent(texture))
+                : (foil ? RenderTypes.entitySolidGlint(texture) : RenderTypes.entitySolid(texture));
+        collector.submitModel(model, net.minecraft.util.Unit.INSTANCE, pose, type, light, overlay, color, null, outline);
+    }
+
+    @WrapOperation(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
+            at = @At(value = "INVOKE", ordinal = 0, target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;IIILnet/minecraft/client/resources/model/sprite/SpriteId;Lnet/minecraft/client/resources/model/sprite/SpriteGetter;I)V"),
+            require = 0)
+    private void shard$tintBase(SubmitNodeCollector collector, net.minecraft.client.model.Model<Object> model, Object state, PoseStack pose, int light, int overlay,
+                                int color, net.minecraft.client.resources.model.sprite.SpriteId base, net.minecraft.client.resources.model.sprite.SpriteGetter sprites,
+                                int outline, Operation<Void> original) {
+        int tinted = ItemTints.multiply(color, ItemTints.shield());
+        if (ItemTints.shieldTranslucent()) {
+            collector.submitModel(model, state, pose, RenderTypes.entityTranslucent(base.atlasLocation()), light, overlay, tinted, sprites.get(base), outline);
+            return;
+        }
+        original.call(collector, model, state, pose, light, overlay, tinted, base, sprites, outline);
+    }
+
+    /^* The enchanted base without patterns. ^/
+    @WrapOperation(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",
+            at = @At(value = "INVOKE", ordinal = 0, target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/UvMapping;I)V"),
+            require = 0)
+    private void shard$tintFoilBase(SubmitNodeCollector collector, net.minecraft.client.model.Model<Object> model, Object state, PoseStack pose, RenderType type,
+                                    int light, int overlay, int color, net.minecraft.client.renderer.texture.UvMapping uv, int outline, Operation<Void> original) {
+        if (ItemTints.shieldTranslucent()) type = RenderTypes.itemTranslucentGlint(net.minecraft.client.renderer.Sheets.SHIELD_BASE.atlasLocation());
+        original.call(collector, model, state, pose, type, light, overlay, ItemTints.multiply(color, ItemTints.shield()), uv, outline);
+    }
+    *///?} else if >=26.1 {
     /*// 26.1: submit has no display context, the item model applies the (1, -1, -1) flip, and the
     // base is one submitModel of the whole model with a sprite id (glint is a second one).
     @Inject(method = "submit(Lnet/minecraft/core/component/DataComponentMap;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V",

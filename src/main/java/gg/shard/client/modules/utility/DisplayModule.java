@@ -137,7 +137,12 @@ public final class DisplayModule extends Module {
         if (!isEnabled()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.options == null) return;
+        //? if >=26.3 {
+        /*// SDL3 reads the mouse raw in relative mode; the Windows pointer acceleration is a hint.
+        org.lwjgl.sdl.SDLHints.SDL_SetHint(org.lwjgl.sdl.SDLHints.SDL_HINT_MOUSE_RELATIVE_SYSTEM_SCALE, rawInput.get() ? "0" : "1");
+        *///?} else {
         if (mc.options.rawMouseInput().get() != rawInput.get()) mc.options.rawMouseInput().set(rawInput.get());
+        //?}
         if (mc.options.enableVsync().get() != vsync.get()) mc.options.enableVsync().set(vsync.get());
     }
 
@@ -177,7 +182,15 @@ public final class DisplayModule extends Module {
         long handle = window.handle();
         if (on == borderless) return;
         if (on) {
+            //? if >=26.3 {
+            /*// Leave vanilla's fullscreen first (the option drives the window; applied right away).
+            if (mc.options.fullscreen().get()) {
+                mc.options.fullscreen().set(false);
+                window.updateFullscreenIfChanged();
+            }
+            *///?} else {
             if (window.isFullscreen()) window.toggleFullScreen(); // leave exclusive first (this hook lets it through)
+            //?}
             savedX = window.getX();
             savedY = window.getY();
             savedW = window.getScreenWidth();
