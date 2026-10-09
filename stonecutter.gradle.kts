@@ -82,6 +82,45 @@ stonecutter parameters {
         replace("""\bnet\.minecraft\.world\.entity\.player\.Player\.class\b""", "net.minecraft.world.entity.Avatar.class",
             """\bnet\.minecraft\.world\.entity\.Avatar\.class\b""", "net.minecraft.world.entity.player.Player.class")
     }
+    // ---- 1.21.6 -------------------------------------------------------------------------------
+    // Before 1.21.6 GuiGraphics.pose() is a PoseStack: compat.Matrix3x2fStack wraps it with the
+    // 2D calls (pushMatrix, translate(x, y), scale(x, y), m00...) and `g.pose()` becomes
+    // `Matrix3x2fStack.of(g)`. Screens and HUD code always name their graphics `g`.
+    moved("1.21.6", "Matrix3x2fStack", "gg.shard.client.compat", "org.joml")
+    replacements.regex(current.parsed >= "1.21.6") {
+        replace("""\bgg\.shard\.client\.compat\.Matrix3x2fStack\.of\((\w+)\)""", "\$1.pose()",
+            """\b(g)\.pose\(\)""", "gg.shard.client.compat.Matrix3x2fStack.of(\$1)")
+    }
+    // No GUI strata before 1.21.6 (drawing is immediate): compat.GuiDraw flushes and clears depth.
+    replacements.regex(current.parsed >= "1.21.6") {
+        replace("""\bgg\.shard\.client\.compat\.GuiDraw\.nextStratum\((\w+)\)""", "\$1.nextStratum()",
+            """\b(g)\.nextStratum\(\)""", "gg.shard.client.compat.GuiDraw.nextStratum(\$1)")
+    }
+    // GUI blits take a RenderType factory instead of a pipeline before 1.21.6.
+    replacements.regex(current.parsed >= "1.21.6") {
+        replace("""\bnet\.minecraft\.client\.renderer\.RenderType::guiTextured\b""", "RenderPipelines.GUI_TEXTURED",
+            """\b(?:net\.minecraft\.client\.renderer\.)?RenderPipelines\.GUI_TEXTURED\b""", "net.minecraft.client.renderer.RenderType::guiTextured")
+    }
+    // Before 1.21.6 the blur post-processes the main target right away (no graphics argument), so
+    // what is drawn before it (the panorama) must be flushed first: compat.GuiDraw.blur(g).
+    replacements.regex(current.parsed >= "1.21.6") {
+        replace("""\bgg\.shard\.client\.compat\.GuiDraw\.blur\((\w+)\)""", "renderBlurredBackground(\$1)",
+            """\brenderBlurredBackground\((g)\)""", "gg.shard.client.compat.GuiDraw.blur(\$1)")
+    }
+    // WorldVersion became a record in 1.21.6 (getName() -> name(), getProtocolVersion() -> protocolVersion()).
+    replacements.regex(current.parsed >= "1.21.6") {
+        replace("""\bgetCurrentVersion\(\)\.getName\(\)""", "getCurrentVersion().name()",
+            """\bgetCurrentVersion\(\)\.name\(\)""", "getCurrentVersion().getName()")
+    }
+    replacements.regex(current.parsed >= "1.21.6") {
+        replace("""\bgetCurrentVersion\(\)\.getProtocolVersion\(\)""", "getCurrentVersion().protocolVersion()",
+            """\bgetCurrentVersion\(\)\.protocolVersion\(\)""", "getCurrentVersion().getProtocolVersion()")
+    }
+    // Window.getGuiScale() is a double before 1.21.6 (always a whole number).
+    replacements.regex(current.parsed >= "1.21.6") {
+        replace("""\(\(int\) ((?:mc|minecraft|Minecraft\.getInstance\(\))\.getWindow\(\)|window)\.getGuiScale\(\)\)""", "\$1.getGuiScale()",
+            """\b((?:mc|minecraft|Minecraft\.getInstance\(\))\.getWindow\(\)|window)\.getGuiScale\(\)""", "((int) \$1.getGuiScale())")
+    }
     // ---- 26.1 (unobfuscated; Mojang's own names) ------------------------------------------------
     // GUI drawing became render-state extraction: GuiGraphics is GuiGraphicsExtractor and the
     // drawing calls Shard uses lost their render/draw prefixes.

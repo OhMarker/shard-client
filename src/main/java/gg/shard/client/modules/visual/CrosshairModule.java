@@ -175,7 +175,12 @@ public final class CrosshairModule extends Module implements PanelPreview {
         if (mc.debugEntries != null && mc.debugEntries.isCurrentlyEnabled(DebugScreenEntries.THREE_DIMENSIONAL_CROSSHAIR)) return false;
         //?} else {
         /*// Before 1.21.9 the F3 screen always brings the 3D crosshair (first person, full debug info).
+        //? if >=1.21.6 {
         if (mc.gui.shouldRenderDebugCrosshair()) return false;
+        //?} else {
+        /^if (mc.getDebugOverlay().showDebugScreen() && mc.options.getCameraType().isFirstPerson()
+                && !mc.player.isReducedDebugInfo() && !mc.options.reducedDebugInfo().get()) return false;
+        ^///?}
         *///?}
         return true;
     }

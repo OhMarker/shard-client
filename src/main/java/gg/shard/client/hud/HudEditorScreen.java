@@ -156,6 +156,11 @@ public final class HudEditorScreen extends DesignScreen {
         }
 
         // Chrome in design units.
+        //? if <1.21.6 {
+        /*// Before 1.21.6 shadowed text is drawn 0.03 towards the camera and stays on top of later fills
+        // at the same depth (the element label over a neighbour's text); the chrome starts a fresh depth.
+        g.nextStratum();
+        *///?}
         Render2D.setPixelsPerUnit(Scale.pixelsPerUnit(pageScale, guiScale));
         pushDesign(g);
         mouseDX = (int) Math.floor(toDesign(mouseX));

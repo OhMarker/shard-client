@@ -1,8 +1,10 @@
 package gg.shard.client.mixin;
 
+import net.minecraft.client.gui.GuiGraphics;
+import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.6 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.state.pip.GuiEntityRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
@@ -10,17 +12,19 @@ import org.joml.Matrix3x2f;
 import org.joml.Quaternionf;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
-import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+//?}
 
 /**
  * GUI Scales, inventory: 1.21.11 draws the player model in the inventory as a picture-in-picture
  * at the box it is given in plain GUI units, ignoring the pose. A scaled inventory draws under a
  * scaled pose, so the model landed outside its black box. Run the box (and the model's size)
- * through the current pose first; with vanilla's identity pose nothing changes.
+ * through the current pose first; with vanilla's identity pose nothing changes. Before 1.21.6
+ * the model is drawn in place under the pose (nothing to do; the mixin is not listed there).
  */
 @Mixin(GuiGraphics.class)
 abstract class GuiGraphicsEntityMixin {
+    //? if >=1.21.6 {
     // 26.2 passes the read-only JOML views (Vector3fc, Quaternionfc).
     //? if >=26.2 {
     /*@WrapOperation(method = "submitEntityRenderState", at = @At(value = "NEW",
@@ -46,4 +50,5 @@ abstract class GuiGraphicsEntityMixin {
         return original.call(state, translation, rotation, camera, Math.round(a.x), Math.round(a.y), Math.round(b.x), Math.round(b.y),
                 scale * pose.m00, scissor);
     }
+    //?}
 }

@@ -34,6 +34,9 @@ final class AccountSwitcher {
 
     private final MenuScreen screen;
     private final Map<UUID, ResolvableProfile> profiles = new HashMap<>();
+    //? if <1.21.6 {
+    /*private final Map<UUID, java.util.concurrent.CompletableFuture<ResolvableProfile>> resolving = new HashMap<>();
+    *///?}
     private boolean open;
     private float openAnim;
     private int pillX;
@@ -169,7 +172,12 @@ final class AccountSwitcher {
             /*// Before 1.21.9: resolve the profile (textures) through the skull cache, then the skin manager.
             ResolvableProfile profile = profiles.computeIfAbsent(uuid, id -> new ResolvableProfile(java.util.Optional.empty(), java.util.Optional.of(id),
                     new com.mojang.authlib.properties.PropertyMap()));
+            //? if >=1.21.6 {
             ResolvableProfile resolved = profile.pollResolve();
+            //?} else {
+            /^// Before 1.21.6 a profile resolves through a future (no pollResolve).
+            ResolvableProfile resolved = profile.isResolved() ? profile : resolving.computeIfAbsent(uuid, k -> profile.resolve()).getNow(null);
+            ^///?}
             if (resolved != null && resolved != profile) profiles.put(uuid, resolved);
             skin = resolved == null ? net.minecraft.client.resources.DefaultPlayerSkin.get(uuid) : mc.getSkinManager().getInsecureSkin(resolved.gameProfile());
             *///?}

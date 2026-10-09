@@ -90,7 +90,17 @@ public final class Lines {
         public RenderPipeline pipeline() {
             return base.pipeline();
         }
-        //?}
+        //?} else if <1.21.6 {
+        /^@Override
+        public RenderPipeline getRenderPipeline() {
+            return base.getRenderPipeline();
+        }
+
+        @Override
+        public com.mojang.blaze3d.pipeline.RenderTarget getRenderTarget() {
+            return base.getRenderTarget();
+        }
+        ^///?}
     }
     *///?}
 }

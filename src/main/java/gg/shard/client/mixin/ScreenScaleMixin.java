@@ -57,4 +57,17 @@ abstract class ScreenScaleMixin implements ScaledScreen {
         g.pose().popMatrix();
     }
     //?}
+
+    // Before 1.21.6 Screen.render draws the background itself (renderWithTooltip only calls render).
+    // Shard's screens draw everything in their own render, so their background comes first here,
+    // as renderWithTooltip does from 1.21.6 on.
+    //? if <1.21.6 {
+    /*@org.spongepowered.asm.mixin.injection.Inject(method = "renderWithTooltip", at = @At("HEAD"), require = 0)
+    private void shard$designBackground(net.minecraft.client.gui.GuiGraphics g, int mx, int my, float pt,
+                                        org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if (!((Object) this instanceof gg.shard.client.gui.DesignScreen)) return;
+        ((Screen) (Object) this).renderBackground(g, mx, my, pt);
+        g.flush();
+    }
+    *///?}
 }
