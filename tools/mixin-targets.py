@@ -1,4 +1,4 @@
-# Static mixin check for an unobfuscated (26.x) node: every injector's method and @At target
+# Static mixin check for a node (26.x, or 1.21.x on its Mojang-mapped jar): every injector's method and @At target
 # (INVOKE / FIELD owner, name and descriptor, NEW constructor) must be in the target method's
 # bytecode on that version's jar. Run `./gradlew :<mc>:compileJava :<mc>:processResources` first.
 # Usage: python tools/mixin-targets.py <mc>        (prints "problems: 0" when everything matches)
@@ -7,6 +7,11 @@ ver = sys.argv[1]
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 gen = os.path.join(root, "versions", ver, "build", "generated", "stonecutter", "main", "java", "gg", "shard", "client", "mixin")
 jar = os.path.expanduser(rf"~\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged-deobf\{ver}\minecraft-merged-deobf-{ver}.jar")
+if not os.path.exists(jar):
+    # 1.21.x: the Mojang-mapped (named) jar Loom remapped for this version.
+    import glob
+    found = glob.glob(os.path.expanduser(rf"~\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged\{ver}-loom.mappings*\*.jar"))
+    if found: jar = found[0]
 cfg = json.load(open(os.path.join(root, "versions", ver, "build", "resources", "main", "shard.mixins.json")))
 active = set(cfg.get("client", []))
 cache = {}
@@ -39,6 +44,9 @@ for f in sorted(os.listdir(gen)):
     if name not in active: continue
     code = open(os.path.join(gen, f), encoding="utf-8").read()
     code = re.sub(r"/\*.*?\*/", "", code, flags=re.S); code = re.sub(r"//[^\n]*", "", code)
+    # String constants used as targets (target = SAME_THREAD) are inlined first.
+    for cn, cv in re.findall(r'static final String (\w+)\s*=\s*("[^"]*")\s*;', code):
+        code = re.sub(r'(target\s*=\s*)' + cn + r'\b', lambda mm: mm.group(1) + cv, code)
     imports = dict((m.group(1).split('.')[-1], m.group(1)) for m in re.finditer(r"import ([\w.]+);", code))
     tm = re.search(r"@Mixin\((?:value\s*=\s*)?\{?([\w.]+)\.class", code)
     targets = []
@@ -47,7 +55,8 @@ for f in sorted(os.listdir(gen)):
         if t[0].islower(): targets.append(t)
         else: targets.append(imports.get(parts[0], parts[0]) + ''.join('$' + p for p in parts[1:]))
     targets += [m.group(1).replace('/', '.') for m in re.finditer(r'targets\s*=\s*\{?\s*"([^"]+)"', code)]
-    for m in re.finditer(r"@(Inject|WrapOperation|ModifyArg|ModifyArgs|Redirect|ModifyVariable|ModifyExpressionValue|ModifyReturnValue|WrapWithCondition|ModifyConstant)\(", code):
+    # Annotations may be written fully qualified (@com.llamalad7...WrapOperation).
+    for m in re.finditer(r"@(?:[a-z][\w]*\.)*(Inject|WrapOperation|ModifyArg|ModifyArgs|Redirect|ModifyVariable|ModifyExpressionValue|ModifyReturnValue|WrapWithCondition|ModifyConstant)\(", code):
         ann = balanced(code, m.end() - 1)
         meths = re.findall(r'"([^"]+)"', re.search(r'method\s*=\s*(\{[^}]*\}|"[^"]*")', ann).group(1)) if 'method' in ann else []
         tg = re.search(r'target\s*=\s*"([^"]+)"', ann)
