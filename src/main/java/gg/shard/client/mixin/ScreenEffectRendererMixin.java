@@ -20,6 +20,30 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
  */
 @Mixin(ScreenEffectRenderer.class)
 abstract class ScreenEffectRendererMixin {
+    // 26.2 submits the overlay as custom geometry: submitFire picks the sprite, its lambda places the
+    // two quads (Matrix4f.translate) and buildFireQuad passes the packed colour (0.9 alpha white).
+    //? if >=26.2 {
+    /*/^* Custom fire texture on your screen. ^/
+    @org.spongepowered.asm.mixin.injection.ModifyVariable(method = "submitFire", at = @At("HEAD"), argsOnly = true, require = 0)
+    private static net.minecraft.client.renderer.texture.TextureAtlasSprite shard$fireSprite(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite) {
+        return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).screenSprite(sprite) : sprite;
+    }
+
+    @ModifyArg(method = "lambda$submitFire$0", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;translate(FFF)Lorg/joml/Matrix4f;"), index = 1, require = 0)
+    private static float shard$fireHeight(float y) {
+        return ShardClient.isReady() ? ShardClient.modules().get(LowFireModule.class).fireY(y) : y;
+    }
+
+    @ModifyArg(method = "buildFireQuad", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/ScreenEffectRenderer;buildSpriteQuad(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lorg/joml/Matrix4f;Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;FFFFFI)V"),
+            index = 8, require = 0)
+    private static int shard$fireColor(int argb) {
+        if (!ShardClient.isReady()) return argb;
+        float[] c = ShardClient.modules().get(LowFireModule.class).screenColor(
+                (argb >> 16 & 0xFF) / 255f, (argb >> 8 & 0xFF) / 255f, (argb & 0xFF) / 255f, (argb >>> 24) / 255f);
+        return net.minecraft.util.ARGB.colorFromFloat(c[3], c[0], c[1], c[2]);
+    }
+    *///?} else {
     /** Custom fire texture on your screen. */
     @org.spongepowered.asm.mixin.injection.ModifyVariable(method = "renderFire", at = @At("HEAD"), argsOnly = true, require = 0)
     private static net.minecraft.client.renderer.texture.TextureAtlasSprite shard$fireSprite(net.minecraft.client.renderer.texture.TextureAtlasSprite sprite) {
@@ -38,6 +62,7 @@ abstract class ScreenEffectRendererMixin {
         float[] c = ShardClient.modules().get(LowFireModule.class).screenColor(r, g, b, a);
         return original.call(consumer, c[0], c[1], c[2], c[3]);
     }
+    //?}
 
     /** Totem Pops, animation size: vanilla scales the floating item by 0.8 on every axis; this multiplies that. */
     @ModifyArgs(method = "renderItemActivationAnimation", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;scale(FFF)V"), require = 0)

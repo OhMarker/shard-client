@@ -43,7 +43,11 @@ public final class CapeTexture extends AbstractTexture {
                     int row = y * l.width();
                     for (int x = 0; x < l.width(); x++) image.setPixel(x, y, px[row + x]);
                 }
+                //? if >=26.2 {
+                /*encoder.writeToTexture(this.texture, image, level, 0, 0, 0);
+                *///?} else {
                 encoder.writeToTexture(this.texture, image, level, 0, 0, 0, l.width(), l.height(), 0, 0);
+                //?}
             }
         }
     }

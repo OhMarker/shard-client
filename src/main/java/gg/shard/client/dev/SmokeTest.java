@@ -1047,6 +1047,8 @@ public final class SmokeTest {
         } catch (ReflectiveOperationException e) {
             ShardClient.LOGGER.error("Smoke: could not show the other player's cape layer", e);
         }
+        // Client-side stand-in: 26.2 no longer numbers entities on construction.
+        player.setId(-3_000_001);
         mc.level.addEntity(player);
         otherPlayer = player;
     }

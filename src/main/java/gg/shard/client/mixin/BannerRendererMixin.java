@@ -45,12 +45,20 @@ abstract class BannerRendererMixin {
     }
     //?}
 
+    // 26.2: the pattern layers are submitted to an OrderedSubmitNodeCollector.
+    //? if >=26.2 {
+    /*@WrapOperation(method = "submitPatternLayer", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/OrderedSubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
+            require = 0)
+    private static void shard$tintLayer(net.minecraft.client.renderer.OrderedSubmitNodeCollector collector, Model<?> model, Object state, PoseStack pose, RenderType type, int light, int overlay, int color,
+                                        TextureAtlasSprite sprite, int outline, ModelFeatureRenderer.CrumblingOverlay crumbling, Operation<Void> original) {
+    *///?} else {
     @WrapOperation(method = "submitPatternLayer", at = @At(value = "INVOKE",
-
             target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
             require = 0)
     private static void shard$tintLayer(SubmitNodeCollector collector, Model<?> model, Object state, PoseStack pose, RenderType type, int light, int overlay, int color,
                                         TextureAtlasSprite sprite, int outline, ModelFeatureRenderer.CrumblingOverlay crumbling, Operation<Void> original) {
+    //?}
         original.call(collector, model, state, pose, type, light, overlay, ItemTints.multiply(color, ItemTints.shield()), sprite, outline, crumbling);
     }
 }

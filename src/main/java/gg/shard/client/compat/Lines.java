@@ -1,11 +1,13 @@
 package gg.shard.client.compat;
 
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+//? if <26.2 {
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+//?}
 //? if <1.21.11 {
 /*import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -17,7 +19,8 @@ import java.util.Map;
 /**
  * World-space lines with a chosen width in pixels. From 1.21.11 the width travels with each
  * vertex (ShapeRenderer takes it); before, it was one value per draw (the render type's line
- * state), so older versions get one lines render type per width.
+ * state), so older versions get one lines render type per width. From 26.2 shapes are submitted
+ * (WorldDraw.outline), not drawn into a buffer here.
  */
 public final class Lines {
     private Lines() {}
@@ -31,6 +34,7 @@ public final class Lines {
         *///?}
     }
 
+    //? if <26.2 {
     /** Outlines {@code shape} at (x, y, z) relative to the camera; {@code consumer} from {@link #type}. */
     public static void shape(PoseStack pose, VertexConsumer consumer, VoxelShape shape, double x, double y, double z, int color, float width) {
         //? if >=1.21.11 {
@@ -39,6 +43,7 @@ public final class Lines {
         /*ShapeRenderer.renderShape(pose, consumer, shape, x, y, z, color);
         *///?}
     }
+    //?}
 
     //? if <1.21.11 {
     /*private static final Map<Integer, RenderType> WIDE = new HashMap<>();

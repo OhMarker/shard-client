@@ -103,7 +103,11 @@ public final class ShardClient implements ClientModInitializer {
                 beforeBlockOutline(gg.shard.client.compat.WorldDraw.of(ctx), state));
         //?}
         gg.shard.client.modules.utility.GuiScalesModule.registerHudScaling();
-        //? if >=26.1 {
+        //? if >=26.2 {
+        /*// 26.2 has no immediate buffers in the level pass: overlays are submitted with the frame's
+        // features (COLLECT_SUBMITS, after vanilla's submits) and drawn in its phases.
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));
+        *///?} else if >=26.1 {
         /*// 26.1 renders entities as solid then translucent features; AFTER_ENTITIES fired where
         // AFTER_TRANSLUCENT_FEATURES fires now (after both, before the block outline).
         net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(ctx -> afterEntities(gg.shard.client.compat.WorldDraw.of(ctx)));

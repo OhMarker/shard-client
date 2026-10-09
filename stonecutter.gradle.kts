@@ -146,4 +146,75 @@ stonecutter parameters {
     replacements.regex(current.parsed >= "26.1") {
         replace("""method = "submitEntityRenderState"""", "method = \"entity\"", """method = "entity"""", "method = \"submitEntityRenderState\"")
     }
+    // ---- 26.2 --------------------------------------------------------------------------------
+    // The in-game HUD class Gui is Hud (same package), and a new Gui (Minecraft.gui) owns the
+    // screen, overlay and toasts; the HUD is Minecraft.gui.hud. In src/ "Gui" always means the HUD;
+    // a quoted "net.minecraft.client.gui.Gui" (mixin targets = ...) is the new class and is kept.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bGui\b(?!")""", "Hud", """\bHud\b(?!")""", "Gui")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        // Lookaheads: the 26.1 getChat().addMessage rule matches the same text.
+        replace("""\.gui(?=\.getChat\()""", ".gui.hud", """\.gui\.hud(?=\.getChat\()""", ".gui")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.setScreen\(""", "\$1.gui.setScreen(",
+            """\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.gui\.setScreen\(""", "\$1.setScreen(")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.screen\b""", "\$1.gui.screen()",
+            """\b(mc|client|minecraft|Minecraft\.getInstance\(\))\.gui\.screen\(\)""", "\$1.screen")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.getOverlay\(\)""", ".gui.overlay()", """\.gui\.overlay\(\)""", ".getOverlay()")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.getToastManager\(\)""", ".gui.toastManager()", """\.gui\.toastManager\(\)""", ".getToastManager()")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.getMainRenderTarget\(\)""", ".gameRenderer.mainRenderTarget()", """\.gameRenderer\.mainRenderTarget\(\)""", ".getMainRenderTarget()")
+    }
+    // Section rebuilds moved from LevelRenderer to the new LevelExtractor.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\.levelRenderer\.allChanged\(\)""", ".levelExtractor.allChanged()", """\.levelExtractor\.allChanged\(\)""", ".levelRenderer.allChanged()")
+    }
+    // F1 (Options.hideGui) is Hud's own flag (isHidden/toggle). Writes first; the read rule skips them.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""mc\.options\.hideGui = (true|false);""", "if (mc.gui.hud.isHidden() != \$1) mc.gui.hud.toggle();",
+            """if \(mc\.gui\.hud\.isHidden\(\) != (true|false)\) mc\.gui\.hud\.toggle\(\);""", "mc.options.hideGui = \$1;")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""mc\.options\.hideGui(?! =)""", "mc.gui.hud.isHidden()", """mc\.gui\.hud\.isHidden\(\)(?! !=)""", "mc.options.hideGui")
+    }
+    // Mixin target renames (ItemInHandRenderer itself is gone in 26.3).
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""method = "renderArmWithItem"""", "method = \"submitArmWithItem\"", """method = "submitArmWithItem"""", "method = \"renderArmWithItem\"")
+    }
+    // Entity type constants moved to EntityTypes.
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bEntityType\.(?=[A-Z_]+\b)""", "net.minecraft.world.entity.EntityTypes.", """\bnet\.minecraft\.world\.entity\.EntityTypes\.""", "EntityType.")
+    }
+    // TextureFormat is GpuFormat (top-level blaze3d package on 26.2, renderpearl.api on 26.3; RGBA8
+    // is RGBA8_UNORM). One rule per name: replacements never chain.
+    val gpuFormatPkg = if (current.parsed >= "26.3") "renderpearl\$1api" else "blaze3d"
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bmojang([./])blaze3d\1textures\1TextureFormat\b""", "mojang\$1$gpuFormatPkg\$1GpuFormat",
+            """\bmojang([./])(blaze3d|renderpearl\1api)\1GpuFormat\b""", "mojang\$1blaze3d\$1textures\$1TextureFormat")
+    }
+    replacements.regex(current.parsed >= "26.2") {
+        replace("""\bTextureFormat\.RGBA8\b""", "GpuFormat.RGBA8_UNORM", """\bGpuFormat\.RGBA8_UNORM\b""", "TextureFormat.RGBA8")
+    }
+    // ---- 26.3 --------------------------------------------------------------------------------
+    // The GPU abstraction moved from com.mojang.blaze3d to com.mojang.renderpearl.api.
+    moved("26.3", "RenderPipeline", "com.mojang.blaze3d.pipeline", "com.mojang.renderpearl.api.pipeline")
+    moved("26.3", "CommandEncoder", "com.mojang.blaze3d.systems", "com.mojang.renderpearl.api.commands")
+    moved("26.3", "GpuDevice", "com.mojang.blaze3d.systems", "com.mojang.renderpearl.api.device")
+    moved("26.3", "AddressMode", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "FilterMode", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "GpuSampler", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "GpuTexture", "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures")
+    moved("26.3", "VertexFormat", "com.mojang.blaze3d.vertex", "com.mojang.renderpearl.api.vertex")
+    // authlib 10: profile results moved to authlib.services (YggdrasilAuthenticationService is gone;
+    // AccountManager uses MinecraftServicesDiscoveryService in place).
+    moved("26.3", "ProfileResult", "com.mojang.authlib.yggdrasil", "com.mojang.authlib.services")
 }

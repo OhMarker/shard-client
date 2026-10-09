@@ -54,6 +54,7 @@
     "RealmsClientAccessor",
     "ResourceReloadTimerMixin",
     "ScreenEffectRendererMixin",
+    "ScreenRenderScaleMixin",
     "ScreenScaleMixin",
     "ShieldSpecialRendererMixin",
     "SkyRendererMixin",

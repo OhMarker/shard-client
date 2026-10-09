@@ -220,6 +220,8 @@ final class SetSmoke {
         ItemStack patterned = new ItemStack(Items.SHIELD);
         patterned.set(net.minecraft.core.component.DataComponents.BASE_COLOR, net.minecraft.world.item.DyeColor.BLUE);
         player.setItemSlot(EquipmentSlot.MAINHAND, patterned);
+        // Client-side stand-in: 26.2 no longer numbers entities on construction.
+        player.setId(-3_000_003);
         mc.level.addEntity(player);
         friend = player;
         if (mc.player != null) friendAhead(mc.player, 3, 0, 0);

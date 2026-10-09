@@ -1,7 +1,11 @@
 package gg.shard.client.account;
 
 import com.mojang.authlib.minecraft.UserApiService;
+//? if >=26.3 {
+/*import com.mojang.authlib.services.MinecraftServicesDiscoveryService;
+*///?} else {
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
+//?}
 import com.mojang.realmsclient.client.RealmsClient;
 import com.mojang.realmsclient.gui.RealmsDataFetcher;
 import gg.shard.client.ShardClient;
@@ -67,7 +71,11 @@ public final class AccountManager {
         if (endpoint == null && FabricLoader.getInstance().isDevelopmentEnvironment() && System.getProperty(FAKE_BRIDGE_PROPERTY) != null) {
             try {
                 User user = Minecraft.getInstance().getUser();
-                endpoint = gg.shard.client.dev.FakeAccountBridge.withDevAccounts(user.getName(), user.getProfileId()).endpoint();
+                var fake = gg.shard.client.dev.FakeAccountBridge.withDevAccounts(user.getName(), user.getProfileId());
+                // Its HTTP dispatcher is not a daemon thread; stop it with the game (26.2's
+                // post-main watchdog crashes a client that does not exit).
+                net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(client -> fake.close());
+                endpoint = fake.endpoint();
                 ShardClient.LOGGER.info("Accounts: dev fake bridge on {}", endpoint.url());
             } catch (Exception e) {
                 ShardClient.LOGGER.warn("Accounts: could not start the fake bridge", e);
@@ -221,7 +229,11 @@ public final class AccountManager {
             api = UserApiService.OFFLINE;
         } else {
             try {
+                //? if >=26.3 {
+                /*api = MinecraftServicesDiscoveryService.create(access.shard$proxy(), true).createUserApiService(user.getAccessToken());
+                *///?} else {
                 api = new YggdrasilAuthenticationService(access.shard$proxy()).createUserApiService(user.getAccessToken());
+                //?}
             } catch (RuntimeException e) {
                 ShardClient.LOGGER.warn("Accounts: no user API for {} ({})", user.getName(), e.getMessage());
                 api = UserApiService.OFFLINE;
@@ -243,7 +255,24 @@ public final class AccountManager {
             UUID id = user.getProfileId();
             access.shard$setProfileFuture(CompletableFuture.supplyAsync(() -> mc.services().sessionService().fetchProfile(id, true), Util.nonCriticalIoPool()));
         }
+        //? if >=26.2 {
+        /*// 26.2 added the friends list: the social manager also takes the account's friends service
+        // and the background updater that polls it (replaced here, the old one stopped).
+        //? if >=26.3 {
+        /^var friends = MinecraftServicesDiscoveryService.create(access.shard$proxy(), !access.shard$offlineDeveloperMode())
+                .createFriendsService(user.getAccessToken());
+        ^///?} else {
+        var friends = new YggdrasilAuthenticationService(access.shard$proxy()).createFriendsService(user.getAccessToken());
+        //?}
+        access.shard$remoteFriendListUpdateHandler().close();
+        var friendUpdates = new net.minecraft.client.gui.screens.social.RemoteFriendListUpdateHandler(friends, mc);
+        access.shard$setRemoteFriendListUpdateHandler(friendUpdates);
+        PlayerSocialManager social = new PlayerSocialManager(mc, service, friends, friendUpdates);
+        access.shard$setPlayerSocialManager(social);
+        if (social.isFriendListEnabled()) friendUpdates.start();
+        *///?} else {
         access.shard$setPlayerSocialManager(new PlayerSocialManager(mc, service));
+        //?}
         access.shard$setProfileKeyPairManager(ProfileKeyPairManager.create(service, user, mc.gameDirectory.toPath()));
         access.shard$setReportingContext(ReportingContext.create(ReportEnvironment.local(), service));
         try {
