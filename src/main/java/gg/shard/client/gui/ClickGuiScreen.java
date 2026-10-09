@@ -1871,7 +1871,7 @@ public final class ClickGuiScreen extends DesignScreen {
         GuiGraphics g = g0;
         var info = ShardClient.launcherInfo();
         String launcher = info.present() ? "Launched by Shard Launcher " + info.launcherVersion() : "Not launched by Shard Launcher";
-        Fonts.drawClipped(g, "Made by OhMarker with the help of swxyzx2", Fonts.Weight.MEDIUM, LABEL, x, y, w, Theme.text());
+        Fonts.drawClipped(g, "Made by OhMarker with the help of SwxyzX2", Fonts.Weight.MEDIUM, LABEL, x, y, w, Theme.text());
         y += Fonts.lineHeight(LABEL) + 2;
         Fonts.drawClipped(g, "Shard Client is open source under the MIT License (github.com/OhMarker/shard-client)", Fonts.Weight.REGULAR, DESC, x, y, w, Theme.muted());
         y += Fonts.lineHeight(DESC) + 6;

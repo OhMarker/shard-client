@@ -150,7 +150,7 @@ public final class AccountBridge {
             if (res.statusCode() / 100 != 2) throw new BridgeException(res.statusCode(), errorMessage(res.statusCode(), res.body()));
             return res.body();
         } catch (IOException e) {
-            throw new BridgeException(0, "Shard Launcher is not reachable");
+            throw new BridgeException(0, "Shard Launcher was closed. Keep it open (it can sit in the tray) to switch accounts; reopen the game from it if you closed it.");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BridgeException(0, "interrupted");
