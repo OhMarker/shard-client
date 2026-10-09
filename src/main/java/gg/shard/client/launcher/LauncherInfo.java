@@ -27,11 +27,13 @@ public record LauncherInfo(
         int accent,
         String theme,
         Path equippedPath,
-        Path sharedConfigPath
+        Path sharedConfigPath,
+        /** Shard Launcher's account bridge (docs/ACCOUNT-SWITCH-API.md); null hides account switching. */
+        AccountBridge.Endpoint accountBridge
 ) {
     public static final int DEFAULT_ACCENT = 0xFF22D3EE;
     public static final LauncherInfo DEFAULTS =
-            new LauncherInfo(false, null, null, null, null, null, null, DEFAULT_ACCENT, "dark", null, null);
+            new LauncherInfo(false, null, null, null, null, null, null, DEFAULT_ACCENT, "dark", null, null, null);
 
     public static LauncherInfo load(Path gameDir) {
         Path file = gameDir.resolve("launcher-info.json");
@@ -62,7 +64,8 @@ public record LauncherInfo(
                 accent == null ? DEFAULT_ACCENT : (0xFF << 24) | (accent & 0xFFFFFF),
                 "light".equalsIgnoreCase(str(o, "theme")) ? "light" : "dark",
                 equipped == null ? null : Path.of(equipped),
-                shared == null ? null : Path.of(shared)
+                shared == null ? null : Path.of(shared),
+                AccountBridge.Endpoint.parse(o.get("accountBridge"))
         );
     }
 

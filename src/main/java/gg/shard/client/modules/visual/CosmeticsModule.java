@@ -59,6 +59,7 @@ public final class CosmeticsModule extends Module {
     private volatile String accountStatus = "Not signed in";
     private boolean started;
     private boolean signingIn;
+    private boolean signInAgain;
     private int ticks;
     private int nextSignIn;
     private int nextBeat = HEARTBEAT_TICKS;
@@ -164,6 +165,19 @@ public final class CosmeticsModule extends Module {
         }
     }
 
+    /**
+     * The in-game account switcher changed the Minecraft account: drop the old Shard session and
+     * sign in as the new account right away (also outside a world), so tokens and capes follow it.
+     */
+    public void onAccountChanged() {
+        api.signOut();
+        worn.clear();
+        looked.clear();
+        accountStatus = "Not signed in";
+        if (signingIn) signInAgain = true; // the sign-in in flight is for the old account
+        else signIn();
+    }
+
     /** Moving the mouse or walking counts as playing; five minutes without either is idle. */
     private void trackInput(LocalPlayer p) {
         if (p.getYRot() != lastYaw || p.getXRot() != lastPitch || p.getX() != lastX || p.getZ() != lastZ) {
@@ -180,6 +194,12 @@ public final class CosmeticsModule extends Module {
         accountStatus = "Signing in";
         api.signIn().whenComplete((me, error) -> Minecraft.getInstance().execute(() -> {
             signingIn = false;
+            if (signInAgain) {
+                signInAgain = false;
+                api.signOut();
+                signIn();
+                return;
+            }
             if (error != null) {
                 Throwable cause = error.getCause() != null ? error.getCause() : error;
                 accountStatus = "Not signed in (" + cause.getMessage() + ")";

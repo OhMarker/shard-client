@@ -71,7 +71,7 @@ public final class SmokeTest {
 
     private static BlockPos ground;
     private static int crystalsBeforeAttack;
-    private static final JsonObject SUMMARY = new JsonObject();
+    static final JsonObject SUMMARY = new JsonObject();
     private static final JsonArray LAYOUTS = new JsonArray();
 
     public static void init() {
@@ -117,6 +117,10 @@ public final class SmokeTest {
 
     private static void tick(Minecraft mc, String server) {
         if (!active) return;
+        if ("screens".equals(System.getProperty("shard.smoke.only"))) {
+            ScreensSmoke.tick(mc); // title screen, server list and account switcher (-PsmokeOnly=screens)
+            return;
+        }
         if (mc.player == null || mc.level == null) {
             ticksInWorld = -1;
             ticksOutOfWorld++;
@@ -1016,7 +1020,7 @@ public final class SmokeTest {
         otherPlayer = player;
     }
 
-    private static void parkCursor(Minecraft mc) {
+    static void parkCursor(Minecraft mc) {
         org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().handle(), 4, 4);
         // The unfocused dev window gets no move event for that, so tell the mouse handler directly;
         // otherwise the pointer stays where opening a screen centred it and hovers leak into shots.
@@ -1502,7 +1506,7 @@ public final class SmokeTest {
         SUMMARY.addProperty("crystalsAfterAttack", after);
     }
 
-    private static void finish(Minecraft mc) {
+    static void finish(Minecraft mc) {
         ShardClient.config().save();
         SUMMARY.add("layouts", LAYOUTS);
         boolean identical = true;

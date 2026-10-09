@@ -115,6 +115,7 @@ public final class ShardClient implements ClientModInitializer {
         // Hidden settings holders (Settings → Appearance / HUD); registered first so HUD modules can inherit defaults.
         m.register(new gg.shard.client.modules.settings.AppearanceModule());
         m.register(new gg.shard.client.modules.settings.HudDefaultsModule());
+        m.register(new gg.shard.client.modules.settings.MenuScreensModule());
         // HUD
         m.register(new FpsModule());
         m.register(new PingModule());
