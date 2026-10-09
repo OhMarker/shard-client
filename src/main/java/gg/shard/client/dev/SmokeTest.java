@@ -143,6 +143,8 @@ public final class SmokeTest {
             }
             return;
         }
+        // A resource reload (Mojang screen) pauses the script so no shot captures it.
+        if (mc.getOverlay() != null) return;
         ticksInWorld++;
         if (bench) {
             Benchmark.tick(mc, ticksInWorld);
@@ -173,6 +175,10 @@ public final class SmokeTest {
         if ("features".equals(only)) {
             if (t < FEATURES_TICKS) featuresBlock(mc, t);
             else finish(mc);
+            return;
+        }
+        if ("audit".equals(only)) {
+            if (!auditBlock(mc, t)) finish(mc);
             return;
         }
         if ("menu".equals(only)) {
@@ -1261,6 +1267,38 @@ public final class SmokeTest {
         }
     }
 
+    private static final java.util.List<String> AUDIT_DEAD = new java.util.ArrayList<>();
+    private static java.util.List<Module> auditModules;
+
+    /** Clicks every switch and segment of every mod's settings, then the Settings and Cosmetics tabs (-PsmokeOnly=audit). */
+    private static boolean auditBlock(Minecraft mc, int t) {
+        if (auditModules == null) {
+            auditModules = new java.util.ArrayList<>();
+            for (Module m : ShardClient.modules().all()) if (!m.hidden()) auditModules.add(m);
+        }
+        int step = t / 4;
+        int local = t % 4;
+        int total = auditModules.size() + 2;
+        if (step >= total) {
+            ShardClient.LOGGER.info("Smoke: click audit found {} dead controls: {}", AUDIT_DEAD.size(), AUDIT_DEAD);
+            com.google.gson.JsonArray arr = new com.google.gson.JsonArray();
+            AUDIT_DEAD.forEach(arr::add);
+            SUMMARY.add("deadControls", arr);
+            return false;
+        }
+        if (local == 0) {
+            if (!(mc.screen instanceof ClickGuiScreen)) openGui(mc);
+            ClickGuiScreen gui = gui(mc);
+            if (step < auditModules.size()) {
+                gui.selectTab(ClickGuiScreen.Tab.MODS);
+                gui.openModule(auditModules.get(step));
+            } else gui.selectTab(step == auditModules.size() ? ClickGuiScreen.Tab.SETTINGS : ClickGuiScreen.Tab.COSMETICS);
+        } else if (local == 3) {
+            AUDIT_DEAD.addAll(gui(mc).clickAudit());
+        }
+        return true;
+    }
+
     private static final int MENU07_TICKS = 150;
 
     /** The 0.7.0 mod menu: tabs, tiles, hover, settings view, search and an eased scroll (-PsmokeOnly=menu). */
@@ -1284,8 +1322,8 @@ public final class SmokeTest {
             case 75 -> shot(mc, "menu-settings-tab.png", null, 0);
             case 77 -> gui.selectTab(ClickGuiScreen.Tab.COSMETICS);
             case 90 -> shot(mc, "menu-cosmetics-tab.png", null, 0);
-            case 92 -> gui.selectTab(ClickGuiScreen.Tab.FRIENDS);
-            case 105 -> shot(mc, "menu-friends-tab.png", null, 0);
+            case 92 -> gui.selectTab(ClickGuiScreen.Tab.PROFILES);
+            case 105 -> shot(mc, "menu-profiles-tab.png", null, 0);
             case 107 -> {
                 gui.selectTab(ClickGuiScreen.Tab.MODS);
                 gui.setSearch("fire");

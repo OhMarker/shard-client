@@ -101,7 +101,7 @@ public final class ClickGuiScreen extends DesignScreen {
     private enum Filter { ALL, CATEGORY, FAVORITES, ENABLED }
 
     /** The top bar's tabs. */
-    public enum Tab { MODS, SETTINGS, COSMETICS, FRIENDS }
+    public enum Tab { MODS, SETTINGS, PROFILES, COSMETICS, FRIENDS }
 
     /** A clickable (and optionally focusable) rectangle registered during rendering. */
     private record Hit(String key, int x, int y, int w, int h, int[] clip, boolean focusable, IntConsumer onClick) {
@@ -242,11 +242,12 @@ public final class ClickGuiScreen extends DesignScreen {
     protected void init() {
         if (anims.isEmpty() && openProgress == 0f) {
             var gui = ShardClient.config().gui();
-            if (gui.has("category")) {
+            if (gui.has("category") && ShardClient.appearance().rememberTab.get()) {
                 String saved = gui.get("category").getAsString();
                 switch (saved) {
                     case "settings" -> tab = Tab.SETTINGS;
                     case "cosmetics" -> tab = Tab.COSMETICS;
+                    case "profiles" -> tab = Tab.PROFILES;
                     case "friends" -> tab = Tab.FRIENDS;
                     case "all" -> filter = Filter.ALL;
                     case "favorites" -> filter = Filter.FAVORITES;
@@ -282,7 +283,7 @@ public final class ClickGuiScreen extends DesignScreen {
             return;
         }
         var gui = ShardClient.config().gui();
-        String saved = tab == Tab.SETTINGS ? "settings" : tab == Tab.COSMETICS ? "cosmetics" : tab == Tab.FRIENDS ? "friends" : switch (filter) {
+        String saved = tab == Tab.SETTINGS ? "settings" : tab == Tab.PROFILES ? "profiles" : tab == Tab.COSMETICS ? "cosmetics" : tab == Tab.FRIENDS ? "friends" : switch (filter) {
             case ALL -> "all";
             case FAVORITES -> "favorites";
             case ENABLED -> "enabled";
@@ -365,6 +366,38 @@ public final class ClickGuiScreen extends DesignScreen {
     /** Shows one category, as a click on it in the rail would (smoke test). */
     public void showCategory(ModuleCategory c) {
         selectCategory(c);
+    }
+
+    /**
+     * Clicks the middle of every switch, option button and segment drawn last frame and reports
+     * the ones whose value did not change; values are put back afterwards (smoke test).
+     */
+    public List<String> clickAudit() {
+        List<String> dead = new ArrayList<>();
+        for (Hit h : new ArrayList<>(hits)) {
+            Setting<?> s = focusTargets.get(h.key);
+            boolean segment = false;
+            if (s == null && h.key.startsWith("set:") && h.key.matches(".*:[0-9]+$")) {
+                s = focusTargets.get(h.key.substring(0, h.key.lastIndexOf(':')));
+                segment = true;
+            }
+            if (!(s instanceof BoolSetting) && !(s instanceof EnumSetting<?>)) continue;
+            if (s instanceof EnumSetting<?> && !segment) continue; // dropdowns open a popover instead
+            com.google.gson.JsonElement before = s.toJson();
+            double cx = h.x + h.w / 2.0;
+            double cy = h.y + h.h / 2.0;
+            if (!h.contains(cx, cy)) continue; // scrolled out of view
+            mouseX = (int) cx;
+            mouseY = (int) cy;
+            designClicked(cx, cy, GLFW.GLFW_MOUSE_BUTTON_LEFT, false);
+            popover = null;
+            boolean changed = !before.equals(s.toJson());
+            // A segment that is already selected legitimately does not change.
+            if (!changed && segment && s instanceof EnumSetting<?> e && h.key.endsWith(":" + e.get().ordinal())) changed = true;
+            if (!changed) dead.add(h.key);
+            s.fromJson(before);
+        }
+        return dead;
     }
 
     /** Shows every mod (the All tab). */
@@ -605,6 +638,7 @@ public final class ClickGuiScreen extends DesignScreen {
                 }
             }
             case SETTINGS -> renderSettingsPage(g);
+            case PROFILES -> renderProfilesPage(g);
             case COSMETICS -> renderCosmeticsPage(g);
             case FRIENDS -> renderFriendsPage(g);
         }
@@ -615,6 +649,7 @@ public final class ClickGuiScreen extends DesignScreen {
         return switch (t) {
             case MODS -> "Mods";
             case SETTINGS -> "Settings";
+            case PROFILES -> "Profiles";
             case COSMETICS -> "Cosmetics";
             case FRIENDS -> "Friends";
         };
@@ -625,6 +660,8 @@ public final class ClickGuiScreen extends DesignScreen {
         int y = menuY;
         g.fill(menuX + 1, y + TOP_H - 1, menuX + menuW - 1, y + TOP_H, Theme.line());
         int x = menuX + 18;
+        Icons.draw(g, "logo", x, y + (TOP_H - 18) / 2, 18, Theme.text());
+        x += 26;
         Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, 14, x, y + (TOP_H - Fonts.lineHeight(14)) / 2, Theme.text());
         int tx = x + Fonts.widthInt("Shard", Fonts.Weight.SEMIBOLD, 14) + 24;
         int textY = y + (TOP_H - Fonts.lineHeight(SECTION)) / 2;
@@ -901,7 +938,7 @@ public final class ClickGuiScreen extends DesignScreen {
         int stripY = y + h - STRIP_H;
         if (on) {
             // A very faint green behind the status, kept inside the rounded bottom corners.
-            int tint = Colors.withAlpha(Theme.success(), 0x0F);
+            int tint = Colors.withAlpha(Theme.accent(), 0x0F);
             g.fill(x + 1, stripY + 1, x + w - 1, y + h - 4, tint);
             g.fill(x + 2, y + h - 4, x + w - 2, y + h - 2, tint);
             g.fill(x + 4, y + h - 2, x + w - 4, y + h - 1, tint);
@@ -919,8 +956,13 @@ public final class ClickGuiScreen extends DesignScreen {
         if (favorites.contains(m.key())) Icons.draw(g, "favorite-on", x + 8, y + 8, 11, 0xFF4A4A50);
 
         String status = notice != null ? (m.blockedBy() != null ? "BLOCKED" : "OFF HERE") : on ? "ENABLED" : "DISABLED";
-        int statusColor = notice != null ? Theme.warning() : on ? Theme.success() : 0xFF6A6A70;
+        int statusColor = notice != null ? Theme.warning() : on ? Theme.accent() : 0xFF6A6A70;
         Fonts.drawCentered(g, status, Fonts.Weight.SEMIBOLD, HINT, x + w / 2, stripY + (STRIP_H - Fonts.lineHeight(HINT)) / 2, statusColor);
+        if (hover && notice == null && ShardClient.appearance().tileTooltips.get()) {
+            hoverDetails = m.description();
+            hoverDetailsX = mouseX + 12;
+            hoverDetailsY = mouseY + 16;
+        }
         if (notice != null && hover) {
             hoverDetails = notice;
             hoverDetailsX = mouseX + 12;
@@ -993,8 +1035,8 @@ public final class ClickGuiScreen extends DesignScreen {
         int fill;
         int color;
         if (primary) {
-            fill = Colors.mix(Theme.text(), 0xFFFFFFFF, hov);
-            color = Theme.surface();
+            fill = Colors.mix(Theme.accent(), Theme.accentHover(), hov);
+            color = Theme.accentText();
         } else if (danger) {
             fill = Colors.mix(Colors.withAlpha(Theme.danger(), 0x1A), Colors.withAlpha(Theme.danger(), 0x30), hov);
             color = Theme.danger();
@@ -1400,14 +1442,19 @@ public final class ClickGuiScreen extends DesignScreen {
             boolean on = e.get() == v;
             Hit probe = new Hit(key + ":" + i, sx, y + 2, sw, h - 4, currentClip, false, b -> e.set(v));
             hits.add(probe);
-            boolean hover = hoverable(probe);
+            boolean hover = popover == null && Render2D.hovered(mouseX, mouseY, sx, y + 2, sw, h - 4) && hoverable(hitFor(key));
             if (on) Render2D.roundedRect(g, sx, y + 2, sw, h - 4, 4, Theme.control());
             else if (hover) Render2D.roundedRect(g, sx, y + 2, sw, h - 4, 4, Theme.surfaceHover());
             String label = Fonts.clip(EnumSetting.pretty(v), Fonts.Weight.MEDIUM, HINT, sw - 6);
             Fonts.drawCentered(g, label, Fonts.Weight.MEDIUM, HINT, sx + sw / 2, y + (h - Fonts.lineHeight(HINT)) / 2, on ? Theme.text() : Theme.muted());
         }
-        // The whole control is one focus stop; arrows change the value.
-        hits.add(new Hit(key, x, y, w, h, currentClip, true, b -> {}));
+        // The whole control is one focus stop (arrows change the value). It is registered last, so
+        // it is the hit a click finds: pick the segment under the pointer here, or clicks on the
+        // segments would do nothing.
+        hits.add(new Hit(key, x, y, w, h, currentClip, true, b -> {
+            int i = Math.max(0, Math.min(values.length - 1, (mouseX - x - 2) / Math.max(1, segW)));
+            e.set(values[i]);
+        }));
     }
 
     /** Details appear only after the pointer rests on the same row for a moment, like a tooltip. */
@@ -1480,13 +1527,37 @@ public final class ClickGuiScreen extends DesignScreen {
         y += section(g, "hud", "HUD", "Scale and the style every HUD element inherits", x, y, sectionW,
                 (ix, iy, iw) -> renderSettingRows(g, ShardClient.hudDefaults(), ShardClient.hudDefaults().settings(), ix, iy, iw)) + GRID_GAP;
         y += section(g, "keybind", "Keybinds", "Every module keybind in one list, with conflict warnings", x, y, sectionW, this::renderKeybindsBody) + GRID_GAP;
-        y += section(g, "profile", "Profiles", "Save the whole config under a name and switch between them", x, y, sectionW, this::renderProfilesBody) + GRID_GAP;
         y += section(g, "server-rule", "Server rules", "Modules kept off on matching addresses; * matches subdomains", x, y, sectionW, this::renderServersBody) + GRID_GAP;
         y += section(g, "download", "Export and import", "Copy the config as JSON to the clipboard, or paste one back", x, y, sectionW, this::renderExportBody) + GRID_GAP;
         y += section(g, "reset", "Reset", "Back to a fresh install, keeping server rules", x, y, sectionW, this::renderResetBody) + GRID_GAP;
         y += section(g, "logo", "About", "Shard Client " + version(), x, y, sectionW, this::renderAboutBody) + GRID_GAP;
 
         int contentHeight = y + Math.round(pageShown) - top;
+        pageScroll = Math.max(0, Math.min(pageScroll, contentHeight - viewH));
+        pageShown = Math.max(0, Math.min(pageShown, Math.max(0, contentHeight - viewH)));
+        unclip(g);
+    }
+
+    /** Saved configs: make your own profiles and switch between them. */
+    private void renderProfilesPage(GuiGraphics g) {
+        int top = contentY;
+        int viewH = contentH;
+        clip(g, menuX + 1, top - GRID_PAD + 1, menuW - 2, viewH + GRID_PAD - 1);
+        pageShown = ease(pageShown, pageScroll);
+        int w = Math.min(contentW, SECTION_MAX_W);
+        int x = menuX + (menuW - w) / 2;
+        int y = top - Math.round(pageShown);
+        Fonts.draw(g, "Profiles", Fonts.Weight.SEMIBOLD, NAME, x, y, Theme.text());
+        y += Fonts.lineHeight(NAME) + 2;
+        for (String line : Fonts.wrap("Save everything (mods, settings, HUD layout) under a name, then switch between profiles in one click, for example one for crystal PvP and one for recording.",
+                Fonts.Weight.REGULAR, DESC, w)) {
+            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x, y, Theme.muted());
+            y += Fonts.lineHeight(DESC);
+        }
+        y += 12;
+        g.fill(x, y, x + w, y + 1, Theme.line());
+        y = renderProfilesBody(x, y + 13, w);
+        int contentHeight = y + Math.round(pageShown) - top + GRID_PAD;
         pageScroll = Math.max(0, Math.min(pageScroll, contentHeight - viewH));
         pageShown = Math.max(0, Math.min(pageShown, Math.max(0, contentHeight - viewH)));
         unclip(g);
@@ -1797,6 +1868,10 @@ public final class ClickGuiScreen extends DesignScreen {
         GuiGraphics g = g0;
         var info = ShardClient.launcherInfo();
         String launcher = info.present() ? "Launched by Shard Launcher " + info.launcherVersion() : "Not launched by Shard Launcher";
+        Fonts.drawClipped(g, "Made by OhMarker with the help of swxyzx2", Fonts.Weight.MEDIUM, LABEL, x, y, w, Theme.text());
+        y += Fonts.lineHeight(LABEL) + 2;
+        Fonts.drawClipped(g, "Shard Client is open source under the MIT License (github.com/OhMarker/shard-client)", Fonts.Weight.REGULAR, DESC, x, y, w, Theme.muted());
+        y += Fonts.lineHeight(DESC) + 6;
         Fonts.drawClipped(g, launcher, Fonts.Weight.REGULAR, DESC, x, y, w, Theme.muted());
         y += Fonts.lineHeight(DESC);
         Fonts.drawClipped(g, "Config schema " + ConfigManager.VERSION + " · Right Shift opens this menu · \".help\" in chat lists commands", Fonts.Weight.REGULAR, HINT, x, y, w, Theme.subtle());
@@ -1877,6 +1952,10 @@ public final class ClickGuiScreen extends DesignScreen {
             }
         }
         target.onClick.accept(button);
+        if (ShardClient.appearance().clickSounds.get() && (target.key.startsWith("row:") || target.key.startsWith("sw:") || target.key.startsWith("set:")
+                || target.key.startsWith("tab:") || target.key.startsWith("cat:") || target.key.startsWith("nav:") || target.key.startsWith("panel"))) {
+            minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 0.25f));
+        }
         return true;
     }
 

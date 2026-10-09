@@ -21,13 +21,16 @@ public final class AppearanceModule extends Module {
 
     public final BoolSetting launcherAccent = add(new BoolSetting("Launcher accent", "Use the accent colour Shard Launcher sends with the game", true)
             .details("Switch it off to pick your own accent below. Without the launcher the default is crystal cyan."));
-    public final ColorSetting accent = add(new ColorSetting("Accent colour", "The one colour used for active switches, focus, the selected category and the primary button", 0xFF22D3EE, false));
+    public final ColorSetting accent = add(new ColorSetting("Accent colour", "Switches, enabled mods, sliders and the main buttons use this colour", 0xFF4ADE80, false));
     public final IntSetting interfaceSize = add(new IntSetting("Interface size", "Size of the mod menu and its settings (it always stays inside the window)", 100, 100, 150, 5, "%")
             .details("The page keeps the same layout at every Minecraft GUI scale; this is the only size knob you need."));
     public final EnumSetting<FontMode> font = add(new EnumSetting<>("Font", "Smooth is Inter, the launcher's font; Vanilla is the Minecraft bitmap font", FontMode.SMOOTH)
             .details("HUD elements follow this choice too. Symbols Inter lacks always fall back to vanilla."));
     public final IntSetting blur = add(new IntSetting("Blur strength", "How much the world behind the page is blurred (0 is off)", 5, 0, 10, 1, ""));
     public final BoolSetting reduceMotion = add(new BoolSetting("Reduce motion", "Snap hover, switches, the panel and popovers into place instead of animating them", false));
+    public final BoolSetting clickSounds = add(new BoolSetting("Click sounds", "A soft click when you toggle a mod or press a button in the menu", false).group("Menu"));
+    public final BoolSetting tileTooltips = add(new BoolSetting("Mod descriptions", "Show what a mod does when you rest the pointer on its tile", true).group("Menu"));
+    public final BoolSetting rememberTab = add(new BoolSetting("Open where you left off", "Reopen the menu on the last tab and category; off always starts on Mods > All", true).group("Menu"));
     public final BoolSetting smoothCorners = add(new BoolSetting("Smooth corners", "Anti-aliased corner textures; off draws the 0.2.0 stepped fills", true)
             .details("Only turn this off if the rounded corners ever render wrong on your GPU."));
 
