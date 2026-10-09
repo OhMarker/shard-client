@@ -1,23 +1,23 @@
 import java.security.MessageDigest
 
 plugins {
-    id("fabric-loom") version "1.18.2"
+    // Applies fabric-loom-remap (Minecraft < 26.1) or fabric-loom (26.1+, unobfuscated).
+    id("dev.kikugie.loom-back-compat")
     `maven-publish`
 }
 
 fun prop(name: String): String = project.property(name).toString()
 
+// This build script runs once per Minecraft version in versions/ (Stonecutter nodes).
+val mcVersion: String = project.name
 val modVersion = prop("modVersion")
-val minecraftVersion = prop("minecraftVersion")
 val loaderVersion = prop("loaderVersion")
 val fabricApiVersion = prop("fabricApiVersion")
 val modmenuVersion = prop("modmenuVersion")
-val sodiumVersion = prop("sodiumVersion")
-val irisVersion = prop("irisVersion")
-val lithiumVersion = prop("lithiumVersion")
-val clothConfigVersion = prop("clothConfigVersion")
+val mcCompat = prop("mcCompat")
+val javaVersion = if (sc.current.parsed >= "26.1") 25 else 21
 
-version = modVersion
+version = "$modVersion+$mcVersion"
 group = prop("mavenGroup")
 
 base {
@@ -35,8 +35,8 @@ repositories {
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:$minecraftVersion")
-    mappings(loom.officialMojangMappings())
+    minecraft("com.mojang:minecraft:$mcVersion")
+    loomx.applyMojangMappings()
     modImplementation("net.fabricmc:fabric-loader:$loaderVersion")
     modImplementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
 
@@ -44,15 +44,18 @@ dependencies {
     modImplementation("com.terraformersmc:modmenu:$modmenuVersion")
 
     // The launcher's bundled set, present in the dev client so mixin conflicts show up early.
-    modRuntimeOnly("maven.modrinth:sodium:$sodiumVersion")
-    modRuntimeOnly("maven.modrinth:iris:$irisVersion")
-    modRuntimeOnly("maven.modrinth:lithium:$lithiumVersion")
+    // Versions without these properties run without them.
+    for ((slug, key) in listOf("sodium" to "sodiumVersion", "iris" to "irisVersion", "lithium" to "lithiumVersion")) {
+        findProperty(key)?.let { modRuntimeOnly("maven.modrinth:$slug:$it") }
+    }
     // -PextraMods=<folder>: also run with these mod jars (reproducing a player's mod list in dev).
     if (project.hasProperty("extraMods")) {
         modRuntimeOnly(fileTree(project.property("extraMods").toString()) { include("*.jar") })
     }
-    modRuntimeOnly("me.shedaniel.cloth:cloth-config-fabric:$clothConfigVersion") {
-        exclude(group = "net.fabricmc.fabric-api")
+    findProperty("clothConfigVersion")?.let {
+        modRuntimeOnly("me.shedaniel.cloth:cloth-config-fabric:$it") {
+            exclude(group = "net.fabricmc.fabric-api")
+        }
     }
 
     testImplementation(platform("org.junit:junit-bom:5.11.4"))
@@ -66,7 +69,9 @@ loom {
             client()
             configName = "Shard Client"
             ideConfigGenerated(true)
-            runDir = "run"
+            // 1.21.11 keeps the original run/ folder; other versions get run-<version>/.
+            val runFolder = rootProject.file(if (mcVersion == "1.21.11") "run" else "run-$mcVersion")
+            runDir = runFolder.relativeTo(projectDir).invariantSeparatorsPath
             // -PwindowSize=1920x1080 changes the dev window (the smoke test uses 1280x720 by default).
             val size = (project.findProperty("windowSize")?.toString() ?: "1280x720").split("x")
             programArgs("--width", size[0], "--height", size[1])
@@ -116,33 +121,35 @@ loom {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.toVersion(javaVersion)
+    targetCompatibility = JavaVersion.toVersion(javaVersion)
     withSourcesJar()
 }
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.release.set(21)
+    options.release.set(javaVersion)
 }
 
 tasks.processResources {
-    inputs.property("version", project.version)
-    inputs.property("minecraft_version", minecraftVersion)
+    inputs.property("version", modVersion)
+    inputs.property("minecraft_compat", mcCompat)
     inputs.property("loader_version", loaderVersion)
+    inputs.property("java_version", javaVersion)
     filesMatching("fabric.mod.json") {
         expand(
             mapOf(
-                "version" to project.version,
-                "minecraft_version" to minecraftVersion,
-                "loader_version" to loaderVersion
+                "version" to modVersion,
+                "minecraft_compat" to mcCompat,
+                "loader_version" to loaderVersion,
+                "java_version" to javaVersion
             )
         )
     }
 }
 
 tasks.jar {
-    from("LICENSE") { rename { "${it}_shard" } }
+    from(rootProject.file("LICENSE")) { rename { "${it}_shard" } }
 }
 
 tasks.test {
@@ -150,19 +157,24 @@ tasks.test {
     testLogging { events("passed", "failed", "skipped") }
 }
 
-// sha512 of the remapped jar, for shard-manifest.json (see CONTRACT.md in the launcher repo).
+// sha512 of the mod jar, for shard-manifest.json (see CONTRACT.md in the launcher repo).
+// Jars and their .sha512 files are collected in the root build/libs/<modVersion>/.
+val modJar = loomx.modJar
 val sha512 = tasks.register("sha512") {
-    dependsOn(tasks.remapJar)
-    val jar = tasks.remapJar.flatMap { it.archiveFile }
-    val out = layout.buildDirectory.file("libs/shard-$modVersion.jar.sha512")
+    dependsOn(modJar)
+    val jar = modJar.flatMap { it.archiveFile }
+    val outDir = rootProject.layout.buildDirectory.dir("libs/$modVersion")
     inputs.file(jar)
-    outputs.file(out)
+    outputs.dir(outDir)
     doLast {
+        val src = jar.get().asFile
+        val dir = outDir.get().asFile.apply { mkdirs() }
+        val copy = dir.resolve(src.name)
+        src.copyTo(copy, overwrite = true)
         val digest = MessageDigest.getInstance("SHA-512")
-        val bytes = jar.get().asFile.readBytes()
-        val hex = digest.digest(bytes).joinToString("") { b -> "%02x".format(b) }
-        out.get().asFile.writeText("$hex  ${jar.get().asFile.name}\n")
-        println("sha512 $hex")
+        val hex = digest.digest(copy.readBytes()).joinToString("") { b -> "%02x".format(b) }
+        dir.resolve("${src.name}.sha512").writeText("$hex  ${src.name}\n")
+        println("sha512 ${src.name} $hex")
     }
 }
 tasks.build { dependsOn(sha512) }
