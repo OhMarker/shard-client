@@ -81,7 +81,7 @@ including "Step 8: final verification").
 
 ### How 0.4.0 was published (the same steps work for later versions)
 1. Merge `v0.4.0` into `main` (`git checkout main && git merge --no-ff v0.4.0`) and push main.
-2. Release (Claude's sandbox may not create releases; if refused, the owner runs it from a
+2. Release (the automation sandbox may not create releases; if refused, the owner runs it from a
    Desktop .cmd):
 
 ```bash
@@ -123,7 +123,7 @@ Last updated 2026-10-07 (0.3.0).
 - Published 2026-10-08: https://github.com/OhMarker/shard-client with releases v0.2.0 and v0.3.0
   (downloaded jars match the local sha512s), and https://github.com/OhMarker/meta serves the
   manifest with `latest` 0.3.0. The owner ran the steps below via a Desktop script because
-  Claude's sandbox may not create public repositories or releases; pushing to the existing
+  the automation sandbox may not create public repositories or releases; pushing to the existing
   repos works.
 
 ## Publish (owner runs once, from this folder)

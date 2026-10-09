@@ -26,7 +26,7 @@ double-click .cmd file on my Desktop (C:\Users\OhMar\OneDrive\Desktop).
    build/libs/shard-0.4.0.jar.sha512.
 7. Merge `v0.4.0` into `main` only after asking me.
 8. STOP and ask me before creating a GitHub release or pushing ../meta. When I say yes, follow
-   "Releasing a new client version later" in STATUS.md (Claude's sandbox can push to existing repos
+   "Releasing a new client version later" in STATUS.md (the automation sandbox can push to existing repos
    but may not create releases; if that is refused, write a Desktop .cmd that runs the `gh release
    create` command for me).
 
