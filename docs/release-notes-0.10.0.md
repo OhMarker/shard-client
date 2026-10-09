@@ -8,5 +8,7 @@ Builds in this release (more are added as each version is finished):
 - Minecraft 1.21.9
 - Minecraft 1.21.8, 1.21.7, 1.21.6
 - Minecraft 1.21.5
+- Minecraft 1.21.4
+- Minecraft 1.21.3, 1.21.2
 
 Fabric Loader 0.19+, Fabric API.
