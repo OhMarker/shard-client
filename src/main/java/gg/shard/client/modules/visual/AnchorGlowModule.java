@@ -54,7 +54,7 @@ public final class AnchorGlowModule extends Module implements PanelPreview {
 
     @Override
     public String icon() {
-        return "anchor";
+        return "glow";
     }
 
     @Override

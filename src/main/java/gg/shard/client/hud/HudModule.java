@@ -126,7 +126,7 @@ public abstract class HudModule extends Module implements gg.shard.client.gui.Pa
         HudStyle.Preset[] presets = HudStyle.Preset.values();
         int cellH = 46;
         int h = cellH + 36;
-        gg.shard.client.gui.Render2D.roundedRect(g, x, y, width, h, gg.shard.client.gui.Theme.radius(), 0xFF2A3446);
+        gg.shard.client.gui.Render2D.roundedRect(g, x, y, width, h, gg.shard.client.gui.Theme.radius(), 0xFF1C1C1F);
         gg.shard.client.gui.Render2D.roundedOutline(g, x, y, width, h, gg.shard.client.gui.Theme.radius(), gg.shard.client.gui.Theme.line());
         if (needsPlayer() && mc.player == null) {
             gg.shard.client.gui.Fonts.drawCentered(g, "Join a world to preview", gg.shard.client.gui.Fonts.Weight.MEDIUM, 11, x + width / 2, y + h / 2 - 7, gg.shard.client.gui.Theme.subtle());
@@ -145,7 +145,7 @@ public abstract class HudModule extends Module implements gg.shard.client.gui.Pa
             boolean on = p == current;
             boolean hover = previewMouseX >= cx && previewMouseX < cx + cellW && previewMouseY >= cy && previewMouseY < cy + cellH;
             gg.shard.client.gui.Render2D.roundedRect(g, cx, cy, cellW, cellH, 6, on ? 0x40000000 : hover ? 0x26000000 : 0x14000000);
-            if (on) gg.shard.client.gui.Render2D.roundedOutline(g, cx, cy, cellW, cellH, 6, gg.shard.client.gui.Theme.accentAlpha(0xC0));
+            if (on) gg.shard.client.gui.Render2D.roundedOutline(g, cx, cy, cellW, cellH, 6, gg.shard.client.gui.Theme.lineHover());
             int[] size = previewSizes.getOrDefault(p, new int[]{lastWidth, lastHeight});
             float s = Math.min(1f, Math.min((cellW - 8) / (float) Math.max(1, size[0]), (cellH - 18) / (float) Math.max(1, size[1])));
             var pose = g.pose();

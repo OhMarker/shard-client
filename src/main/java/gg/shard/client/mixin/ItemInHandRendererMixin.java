@@ -6,10 +6,13 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import gg.shard.client.ShardClient;
 import gg.shard.client.modules.visual.LowShieldModule;
+import gg.shard.client.modules.visual.SmallItemsModule;
+import gg.shard.client.render.ItemTints;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -19,7 +22,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Shield: right after vanilla pushes the hand's pose the shield is moved in view space (so
+ * Small Items: just before the held item is drawn it is moved and shrunk in hand space. Shield
+ * tint/opacity: the colour is published to {@link ItemTints} for the duration of the shield's
+ * submit, where ShieldSpecialRendererMixin and BannerRendererMixin pick it up.
+ *
+ * <p>Shield: right after vanilla pushes the hand's pose the shield is moved in view space (so
  * "lower" is down the screen), and the item itself is scaled in its own space just before it is
  * drawn (so "width" is the shield's face, around its own centre). Both hooks are optional.
  */
@@ -41,14 +48,31 @@ abstract class ItemInHandRendererMixin {
     private void shard$scaleShield(ItemInHandRenderer self, LivingEntity entity, ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
                                    SubmitNodeCollector collector, int light, Operation<Void> original,
                                    @Local(argsOnly = true) AbstractClientPlayer player, @Local(argsOnly = true) InteractionHand hand) {
-        float[] scale = ShardClient.isReady() ? ShardClient.modules().get(LowShieldModule.class).scaleFor(player, hand, stack) : null;
-        if (scale == null) {
+        if (!ShardClient.isReady()) {
+            original.call(self, entity, stack, context, poseStack, collector, light);
+            return;
+        }
+        LowShieldModule shield = ShardClient.modules().get(LowShieldModule.class);
+        float[] scale = shield.scaleFor(player, hand, stack);
+        int color = shield.colorFor(player, hand, stack);
+        HumanoidArm arm = hand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
+        float[] small = ShardClient.modules().get(SmallItemsModule.class).transformFor(hand, arm, stack);
+        if (scale == null && small == null && color == ItemTints.NONE) {
             original.call(self, entity, stack, context, poseStack, collector, light);
             return;
         }
         poseStack.pushPose();
-        poseStack.scale(scale[0], scale[1], scale[2]);
-        original.call(self, entity, stack, context, poseStack, collector, light);
-        poseStack.popPose();
+        if (small != null) {
+            poseStack.translate(small[1], small[2], small[3]);
+            poseStack.scale(small[0], small[0], small[0]);
+        }
+        if (scale != null) poseStack.scale(scale[0], scale[1], scale[2]);
+        ItemTints.beginShield(color);
+        try {
+            original.call(self, entity, stack, context, poseStack, collector, light);
+        } finally {
+            ItemTints.endShield();
+            poseStack.popPose();
+        }
     }
 }

@@ -5,8 +5,10 @@ import gg.shard.client.ShardClient;
 import gg.shard.client.mixin.OverlayTextureAccessor;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
+import gg.shard.client.module.setting.BoolSetting;
 import gg.shard.client.module.setting.ColorSetting;
 import gg.shard.client.module.setting.IntSetting;
+import gg.shard.client.render.ItemTints;
 import gg.shard.client.util.Colors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -29,6 +31,8 @@ public final class HitColorModule extends Module {
     private final IntSetting strength = add(new IntSetting("Strength", "How strong the tint is", 70, 10, 100, 5, "%"));
     private final IntSetting flashTicks = add(new IntSetting("Flash duration", "How long the tint stays after a hit (vanilla is 10 ticks)", 10, 1, 10, 1, " ticks")
             .details("Shorter flashes make rapid hits easier to count."));
+    private final BoolSetting tintArmor = add(new BoolSetting("Tint armor", "Also flash worn armour and elytra (vanilla leaves them untinted)", true)
+            .details("Armour ignores vanilla's damage overlay, so its colour is multiplied by the hit colour while the flash shows."));
 
     private boolean painted;
 
@@ -40,7 +44,7 @@ public final class HitColorModule extends Module {
 
     @Override
     public String about() {
-        return "Changes the colour, strength and length of the damage flash on every entity by repainting the overlay texture vanilla uses. "
+        return "Changes the colour, strength and length of the damage flash on every entity by repainting the overlay texture vanilla uses, and can flash worn armour too. "
                 + "Hits are detected exactly as vanilla detects them; nothing about damage is predicted or revealed.";
     }
 
@@ -58,6 +62,12 @@ public final class HitColorModule extends Module {
     public boolean showsOverlay(LivingEntity entity) {
         if (!isEnabled() || entity.hurtTime <= 0) return true;
         return entity.hurtTime > VANILLA_HURT_TICKS - flashTicks.get();
+    }
+
+    /** Multiplier for armour layers while the wearer flashes, or {@link ItemTints#NONE}. */
+    public int armorTint() {
+        if (!isEnabled() || !tintArmor.get()) return ItemTints.NONE;
+        return ItemTints.hitTint(color.get(), strength.get());
     }
 
     @Override

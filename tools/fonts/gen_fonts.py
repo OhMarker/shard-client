@@ -13,7 +13,7 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parents[2] / "src/main/resources/assets/shard/font"
 WEIGHTS = ("regular", "medium", "semibold")
 SIZES = (10, 11, 12, 13, 14, 15, 16, 18, 20, 24)
-DENSITIES = (2, 3, 4, 6)
+DENSITIES = (1, 2, 3, 4, 6)
 
 
 def definition(weight, size, density):

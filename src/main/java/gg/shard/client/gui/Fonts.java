@@ -52,7 +52,7 @@ public final class Fonts {
      * smallest at or above the current on-screen density ({@link Render2D#pixelsPerUnit}), so
      * glyphs are never stretched up; {@code FontTextureMixin} smooths the small rest.
      */
-    public static final int[] DENSITIES = {2, 3, 4, 6};
+    public static final int[] DENSITIES = {1, 2, 3, 4, 6};
     /** Inter 4.1 metrics relative to the em. */
     static final double CAP_HEIGHT = 0.7275;
     static final double ASCENT = 0.9688;

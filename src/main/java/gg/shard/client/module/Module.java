@@ -108,6 +108,7 @@ public abstract class Module {
     }
 
     public void setEnabled(boolean value) {
+        if (!value && alwaysOn()) return;
         if (enabled == value) return;
         boolean wasActive = isEnabled();
         enabled = value;
@@ -168,6 +169,11 @@ public abstract class Module {
 
     /** Hidden from the GUI (always on, no user-facing options). */
     public boolean hidden() {
+        return false;
+    }
+
+    /** Never switched off (no toggle, no keybind); its settings live on their own page. */
+    public boolean alwaysOn() {
         return false;
     }
 

@@ -170,6 +170,11 @@ public final class SmokeTest {
             else finish(mc);
             return;
         }
+        if ("menu".equals(only)) {
+            if (t < MENU07_TICKS) menu07Block(mc, t);
+            else finish(mc);
+            return;
+        }
         int block = t / STEP_TICKS;
         int local = t % STEP_TICKS;
         if (block < SCALES.length) {
@@ -1007,6 +1012,87 @@ public final class SmokeTest {
         mc.resizeDisplay();
         ShardClient.LOGGER.info("Smoke: GUI scale {} -> effective {} ({}x{})", scale == 0 ? "auto" : scale, mc.getWindow().getGuiScale(),
                 mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
+    }
+
+    private static final int MENU07_TICKS = 150;
+
+    /** The 0.7.0 mod menu: tabs, tiles, hover, settings view, search and an eased scroll (-PsmokeOnly=menu). */
+    private static void menu07Block(Minecraft mc, int t) {
+        ClickGuiScreen gui = mc.screen instanceof ClickGuiScreen g ? g : null;
+        switch (t) {
+            case 0 -> {
+                openGui(mc);
+                gui(mc).selectTab(ClickGuiScreen.Tab.MODS);
+                gui(mc).showAll();
+            }
+            case 2, 24, 49, 64, 79, 94, 109 -> parkCursor(mc);
+            case 20 -> shot(mc, "menu-all.png", null, 3);
+            case 22 -> gui.showCategory(gg.shard.client.module.ModuleCategory.HUD);
+            case 35 -> shot(mc, "menu-hud.png", null, 0);
+            case 37 -> moveCursor(mc, gui, 1);
+            case 45 -> shot(mc, "menu-hover.png", null, 0);
+            case 47 -> gui.openModule(module("fps"));
+            case 60 -> shot(mc, "menu-settings-view.png", null, 3);
+            case 62 -> gui.selectTab(ClickGuiScreen.Tab.SETTINGS);
+            case 75 -> shot(mc, "menu-settings-tab.png", null, 0);
+            case 77 -> gui.selectTab(ClickGuiScreen.Tab.COSMETICS);
+            case 90 -> shot(mc, "menu-cosmetics-tab.png", null, 0);
+            case 92 -> gui.selectTab(ClickGuiScreen.Tab.FRIENDS);
+            case 105 -> shot(mc, "menu-friends-tab.png", null, 0);
+            case 107 -> {
+                gui.selectTab(ClickGuiScreen.Tab.MODS);
+                gui.setSearch("fire");
+            }
+            case 120 -> shot(mc, "menu-search.png", null, 0);
+            case 122 -> {
+                gui.setSearch("");
+                gui.showAll();
+            }
+            case 125 -> {
+                double s = mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getWidth();
+                mc.screen.mouseScrolled(mc.getWindow().getWidth() / 2.0 * s, mc.getWindow().getHeight() / 2.0 * s, 0, -2);
+            }
+            case 126 -> shot(mc, "menu-scroll-mid.png", null, 0);
+            case 140 -> shot(mc, "menu-scroll-end.png", null, 0);
+            default -> {
+            }
+        }
+    }
+
+    /** Puts the pointer on the n-th tile of the first row. */
+    private static void moveCursor(Minecraft mc, ClickGuiScreen gui, int tile) {
+        int[] c = gui.tileCentre(tile);
+        double px = c[0] * gui.pixelsPerUnitNow();
+        double py = c[1] * gui.pixelsPerUnitNow();
+        org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().handle(), px, py);
+        ((gg.shard.client.mixin.MouseHandlerInvoker) mc.mouseHandler).shard$onMove(mc.getWindow().handle(), px, py);
+    }
+
+    /** A screenshot plus, when {@code zoom} is above 0, a zoomed crop of the menu's top-left quarter. */
+    private static void shot(Minecraft mc, String name, String unused, int zoom) {
+        quietHud(mc);
+        Path file = out.resolve(name);
+        Screenshot.takeScreenshot(mc.getMainRenderTarget(), image -> {
+            try (image) {
+                image.writeToFile(file);
+                ShardClient.LOGGER.info("Smoke: wrote {}", file);
+                if (zoom > 0) {
+                    int cw = Math.min(image.getWidth(), image.getWidth() / 3);
+                    int ch = Math.min(image.getHeight(), image.getHeight() / 3);
+                    int x0 = (image.getWidth() - Math.min(image.getWidth(), 960 * image.getHeight() / 720)) / 2;
+                    int y0 = image.getHeight() / 10;
+                    x0 = Math.max(0, Math.min(image.getWidth() - cw, x0));
+                    try (NativeImage z = new NativeImage(cw * zoom, ch * zoom, false)) {
+                        for (int zy = 0; zy < ch * zoom; zy++) {
+                            for (int zx = 0; zx < cw * zoom; zx++) z.setPixel(zx, zy, image.getPixel(x0 + zx / zoom, y0 + zy / zoom) | 0xFF000000);
+                        }
+                        z.writeToFile(out.resolve(name.replace(".png", "-zoom.png")));
+                    }
+                }
+            } catch (IOException e) {
+                ShardClient.LOGGER.error("Smoke: could not write {}", file, e);
+            }
+        });
     }
 
     private static void openGui(Minecraft mc) {
