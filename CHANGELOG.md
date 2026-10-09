@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0
+
+- **Shard on more Minecraft versions.** The same client, with every module, menu, HUD element and
+  cosmetic, now also runs on Minecraft 1.21.10 and 1.21.9. More versions follow in this release
+  line; Shard Launcher installs the right build for each instance automatically.
+
 ## 0.9.1
 
 - Borderless fullscreen no longer hides the mouse cursor in menus: the window is one pixel taller
