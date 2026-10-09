@@ -3,6 +3,7 @@ package gg.shard.client.modules.visual;
 import gg.shard.client.ShardClient;
 import gg.shard.client.cosmetics.CapeLibrary;
 import gg.shard.client.cosmetics.EquippedCape;
+import gg.shard.client.cosmetics.PlayerCosmetics;
 import gg.shard.client.cosmetics.ShardApi;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
@@ -13,6 +14,9 @@ import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.ClientAsset;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerSkin;
 
@@ -42,7 +46,9 @@ public final class CosmeticsModule extends Module {
     private static final long IDLE_AFTER_MS = 5 * 60_000;
 
     private final BoolSetting showCape = add(new BoolSetting("Show my cape", "Wear the cape you equipped in Shard Launcher", true));
-    private final BoolSetting showOthers = add(new BoolSetting("Show Shard capes", "Show the capes other Shard players equipped", true));
+    private final BoolSetting showShield = add(new BoolSetting("Show my shield", "Your shields use the shield cosmetic you equipped", true));
+    private final BoolSetting showBandana = add(new BoolSetting("Show my bandana", "Wear the bandana you equipped (hidden under a helmet)", true));
+    private final BoolSetting showOthers = add(new BoolSetting("Show other players' cosmetics", "Show the capes, shields and bandanas other Shard players equipped", true));
     private final BoolSetting onElytra = add(new BoolSetting("On elytra too", "Paint elytras with the cape's elytra artwork", true));
     private final BoolSetting earnTokens = add(new BoolSetting("Earn tokens", "Earn 10 Shard tokens for every 10 minutes you play", true));
     private final BoolSetting tokenToasts = add(new BoolSetting("Token pop-ups", "A small pop-up each time you earn tokens", true));
@@ -50,11 +56,13 @@ public final class CosmeticsModule extends Module {
     private final CapeLibrary library = new CapeLibrary();
     private final ShardApi api = new ShardApi(library.cacheDir());
     /** Who wears what, from the API (players currently in the world). */
-    private final Map<UUID, String> worn = new ConcurrentHashMap<>();
+    private final Map<UUID, PlayerCosmetics.Equipped> worn = new ConcurrentHashMap<>();
     private final Set<UUID> looked = new HashSet<>();
     private final Map<PlayerSkin, PlayerSkin> patched = new WeakHashMap<>();
 
     private String localCapeId;
+    /** Shield and bandana from the launcher's equipped.json, once it writes them. */
+    private PlayerCosmetics.Equipped localSlots = PlayerCosmetics.Equipped.NONE;
     private volatile String localStatus = "Not loaded";
     private volatile String accountStatus = "Not signed in";
     private boolean started;
@@ -72,7 +80,7 @@ public final class CosmeticsModule extends Module {
     private double lastZ = Double.NaN;
 
     public CosmeticsModule() {
-        super("Cosmetics", "Capes for every Shard player, and tokens for playing.", ModuleCategory.VISUALS);
+        super("Cosmetics", "Capes, shields and bandanas for every Shard player, and tokens for playing.", ModuleCategory.VISUALS);
     }
 
     @Override
@@ -97,9 +105,9 @@ public final class CosmeticsModule extends Module {
 
     @Override
     public String about() {
-        return "Shows the cape every Shard player equipped in Shard Launcher, including yours, and earns you "
+        return "Shows the cape, shield and bandana every Shard player equipped in Shard Launcher, including yours, and earns you "
                 + "10 Shard tokens for every 10 minutes you play (only while you are moving; standing idle for "
-                + "five minutes pauses it). Spend tokens on capes in the launcher. You sign in with Mojang's own "
+                + "five minutes pauses it). Spend tokens on cosmetics in the launcher. You sign in with Mojang's own "
                 + "check, the same one servers use, so your account details never reach Shard. Purely visual: "
                 + "nothing is sent to the Minecraft server, and players without Shard see normal capes.";
     }
@@ -124,10 +132,10 @@ public final class CosmeticsModule extends Module {
                 // (bought or given), so nobody wears a cape they did not pay for, even on their screen.
                 ShardApi.Me me = api.me();
                 if (localCapeId != null && (me == null || me.owned().contains(localCapeId))) texture = library.ready(localCapeId);
-                if (texture == null) texture = library.texture(worn.get(uuid));
+                if (texture == null) texture = library.capeTexture(wornSlot(uuid, "cape"));
             }
         } else if (showOthers.get()) {
-            texture = library.texture(worn.get(uuid));
+            texture = library.capeTexture(wornSlot(uuid, "cape"));
         }
         if (texture == null) return skin;
         boolean elytra = onElytra.get();
@@ -136,6 +144,46 @@ public final class CosmeticsModule extends Module {
         PlayerSkin out = new PlayerSkin(skin.body(), texture, elytra ? texture : skin.elytra(), skin.model(), skin.secure());
         patched.put(skin, out);
         return out;
+    }
+
+    private String wornSlot(UUID uuid, String slot) {
+        PlayerCosmetics.Equipped e = worn.get(uuid);
+        return e == null ? null : e.slot(slot);
+    }
+
+    /** The shield texture this player's held shields use, or null for vanilla's. Render thread. */
+    public Identifier shieldTexture(UUID uuid, boolean local) {
+        return slotTexture(uuid, local, "shield", showShield);
+    }
+
+    /** The bandana texture this player wears, or null. Render thread. */
+    public Identifier bandanaTexture(UUID uuid, boolean local) {
+        return slotTexture(uuid, local, "bandana", showBandana);
+    }
+
+    private Identifier slotTexture(UUID uuid, boolean local, String slot, BoolSetting mine) {
+        if (!isEnabled() || uuid == null) return null;
+        if (local) {
+            if (!mine.get()) return null;
+            // Same rule as the cape: the launcher's pick first, but once signed in only if owned.
+            ShardApi.Me me = api.me();
+            String fromLauncher = localSlots.slot(slot);
+            Identifier t = fromLauncher != null && (me == null || me.owned().contains(fromLauncher)) ? library.textureId(fromLauncher, slot) : null;
+            if (t == null) t = library.textureId(wornSlot(uuid, slot), slot);
+            if (t == null && me != null) t = library.textureId(me.equipped().slot(slot), slot);
+            return t;
+        }
+        return showOthers.get() ? library.textureId(wornSlot(uuid, slot), slot) : null;
+    }
+
+    // 0.8.x called "Show other players' cosmetics" "Show Shard capes".
+    @Override
+    protected void migrateSetting(String key, JsonElement value, JsonObject all, int version) {
+        if (key.equals("show-shard-capes")) {
+            if (!all.has(showOthers.key())) showOthers.fromJson(value);
+            return;
+        }
+        super.migrateSetting(key, value, all, version);
     }
 
     @Override
@@ -228,7 +276,7 @@ public final class CosmeticsModule extends Module {
             if (earned > 0 && tokenToasts.get()) {
                 SystemToast.add(Minecraft.getInstance().getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                         Component.literal("+" + earned + " Shard tokens"),
-                        Component.literal("You have " + me.tokens() + ". Spend them on capes in Shard Launcher."));
+                        Component.literal("You have " + me.tokens() + ". Spend them on cosmetics in Shard Launcher."));
             }
         }));
     }
@@ -242,12 +290,12 @@ public final class CosmeticsModule extends Module {
         nextLookup = ticks + EQUIPPED_TICKS;
         looked.clear();
         looked.addAll(present);
-        api.equipped(present).whenComplete((capes, error) -> Minecraft.getInstance().execute(() -> {
+        api.equipped(present).whenComplete((slots, error) -> Minecraft.getInstance().execute(() -> {
             if (error != null) return; // keep what we had; try again next minute
             for (UUID uuid : present) {
-                String cape = capes.get(uuid);
-                if (cape == null) worn.remove(uuid);
-                else worn.put(uuid, cape);
+                PlayerCosmetics.Equipped e = slots.get(uuid);
+                if (e == null) worn.remove(uuid);
+                else worn.put(uuid, e);
             }
         }));
     }
@@ -257,6 +305,13 @@ public final class CosmeticsModule extends Module {
         if (equipped == null) {
             localStatus = "No launcher info";
             return;
+        }
+        localSlots = EquippedCape.readSlots(equipped);
+        for (String slot : new String[]{"shield", "bandana"}) {
+            String id = localSlots.slot(slot);
+            if (id == null) continue;
+            Path texture = EquippedCape.textureFor(equipped, id);
+            if (Files.isRegularFile(texture)) library.loadLocal(id, slot, texture);
         }
         EquippedCape item = EquippedCape.read(equipped);
         if (item == null) {
@@ -281,8 +336,13 @@ public final class CosmeticsModule extends Module {
         return dev == null || dev.isBlank() ? null : Path.of(dev);
     }
 
+    /** Dev/smoke: equip through the API, then look everyone up again. */
+    public java.util.concurrent.CompletableFuture<ShardApi.Me> equip(String slot, String id) {
+        return api.equip(slot, id).whenComplete((me, error) -> Minecraft.getInstance().execute(() -> nextLookup = 0));
+    }
+
     /** For the smoke test: what the API says this player wears. */
-    public Map<UUID, String> wornSnapshot() {
+    public Map<UUID, PlayerCosmetics.Equipped> wornSnapshot() {
         return new HashMap<>(worn);
     }
 }

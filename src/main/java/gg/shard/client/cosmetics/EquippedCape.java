@@ -28,6 +28,26 @@ public record EquippedCape(String id, Path texture) {
         }
     }
 
+    /**
+     * Every slot in equipped.json ({@code cape}/{@code cloak}, and {@code shield}/{@code bandana}
+     * once the launcher writes them); {@link PlayerCosmetics.Equipped#NONE} when unusable.
+     */
+    public static PlayerCosmetics.Equipped readSlots(Path equippedJson) {
+        if (equippedJson == null || !Files.isRegularFile(equippedJson)) return PlayerCosmetics.Equipped.NONE;
+        try {
+            JsonElement root = JsonParser.parseString(Files.readString(equippedJson, StandardCharsets.UTF_8));
+            if (!root.isJsonObject()) return PlayerCosmetics.Equipped.NONE;
+            return PlayerCosmetics.parseSlots(root.getAsJsonObject().get("equipped"));
+        } catch (IOException | RuntimeException e) {
+            return PlayerCosmetics.Equipped.NONE;
+        }
+    }
+
+    /** Where the launcher caches the texture of {@code id} next to equipped.json. */
+    public static Path textureFor(Path equippedJson, String id) {
+        return texturePath(equippedJson, id);
+    }
+
     /** {@code equipped.cape}, else {@code equipped.cloak} (the launcher never sets both). */
     static String backItemId(JsonElement root) {
         if (root == null || !root.isJsonObject()) return null;

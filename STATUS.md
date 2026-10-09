@@ -1,5 +1,17 @@
 # Status (handoff for a new session)
 
+## 0.9.0: OhMarker set, shield and bandana (2026-10-09, committed locally, not released)
+- Shield cosmetic retextures held shields (first and third person, both hands, banner shields too;
+  Shield module tint/opacity on top); bandana is a head feature layer (BandanaMesh/BandanaLayer).
+  Why and how: DECISIONS.md "0.9.0". Settings: Show my shield / Show my bandana / Show other
+  players' cosmetics (old "show-shard-capes" key migrates).
+- Catalogue: cosmetics-v2.json (fallback v1). meta's cosmetics-v2.json and the shield/bandana PNGs
+  were only local when this was built; push meta before releasing or the new items will not load.
+- Verify: `node tools/smoke-set-seed.mjs` against the local API, then `./gradlew runClient
+  -PquickPlay=localhost:25599 -PsmokeDir=$PWD/smoke-set -PsmokeOnly=set -PwindowSize=1920x1080
+  -PapiBase=http://127.0.0.1:8787 -PcatalogueUrl=file:///C:/Users/OhMar/New%20folder/meta/cosmetics-v2.json`.
+  19 shots in docs/screenshots/0.9.0/. 140 JUnit tests.
+
 ## 0.8.0: title screen, server list, account switcher, faster start-up (2026-10-09, released)
 - Shard title screen + server list (`gui/menu/`, `MinecraftScreenSwapMixin`, hidden
   `MenuScreensModule`, Settings → Menus); account switcher via the launcher bridge

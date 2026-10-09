@@ -99,6 +99,10 @@ loom {
             if (project.hasProperty("metaBase")) {
                 vmArgs("-Dshard.dev.metaBase=" + project.property("metaBase").toString())
             }
+            // -PcatalogueUrl=<url or file:///...> reads the cosmetics catalogue from there (e.g. an unpushed cosmetics-v2.json).
+            if (project.hasProperty("catalogueUrl")) {
+                vmArgs("-Dshard.dev.catalogueUrl=" + project.property("catalogueUrl").toString())
+            }
             // -PsmokeBench runs the BENCHMARKS.md scenario instead of the screenshot pass.
             if (project.hasProperty("smokeBench")) {
                 vmArgs("-Dshard.smoke.bench=1")

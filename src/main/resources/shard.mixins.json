@@ -6,6 +6,8 @@
   "client": [
     "AbstractArrowInvoker",
     "AbstractClientPlayerCapeMixin",
+    "AvatarRendererMixin",
+    "AvatarRenderStateMixin",
     "AbstractContainerScreenAccessor",
     "AtmosphericFogEnvironmentMixin",
     "BannerRendererMixin",
@@ -28,6 +30,7 @@
     "GuiMixin",
     "GuiOverlaysMixin",
     "ItemInHandRendererMixin",
+    "ItemModelResolverMixin",
     "JoinMultiplayerScreenAccessor",
     "LevelRendererEntitiesMixin",
     "LightTextureMixin",

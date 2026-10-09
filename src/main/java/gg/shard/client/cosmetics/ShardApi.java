@@ -45,7 +45,8 @@ public final class ShardApi {
     public static final String DEV_API_PROPERTY = "shard.dev.apiBase";
 
     /** The signed-in player's account, as the API last reported it. */
-    public record Me(String uuid, String name, int tokens, List<String> owned, String cape, boolean admin, int secondsToNextTokens) {}
+    public record Me(String uuid, String name, int tokens, List<String> owned, String cape, boolean admin, int secondsToNextTokens,
+                     PlayerCosmetics.Equipped equipped) {}
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
@@ -107,20 +108,27 @@ public final class ShardApi {
         }, worker);
     }
 
-    /** Cape ids for the given players (only those wearing one), up to 100 per call. */
-    public CompletableFuture<Map<UUID, String>> equipped(Collection<UUID> uuids) {
+    /** Equips an owned cosmetic in a slot ("cape", "shield", "bandana"); null id takes it off. */
+    public CompletableFuture<Me> equip(String slot, String id) {
         return CompletableFuture.supplyAsync(() -> {
-            Map<UUID, String> out = new HashMap<>();
+            JsonObject body = new JsonObject();
+            body.addProperty("slot", slot);
+            body.addProperty("id", id);
+            me = parseMe(post("/v1/equip", body, true));
+            return me;
+        }, worker);
+    }
+
+    /** Every slot for the given players (only those wearing something), up to 100 per call. */
+    public CompletableFuture<Map<UUID, PlayerCosmetics.Equipped>> equipped(Collection<UUID> uuids) {
+        return CompletableFuture.supplyAsync(() -> {
+            Map<UUID, PlayerCosmetics.Equipped> out = new HashMap<>();
             List<UUID> all = new ArrayList<>(uuids);
             for (int i = 0; i < all.size(); i += 100) {
                 String list = all.subList(i, Math.min(all.size(), i + 100)).stream()
                         .map(u -> u.toString().replace("-", "")).collect(Collectors.joining(","));
-                JsonObject players = get("/v1/equipped?uuids=" + list).getAsJsonObject("players");
-                for (Map.Entry<String, JsonElement> e : players.entrySet()) {
-                    UUID uuid = PlayerCosmetics.parseUuid(e.getKey());
-                    String cape = e.getValue().isJsonPrimitive() ? e.getValue().getAsString() : null;
-                    if (uuid != null && cape != null && PlayerCosmetics.SAFE_ID.matcher(cape).matches()) out.put(uuid, cape);
-                }
+                // v=2: { cape, shield, bandana } per player; an older API ignores it and sends cape ids.
+                out.putAll(PlayerCosmetics.parseEquipped(get("/v1/equipped?v=2&uuids=" + list).getAsJsonObject("players")));
             }
             return out;
         }, worker);
@@ -156,9 +164,13 @@ public final class ShardApi {
         JsonElement list = o.get("owned");
         if (list != null && list.isJsonArray()) for (JsonElement e : (JsonArray) list) owned.add(e.getAsString());
         JsonElement cape = o.get("cape");
+        String capeId = cape == null || cape.isJsonNull() ? null : cape.getAsString();
+        // Newer APIs send equipped: { cape, shield, bandana }; older ones only the cape.
+        PlayerCosmetics.Equipped equipped = o.has("equipped") ? PlayerCosmetics.parseSlots(o.get("equipped"))
+                : new PlayerCosmetics.Equipped(capeId, null, null);
         return new Me(o.get("uuid").getAsString(), o.get("name").getAsString(), o.get("tokens").getAsInt(), List.copyOf(owned),
-                cape == null || cape.isJsonNull() ? null : cape.getAsString(), o.has("admin") && o.get("admin").getAsBoolean(),
-                o.has("secondsToNextTokens") ? o.get("secondsToNextTokens").getAsInt() : 0);
+                capeId, o.has("admin") && o.get("admin").getAsBoolean(),
+                o.has("secondsToNextTokens") ? o.get("secondsToNextTokens").getAsInt() : 0, equipped);
     }
 
     // ---- HTTP ---------------------------------------------------------------------------------

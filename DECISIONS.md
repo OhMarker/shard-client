@@ -274,6 +274,39 @@
   Look "Small Items mod" (default) reproduces that: 0.6 around the hand's pivot for every item,
   shields included, and the empty arm; Look "Custom" keeps the 0.7.1 sliders.
 
+## 0.9.0: OhMarker set (shield and bandana)
+
+- **Shield = the held shield, retextured.** Vanilla resolves a held item's look while it knows the
+  holder (`ItemModelResolver.appendItemLayers`, which gets the `ItemOwner`) but draws the shield
+  later from its components only. `ItemModelResolverMixin` keeps a small stack of (holder, display
+  context); `ShieldSpecialRendererMixin.extractArgument` wraps the components in
+  `ShieldCosmetics.Skinned(components, texture)` when the holder is a player with a shield cosmetic,
+  and `submit` draws the plate and handle with that texture (vanilla's 64x64 shield layout on the
+  whole texture, no atlas sprite) instead of the base and banner patterns. Only the four hand
+  contexts count, so hotbar icons, dropped shields and item frames stay vanilla. `Skinned` is a
+  record so vanilla's model identity changes with the texture. The Shield module's first-person
+  tint/opacity (`ItemTints`) is multiplied in and switches to entity_translucent the same way.
+- **Bandana = a feature layer with custom geometry.** Registered on both player renderers with
+  Fabric's `LivingEntityFeatureRendererRegistrationCallback`; `AvatarRendererMixin` puts the
+  texture into the render state (`BandanaState`, added by `AvatarRenderStateMixin`) while the
+  entity is known, so the layer works for remote players, F5 and the inventory doll. The layer
+  applies the head part's pose and submits quads from `BandanaMesh` (pure, unit-tested) with
+  entity_cutout_no_cull. Hidden under any helmet, skull or head item, and for invisible players.
+- **How the square art is cut.** A thin shell 0.6 px outside the head (the hat layer is 0.5). Top:
+  everything inside the border (u/v 0.125..0.875: emblem plus the four crescents), upright for
+  someone in front. The forehead band and the sides continue the top's edges outwards through the
+  border to the stitched edge, so the top's rim has no seam; the side hem drops smoothly from the
+  hairline to behind the ears (the border stretches up to about 2.5x towards the back, which reads
+  fine as a wrap). Back: the lower half of the art (ring, MINECRAFT, crescents), upright from
+  behind, own crop (a seam at the top-back edge was preferred to a squashed or stretched back).
+  Knot: the corner's star-in-a-ring medallion; tails: strips of the side border.
+- **Catalogue v2.** `cosmetics-v2.json` first, `cosmetics.json` if it is missing; bundles (no
+  texture) are ignored. Dev runs: `-PcatalogueUrl=file:///.../cosmetics-v2.json` also resolves
+  meta-repository texture URLs next to that file, so unpushed art can be tested.
+- **Who wears what.** `GET /v1/equipped?v=2` (an old API's cape-id strings still parse as capes);
+  `/v1/me`'s `equipped`. Your own slots: the launcher's equipped.json first (once it writes
+  `shield`/`bandana`, if owned), then the lookup, then `/v1/me`.
+
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.

@@ -84,6 +84,12 @@ public final class ShardClient implements ClientModInitializer {
 
         hud = new HudManager(modules);
         gg.shard.client.render.LowFireModels.init();
+        // Bandana cosmetic on every player renderer (wide and slim).
+        net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, ctx) -> {
+            if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {
+                helper.register(new gg.shard.client.render.BandanaLayer(avatar));
+            }
+        });
         gg.shard.client.combat.CombatTracker.init();
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> {
             if (gg.shard.client.dev.SmokeTest.active() || !gg.shard.client.gui.WelcomeScreen.needed()) return;

@@ -171,6 +171,11 @@ public final class SmokeTest {
             else finish(mc);
             return;
         }
+        if ("set".equals(only)) {
+            if (t < SetSmoke.TICKS) SetSmoke.block(mc, t);
+            else finish(mc);
+            return;
+        }
         if ("scales".equals(only)) {
             if (t < SCALES_TICKS) scalesBlock(mc, t);
             else finish(mc);
@@ -956,7 +961,7 @@ public final class SmokeTest {
             }
             case 40 -> {
                 SUMMARY.addProperty("capeStatus", cosmetics.status());
-                SUMMARY.addProperty("apiSaysOtherWears", cosmetics.wornSnapshot().get(OTHER_PLAYER));
+                SUMMARY.addProperty("apiSaysOtherWears", String.valueOf(cosmetics.wornSnapshot().get(OTHER_PLAYER)));
                 var account = cosmetics.account();
                 SUMMARY.addProperty("shardAccount", account == null ? "not signed in" : account.name() + " " + account.tokens() + " tokens");
                 SUMMARY.addProperty("otherPlayerHasShardCape", otherPlayer != null
@@ -991,10 +996,10 @@ public final class SmokeTest {
             case 165 -> shot(mc, "smoke-cape-off.png", null);
             case 170 -> {
                 cosmetics.setEnabled(true);
-                setSetting("cosmetics", "show-shard-capes", "false");
+                setSetting("cosmetics", "show-other-players'-cosmetics", "false");
             }
             case 180 -> shot(mc, "smoke-cape-others-off.png", null);
-            case 185 -> setSetting("cosmetics", "show-shard-capes", "true");
+            case 185 -> setSetting("cosmetics", "show-other-players'-cosmetics", "true");
             case 190 -> {
                 if (otherPlayer != null) {
                     otherPlayer.discard();
