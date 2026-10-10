@@ -1,5 +1,25 @@
 # Status (handoff for a new session)
 
+## 0.14.0: new mod menu (released 2026-10-10)
+- Released: https://github.com/OhMarker/shard-client/releases/tag/v0.14.0 (17 jars from a clean
+  worktree of commit b3e3f9a), meta latest 0.14.0 (meta commit 0f2b265); the downloaded 1.21.11
+  jar's sha512 matches the manifest.
+- Owner picked the "two-column cards" layout from mockups in the launcher repo
+  (design/ingame/cards.html, menu-screens/*.png). `ClickGuiScreen`: sidebar (search, All mods,
+  Favorites, Enabled, categories with counts; Cosmetics, Friends, Profiles, Edit HUD, Settings;
+  player name and Shards), 2-column mod cards (switch, 2-line description, status, key, Settings
+  link), All/Enabled/Off filter (`showOnly`), footer with Reset category (confirm) and Edit HUD
+  Layout. A mod's settings are a full page (`renderModulePage`): back + breadcrumb, mod card with
+  Favorite and switch, settings boxes per group in two columns (`renderSettingsBox`, heights from
+  the previous frame), Reset module / Disable on this server. Menu is 1280x688 design units;
+  scale is chosen to fit 1040x600 so 720p stays at 1.0. The HUD editor's embedded column still
+  uses the old `renderPanel`. Hit keys kept (row:, gear:, tab:, cat:, nav:, panel-*), new sw:,
+  show:N, crumb:category.
+- Verified: all 17 versions build with tests; `-PsmokeOnly=menu` (now shoots Combat and Crystal
+  Optimizer) at 1920x1080 on 1.21.11, 1.21 and 26.3, and at 1280x720 on 1.21.11; `-PsmokeOnly=audit`
+  on 1.21.11 found no dead controls. Shots in docs/screenshots/menu-redesign/. Not clicked by a
+  person: Reset category's confirm, the crumb link, All/Enabled/Off.
+
 ## 0.13.1: Shard title screen after cancelling Create World (released 2026-10-10)
 - Released: https://github.com/OhMarker/shard-client/releases/tag/v0.13.1 (commit 8a9dd21, clean
   worktree), meta latest 0.13.1 (b91ff08). Owner reported: Singleplayer, then back, showed vanilla's
