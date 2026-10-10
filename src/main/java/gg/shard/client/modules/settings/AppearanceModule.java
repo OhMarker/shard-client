@@ -30,7 +30,7 @@ public final class AppearanceModule extends Module {
     public final BoolSetting reduceMotion = add(new BoolSetting("Reduce motion", "Snap hover, switches, the panel and popovers into place instead of animating them", false));
     public final BoolSetting clickSounds = add(new BoolSetting("Click sounds", "A soft click when you toggle a mod or press a button in the menu", false).group("Menu"));
     public final BoolSetting tileTooltips = add(new BoolSetting("Mod descriptions", "Show what a mod does when you rest the pointer on its tile", true).group("Menu"));
-    public final BoolSetting rememberTab = add(new BoolSetting("Open where you left off", "Reopen the menu on the last tab and category; off always starts on Mods > All", true).group("Menu"));
+    public final BoolSetting rememberTab = add(new BoolSetting("Open where you left off", "The menu always opens on Mods; this brings back the last Mods category (off: Mods > All)", true).group("Menu"));
     public final BoolSetting smoothCorners = add(new BoolSetting("Smooth corners", "Anti-aliased corner textures; off draws the 0.2.0 stepped fills", true)
             .details("Only turn this off if the rounded corners ever render wrong on your GPU."));
 

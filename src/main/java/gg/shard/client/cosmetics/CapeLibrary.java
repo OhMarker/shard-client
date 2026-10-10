@@ -56,6 +56,9 @@ public final class CapeLibrary {
     private final Map<String, ClientAsset.Texture> textures = new ConcurrentHashMap<>();
     /** Ids being loaded or that failed (failures are retried after the next list refresh). */
     private final Map<String, Boolean> busy = new ConcurrentHashMap<>();
+    /** Preview pictures for the in-game Cosmetics tab, and the ids loading (or failed). */
+    private final Map<String, Identifier> previews = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> previewBusy = new ConcurrentHashMap<>();
     private volatile boolean refreshing;
     private volatile String status = "Not loaded";
 
@@ -155,6 +158,48 @@ public final class CapeLibrary {
         return cacheDir;
     }
 
+    /** Every cape, shield and bandana in the catalogue (empty until the first refresh). */
+    public Map<String, PlayerCosmetics.Item> catalogue() {
+        return catalogue;
+    }
+
+    /**
+     * The catalogue preview picture of an id, fitted into a {@link PreviewFit#SIZE} square, once
+     * ready; starts loading it otherwise. Null for items without a preview.
+     */
+    public Identifier preview(String id) {
+        if (id == null) return null;
+        Identifier ready = previews.get(id);
+        if (ready != null) return ready;
+        PlayerCosmetics.Item item = catalogue.get(id);
+        if (item == null || item.previewUrl() == null || previewBusy.putIfAbsent(id, Boolean.TRUE) != null) return null;
+        String url = item.previewUrl();
+        CompletableFuture.supplyAsync(() -> {
+            Path file = download("previews", id, url);
+            try (InputStream in = Files.newInputStream(file); NativeImage image = NativeImage.read(in)) {
+                //? if >=1.21.2 {
+                int[] argb = image.getPixels();
+                //?} else {
+                /*int[] argb = image.makePixelArray();
+                *///?}
+                int[] square = PreviewFit.fit(argb, image.getWidth(), image.getHeight(), PreviewFit.SIZE);
+                return MipChain.build(square, PreviewFit.SIZE, PreviewFit.SIZE, 16);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).whenComplete((levels, error) -> Minecraft.getInstance().execute(() -> {
+            if (error != null) {
+                ShardClient.LOGGER.warn("Cosmetics: could not load the preview of {} from {}", id, url, error);
+                return; // retried after the next catalogue refresh
+            }
+            Identifier tex = Identifier.fromNamespaceAndPath(ShardClient.MOD_ID,
+                    "cosmetics/preview/" + EquippedCape.safeId(id).toLowerCase(Locale.ROOT));
+            Minecraft.getInstance().getTextureManager().register(tex, new CapeTexture("Shard preview " + id, levels));
+            previews.put(id, tex);
+        }));
+        return null;
+    }
+
     /** Re-reads the catalogue (falls back to the cached copy when offline). */
     public void refresh() {
         if (refreshing) return;
@@ -175,14 +220,16 @@ public final class CapeLibrary {
                 if (catalogueJson != null) {
                     Map<String, PlayerCosmetics.Item> parsed = new java.util.HashMap<>(PlayerCosmetics.parseCatalogueV2(catalogueJson, local));
                     if (devCatalogue != null && devCatalogue.startsWith("file:")) {
+                        java.util.function.Predicate<String> exists = u -> Files.isRegularFile(Path.of(URI.create(u)));
                         parsed.replaceAll((id, item) -> new PlayerCosmetics.Item(id, item.type(),
-                                PlayerCosmetics.localTexture(item.textureUrl(), META_BASE, devCatalogue,
-                                        u -> Files.isRegularFile(Path.of(URI.create(u))))));
+                                PlayerCosmetics.localTexture(item.textureUrl(), META_BASE, devCatalogue, exists), item.name(), item.rarity(),
+                                item.previewUrl() == null ? null : PlayerCosmetics.localTexture(item.previewUrl(), META_BASE, devCatalogue, exists)));
                     }
                     catalogue = Map.copyOf(parsed);
                 }
                 // Retry anything that failed last time.
                 busy.keySet().removeIf(id -> !textures.containsKey(id) && !localTypes.containsKey(id));
+                previewBusy.keySet().removeIf(id -> !previews.containsKey(id));
                 status = catalogue.size() + " cosmetic" + (catalogue.size() == 1 ? "" : "s") + " in the catalogue";
                 ShardClient.LOGGER.info("Cosmetics: {}", status);
             } catch (RuntimeException e) {
@@ -229,9 +276,14 @@ public final class CapeLibrary {
 
     /** The cached PNG for a cape, downloaded again when its URL changed. */
     private Path downloadTexture(String capeId, String url) {
+        return download("textures", capeId, url);
+    }
+
+    /** The cached PNG in a cache folder, downloaded again when its URL changed. */
+    private Path download(String folder, String capeId, String url) {
         String safe = EquippedCape.safeId(capeId);
-        Path png = cacheDir.resolve("textures").resolve(safe + ".png");
-        Path source = cacheDir.resolve("textures").resolve(safe + ".url");
+        Path png = cacheDir.resolve(folder).resolve(safe + ".png");
+        Path source = cacheDir.resolve(folder).resolve(safe + ".url");
         try {
             if (Files.isRegularFile(png) && Files.isRegularFile(source)
                     && Files.readString(source, StandardCharsets.UTF_8).equals(url)) {

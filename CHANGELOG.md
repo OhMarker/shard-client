@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0
+
+- **Change your cosmetics in game.** The Cosmetics tab of the Shard menu now shows what you wear
+  (cape, shield, bandana) and every cosmetic with its picture, rarity and an Equip / Take off
+  button. Changes save to your Shard account: you wear them at once, other Shard players see them
+  within a minute, and Shard Launcher shows the same. Items you do not own yet show a lock and
+  point to the launcher's shop. Filter by Capes, Shields or Bandanas.
+- **The menu always opens on Mods.** "Open where you left off" now only brings back your last Mods
+  category.
+- Fixed: the game crashed when the pointer rested on a two- or three-option switch (for example on
+  the Settings page) in the Shard menu.
+
 ## 0.10.0
 
 - **Shard on more Minecraft versions.** The same client, with every module, menu, HUD element and

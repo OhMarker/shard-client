@@ -128,11 +128,9 @@ public final class CosmeticsModule extends Module {
         ClientAsset.Texture texture = null;
         if (local) {
             if (showCape.get()) {
-                // The launcher's choice shows straight away; once signed in it must also be owned
-                // (bought or given), so nobody wears a cape they did not pay for, even on their screen.
-                ShardApi.Me me = api.me();
-                if (localCapeId != null && (me == null || me.owned().contains(localCapeId))) texture = library.ready(localCapeId);
-                if (texture == null) texture = library.capeTexture(wornSlot(uuid, "cape"));
+                String id = wearing("cape");
+                texture = library.ready(id);
+                if (texture == null) texture = library.capeTexture(id);
             }
         } else if (showOthers.get()) {
             texture = library.capeTexture(wornSlot(uuid, "cape"));
@@ -170,17 +168,20 @@ public final class CosmeticsModule extends Module {
 
     private Identifier slotTexture(UUID uuid, boolean local, String slot, BoolSetting mine) {
         if (!isEnabled() || uuid == null) return null;
-        if (local) {
-            if (!mine.get()) return null;
-            // Same rule as the cape: the launcher's pick first, but once signed in only if owned.
-            ShardApi.Me me = api.me();
-            String fromLauncher = localSlots.slot(slot);
-            Identifier t = fromLauncher != null && (me == null || me.owned().contains(fromLauncher)) ? library.textureId(fromLauncher, slot) : null;
-            if (t == null) t = library.textureId(wornSlot(uuid, slot), slot);
-            if (t == null && me != null) t = library.textureId(me.equipped().slot(slot), slot);
-            return t;
-        }
+        if (local) return mine.get() ? library.textureId(wearing(slot), slot) : null;
         return showOthers.get() ? library.textureId(wornSlot(uuid, slot), slot) : null;
+    }
+
+    /**
+     * What you wear in a slot ("cape", "shield", "bandana"). Before signing in it is the launcher's
+     * pick from equipped.json, so it shows straight away; once signed in the account is the truth
+     * (only owned items can be equipped there), so a change made in the in-game Cosmetics tab or
+     * in the launcher shows at once without a restart.
+     */
+    public String wearing(String slot) {
+        ShardApi.Me me = api.me();
+        if (me != null) return me.equipped().slot(slot);
+        return "cape".equals(slot) ? localCapeId : localSlots.slot(slot);
     }
 
     // 0.8.x called "Show other players' cosmetics" "Show Shard capes".
@@ -343,9 +344,50 @@ public final class CosmeticsModule extends Module {
         return dev == null || dev.isBlank() ? null : Path.of(dev);
     }
 
-    /** Dev/smoke: equip through the API, then look everyone up again. */
+    /**
+     * Equips an owned item in a slot (null takes it off) on your Shard account: the in-game
+     * Cosmetics tab and the smoke test. You wear it at once, other Shard players see it on their next
+     * lookup (within a minute), and the launcher shows it the next time it loads your account.
+     * Completes on the render thread.
+     */
     public java.util.concurrent.CompletableFuture<ShardApi.Me> equip(String slot, String id) {
-        return api.equip(slot, id).whenComplete((me, error) -> Minecraft.getInstance().execute(() -> nextLookup = 0));
+        java.util.concurrent.CompletableFuture<ShardApi.Me> done = new java.util.concurrent.CompletableFuture<>();
+        if (!api.signedIn()) {
+            done.completeExceptionally(new IllegalStateException("not signed in to Shard yet"));
+            return done;
+        }
+        api.equip(slot, id).whenComplete((me, error) -> Minecraft.getInstance().execute(() -> {
+            if (error != null) {
+                done.completeExceptionally(error.getCause() != null ? error.getCause() : error);
+                return;
+            }
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player != null) worn.put(player.getUUID(), me.equipped());
+            accountStatus = "Signed in as " + me.name() + ", " + me.tokens() + " tokens";
+            nextLookup = 0;
+            done.complete(me);
+        }));
+        return done;
+    }
+
+    /** Whether the Shard account is signed in (equipping needs it). */
+    public boolean signedIn() {
+        return api.signedIn() && api.me() != null;
+    }
+
+    /** The account line for the Cosmetics tab: who is signed in, or why not. */
+    public String accountStatus() {
+        return accountStatus;
+    }
+
+    /** Every cape, shield and bandana in the catalogue. */
+    public Map<String, PlayerCosmetics.Item> catalogue() {
+        return library.catalogue();
+    }
+
+    /** The preview picture of a catalogue item once loaded (256x256), else null. Render thread. */
+    public Identifier preview(String id) {
+        return library.preview(id);
     }
 
     /** For the smoke test: what the API says this player wears. */

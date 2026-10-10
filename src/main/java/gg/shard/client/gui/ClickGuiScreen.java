@@ -5,6 +5,11 @@ import com.google.gson.JsonElement;
 import com.mojang.blaze3d.platform.InputConstants;
 import gg.shard.client.ShardClient;
 import gg.shard.client.config.ConfigManager;
+import gg.shard.client.cosmetics.CosmeticsTab;
+import gg.shard.client.cosmetics.PlayerCosmetics;
+import gg.shard.client.cosmetics.PreviewFit;
+import gg.shard.client.cosmetics.ShardApi;
+import gg.shard.client.modules.visual.CosmeticsModule;
 import gg.shard.client.hud.HudEditorScreen;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
@@ -27,6 +32,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -69,6 +75,8 @@ public final class ClickGuiScreen extends DesignScreen {
     static final int BUTTON_H = 28;
     static final int FIELD_H = 28;
     static final int SECTION_MAX_W = 640;
+    /** The Cosmetics tab's item grid is wider than a settings section. */
+    static final int COSMETICS_MAX_W = 760;
     // ---- menu frame (design units = physical pixels at 1080p) -------------------------------
     static final int MENU_W = 960;
     static final int MENU_H = 580;
@@ -244,11 +252,10 @@ public final class ClickGuiScreen extends DesignScreen {
             var gui = ShardClient.config().gui();
             if (gui.has("category") && ShardClient.appearance().rememberTab.get()) {
                 String saved = gui.get("category").getAsString();
+                // The menu always opens on Mods; only the Mods category is remembered. A saved
+                // Settings/Cosmetics/Profiles/Friends tab keeps the default Mods > All.
                 switch (saved) {
-                    case "settings" -> tab = Tab.SETTINGS;
-                    case "cosmetics" -> tab = Tab.COSMETICS;
-                    case "profiles" -> tab = Tab.PROFILES;
-                    case "friends" -> tab = Tab.FRIENDS;
+                    case "settings", "cosmetics", "profiles", "friends" -> { }
                     case "all" -> filter = Filter.ALL;
                     case "favorites" -> filter = Filter.FAVORITES;
                     case "enabled" -> filter = Filter.ENABLED;
@@ -283,7 +290,7 @@ public final class ClickGuiScreen extends DesignScreen {
             return;
         }
         var gui = ShardClient.config().gui();
-        String saved = tab == Tab.SETTINGS ? "settings" : tab == Tab.PROFILES ? "profiles" : tab == Tab.COSMETICS ? "cosmetics" : tab == Tab.FRIENDS ? "friends" : switch (filter) {
+        String saved = switch (filter) {
             case ALL -> "all";
             case FAVORITES -> "favorites";
             case ENABLED -> "enabled";
@@ -410,6 +417,27 @@ public final class ClickGuiScreen extends DesignScreen {
         return new int[]{contentX + index * (cardWidth + TILE_GAP) + cardWidth / 2, contentY + TILE_H / 2};
     }
 
+    /** Centre (design units) of the last frame's first control whose key matches {@code regex}, or null (smoke test). */
+    public int[] hitCentre(String regex) {
+        for (Hit h : new ArrayList<>(hits)) {
+            if (h.key.matches(regex) && h.contains(h.x + h.w / 2.0, h.y + h.h / 2.0)) return new int[]{h.x + h.w / 2, h.y + h.h / 2};
+        }
+        return null;
+    }
+
+    /** Clicks the control with this key as the last frame drew it; false when it is not on screen (smoke test). */
+    public boolean press(String key) {
+        Hit h = hitFor(key);
+        if (h == null) return false;
+        h.onClick.accept(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        return true;
+    }
+
+    /** The tab showing now (smoke test). */
+    public Tab currentTab() {
+        return tab;
+    }
+
     /** Physical pixels per design unit this frame (smoke test). */
     public double pixelsPerUnitNow() {
         return Render2D.pixelsPerUnit();
@@ -489,7 +517,7 @@ public final class ClickGuiScreen extends DesignScreen {
     }
 
     private boolean hoverable(Hit candidate) {
-        if (popover != null) return false;
+        if (candidate == null || popover != null) return false;
         // In the narrow layouts the panel renders over the list, so a row under it must not light up.
         if (panelCovers(mouseX, mouseY) && !Render2D.hovered(candidate.x + candidate.w / 2.0, candidate.y + candidate.h / 2.0, panelX, panelY, panelW, panelH)) {
             return false;
@@ -1442,7 +1470,9 @@ public final class ClickGuiScreen extends DesignScreen {
             boolean on = e.get() == v;
             Hit probe = new Hit(key + ":" + i, sx, y + 2, sw, h - 4, currentClip, false, b -> e.set(v));
             hits.add(probe);
-            boolean hover = popover == null && Render2D.hovered(mouseX, mouseY, sx, y + 2, sw, h - 4) && hoverable(hitFor(key));
+            // The whole-control hit for `key` is only added after this loop, so test the segment's own
+            // probe (looking up `key` here returned null and crashed on hover, 0.10.0).
+            boolean hover = popover == null && Render2D.hovered(mouseX, mouseY, sx, y + 2, sw, h - 4) && hoverable(probe);
             if (on) Render2D.roundedRect(g, sx, y + 2, sw, h - 4, 4, Theme.control());
             else if (hover) Render2D.roundedRect(g, sx, y + 2, sw, h - 4, 4, Theme.surfaceHover());
             String label = Fonts.clip(EnumSetting.pretty(v), Fonts.Weight.MEDIUM, HINT, sw - 6);
@@ -1567,28 +1597,135 @@ public final class ClickGuiScreen extends DesignScreen {
     }
 
     /** Cosmetics are always on; this tab holds what they show and the token options. */
+    /** Which slot the Cosmetics tab lists (null = all), and the item key being saved (buttons wait for it). */
+    private String cosmeticFilter;
+    private String cosmeticBusy;
+
+    /**
+     * Cosmetics: what you wear in each slot, every cape, shield and bandana (owned first) with
+     * Equip / Take off, and the display switches. Equipping saves to your Shard account.
+     */
     private void renderCosmeticsPage(GuiGraphics g) {
-        Module cosmetics = ShardClient.modules().get(gg.shard.client.modules.visual.CosmeticsModule.class);
+        CosmeticsModule cosmetics = ShardClient.modules().get(CosmeticsModule.class);
         int top = contentY;
         int viewH = contentH;
         clip(g, menuX + 1, top - GRID_PAD + 1, menuW - 2, viewH + GRID_PAD - 1);
         pageShown = ease(pageShown, pageScroll);
-        int w = Math.min(contentW, SECTION_MAX_W);
+        int w = Math.min(contentW, COSMETICS_MAX_W);
         int x = menuX + (menuW - w) / 2;
         int y = top - Math.round(pageShown);
+        Map<String, PlayerCosmetics.Item> catalogue = cosmetics.catalogue();
+        ShardApi.Me me = cosmetics.account();
+        boolean signedIn = cosmetics.signedIn();
+        Set<String> owned = me == null ? Set.of() : new HashSet<>(me.owned());
+
         Fonts.draw(g, "Cosmetics", Fonts.Weight.SEMIBOLD, NAME, x, y, Theme.text());
         y += Fonts.lineHeight(NAME) + 2;
-        for (String line : Fonts.wrap("Capes you equip in Shard Launcher show here, on you and on every Shard player. They are always on.",
+        for (String line : Fonts.wrap("Equip anything you own. It saves to your Shard account: you wear it straight away, other Shard players see it within a minute, and the launcher shows it too.",
                 Fonts.Weight.REGULAR, DESC, w)) {
             Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x, y, Theme.muted());
             y += Fonts.lineHeight(DESC);
         }
         y += 4;
-        for (String line : Fonts.wrap(((gg.shard.client.modules.visual.CosmeticsModule) cosmetics).status(), Fonts.Weight.REGULAR, DESC, w)) {
-            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x, y, Theme.subtle());
-            y += Fonts.lineHeight(DESC);
+        Fonts.drawClipped(g, cosmetics.accountStatus(), Fonts.Weight.REGULAR, DESC, x, y, w, signedIn ? Theme.subtle() : Theme.warning());
+        y += Fonts.lineHeight(DESC) + 14;
+
+        // What you wear, one card per slot.
+        Fonts.draw(g, "Wearing", Fonts.Weight.SEMIBOLD, SECTION, x, y, Theme.text());
+        y += Fonts.lineHeight(SECTION) + 8;
+        int slotGap = 8;
+        int slotW = (w - 2 * slotGap) / 3;
+        int slotH = 64;
+        for (int i = 0; i < CosmeticsTab.SLOTS.size(); i++) {
+            String slot = CosmeticsTab.SLOTS.get(i);
+            int sx = x + i * (slotW + slotGap);
+            Render2D.panel(g, sx, y, slotW, slotH, Theme.radius(), Theme.surfaceRaised(), Theme.line());
+            String id = cosmetics.wearing(slot);
+            PlayerCosmetics.Item item = id == null ? null : catalogue.get(id);
+            int ps = slotH - 16;
+            cosmeticPicture(g, cosmetics, id, slot, sx + 8, y + 8, ps, true);
+            int tx = sx + 8 + ps + 10;
+            int tw = slotW - (tx - sx) - 8;
+            Fonts.drawClipped(g, CosmeticsTab.slotLabel(slot), Fonts.Weight.MEDIUM, HINT, tx, y + 8, tw, Theme.subtle());
+            Fonts.drawClipped(g, item != null ? item.name() : id != null ? id : "Nothing", Fonts.Weight.MEDIUM, LABEL, tx, y + 8 + Fonts.lineHeight(HINT) + 1, tw,
+                    id == null ? Theme.muted() : Theme.text());
+            if (id != null) {
+                String key = "cos-off:" + slot;
+                button(g, key, tx, y + slotH - 8 - 20, Math.min(tw, 80), 20, cosmeticBusy != null && cosmeticBusy.equals(key) ? "Saving" : "Take off", false,
+                        signedIn && cosmeticBusy == null, b -> equipFromTab(cosmetics, key, slot, null, null));
+            }
         }
-        y += 12;
+        y += slotH + 18;
+
+        // Your cosmetics, with a slot filter on the right.
+        Fonts.draw(g, "Your cosmetics", Fonts.Weight.SEMIBOLD, SECTION, x, y + (24 - Fonts.lineHeight(SECTION)) / 2, Theme.text());
+        String[][] filters = {{null, "All"}, {"cape", "Capes"}, {"shield", "Shields"}, {"bandana", "Bandanas"}};
+        int[] fws = new int[filters.length];
+        int fx = x + w;
+        for (int i = 0; i < filters.length; i++) {
+            fws[i] = Math.max(56, Fonts.widthInt(filters[i][1], Fonts.Weight.MEDIUM, LABEL) + 28);
+            fx -= fws[i] + (i > 0 ? 4 : 0);
+        }
+        for (int i = 0; i < filters.length; i++) {
+            String[] f = filters[i];
+            int fw = fws[i];
+            boolean on = java.util.Objects.equals(cosmeticFilter, f[0]);
+            button(g, "cos-filter:" + f[1], fx, y, fw, 24, f[1], on, true, b -> {
+                cosmeticFilter = f[0];
+                pageScroll = 0;
+            });
+            fx += fw + 4;
+        }
+        y += 24 + 10;
+
+        List<PlayerCosmetics.Item> items = CosmeticsTab.list(catalogue.values(), owned, cosmeticFilter);
+        if (items.isEmpty()) {
+            String empty = catalogue.isEmpty() ? "Loading the cosmetics catalogue..." : "Nothing in this slot yet.";
+            Fonts.draw(g, empty, Fonts.Weight.REGULAR, DESC, x, y + 4, Theme.subtle());
+            y += Fonts.lineHeight(DESC) + 16;
+        } else {
+            int gap = 8;
+            int cols = Math.max(2, (w + gap) / (132 + gap));
+            int tileW = (w - (cols - 1) * gap) / cols;
+            int ps = Math.min(tileW - 16, 96);
+            int tileH = 8 + ps + 8 + Fonts.lineHeight(LABEL) + 2 + Fonts.lineHeight(HINT) + 8 + 22 + 8;
+            boolean anyLocked = false;
+            for (int i = 0; i < items.size(); i++) {
+                PlayerCosmetics.Item item = items.get(i);
+                int tx = x + (i % cols) * (tileW + gap);
+                int ty = y + (i / cols) * (tileH + gap);
+                boolean has = owned.contains(item.id());
+                anyLocked |= !has;
+                boolean on = item.id().equals(cosmetics.wearing(item.slot()));
+                Render2D.panel(g, tx, ty, tileW, tileH, Theme.radius(), Theme.surfaceRaised(), on ? Theme.accentAlpha(0xC0) : Theme.line());
+                cosmeticPicture(g, cosmetics, item.id(), item.slot(), tx + (tileW - ps) / 2, ty + 8, ps, has);
+                if (!has) Icons.draw(g, "lock", tx + tileW - 8 - 14, ty + 8, 14, Theme.muted());
+                if (on) Icons.draw(g, "check", tx + 8, ty + 8, 14, Theme.accent());
+                int ny = ty + 8 + ps + 8;
+                Fonts.drawClipped(g, item.name(), Fonts.Weight.MEDIUM, LABEL, tx + 8, ny, tileW - 16, has ? Theme.text() : Theme.muted());
+                ny += Fonts.lineHeight(LABEL) + 2;
+                Fonts.drawClipped(g, CosmeticsTab.slotLabel(item.rarity()) + " " + CosmeticsTab.slotLabel(item.slot()).toLowerCase(Locale.ROOT),
+                        Fonts.Weight.REGULAR, HINT, tx + 8, ny, tileW - 16, rarityColor(item.rarity()));
+                int by = ty + tileH - 8 - 22;
+                String key = "cos-item:" + item.id();
+                if (!has) {
+                    button(g, key, tx + 8, by, tileW - 16, 22, "In the shop", false, false, b -> {});
+                } else {
+                    String label = cosmeticBusy != null && cosmeticBusy.equals(key) ? "Saving" : on ? "Take off" : "Equip";
+                    button(g, key, tx + 8, by, tileW - 16, 22, label, !on, signedIn && cosmeticBusy == null,
+                            b -> equipFromTab(cosmetics, key, item.slot(), on ? null : item.id(), item.name()));
+                }
+            }
+            y += ((items.size() + cols - 1) / cols) * (tileH + gap);
+            if (anyLocked) {
+                Fonts.draw(g, "Locked items are in the Shop in Shard Launcher; spend the tokens you earn by playing.", Fonts.Weight.REGULAR, HINT, x, y + 2, Theme.subtle());
+                y += Fonts.lineHeight(HINT) + 6;
+            }
+        }
+        y += 14;
+
+        Fonts.draw(g, "Display", Fonts.Weight.SEMIBOLD, SECTION, x, y, Theme.text());
+        y += Fonts.lineHeight(SECTION) + 8;
         g.fill(x, y, x + w, y + 1, Theme.line());
         y += 1;
         rowDividers = true;
@@ -1598,6 +1735,40 @@ public final class ClickGuiScreen extends DesignScreen {
         pageScroll = Math.max(0, Math.min(pageScroll, contentHeight - viewH));
         pageShown = Math.max(0, Math.min(pageShown, Math.max(0, contentHeight - viewH)));
         unclip(g);
+    }
+
+    /** The item's preview picture in a rounded well, or the slot's icon while it loads (or when there is none). */
+    private void cosmeticPicture(GuiGraphics g, CosmeticsModule cosmetics, String id, String slot, int x, int y, int size, boolean bright) {
+        Render2D.roundedRect(g, x, y, size, size, Theme.radiusSmall(), Theme.iconWell());
+        Identifier tex = id == null ? null : cosmetics.preview(id);
+        if (tex != null) {
+            Render2D.image(g, tex, x + 2, y + 2, size - 4, PreviewFit.SIZE, bright ? 0xFFFFFFFF : 0x80FFFFFF);
+            return;
+        }
+        int is = Math.min(24, size / 2);
+        Icons.draw(g, "bandana".equals(slot) ? "user" : slot, x + (size - is) / 2, y + (size - is) / 2, is, id == null ? Theme.subtle() : Theme.muted());
+    }
+
+    /** Saves a slot change; the buttons wait (show "Saving") until the account answers. */
+    private void equipFromTab(CosmeticsModule cosmetics, String key, String slot, String id, String name) {
+        cosmeticBusy = key;
+        cosmetics.equip(slot, id).whenComplete((me, error) -> {
+            cosmeticBusy = null;
+            if (error != null) showToast("Could not save: " + error.getMessage());
+            else showToast(id == null ? "Took off your " + slot : "Equipped " + name);
+        });
+    }
+
+    private static int rarityColor(String rarity) {
+        return switch (rarity == null ? "" : rarity) {
+            case "special" -> 0xFFF08A3C;
+            case "mythic" -> 0xFFE5484D;
+            case "legendary" -> 0xFFF5B83D;
+            case "epic" -> 0xFFB07CF7;
+            case "rare" -> 0xFF4FA3F7;
+            case "uncommon" -> 0xFF5CC97B;
+            default -> Theme.muted();
+        };
     }
 
     /** Friends are managed in the launcher; the tab points there. */

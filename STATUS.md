@@ -1,5 +1,23 @@
 # Status (handoff for a new session)
 
+## 0.11.0: in-game cosmetics, menu opens on Mods, hover crash fixed (2026-10-09, committed, not released)
+- Crash fix: hovering a segmented control in the Shard menu (0.10.0, every version) threw an NPE
+  in `ClickGuiScreen.hoverable`. Why: DECISIONS.md "0.11.0".
+- The menu always opens on Mods ("Open where you left off" keeps only the Mods category).
+- Cosmetics tab: Wearing cards (Take off), filter (All/Capes/Shields/Bandanas), item grid with
+  previews, rarity and Equip/Take off (`POST /v1/equip` via `CosmeticsModule.equip`), locked items
+  point to the launcher shop, then the display switches. New: `CosmeticsTab`, `PreviewFit`,
+  `CapeLibrary.preview/catalogue`, `Render2D.image`, catalogue `Item` gains name/rarity/previewUrl.
+- Verified: all 17 versions build (`./gradlew build --continue`; run with `--no-parallel` if Gradle
+  runs out of heap), 148 JUnit tests on 1.21, 1.21.11, 26.3. New smoke pass
+  `-PsmokeOnly=wardrobe` (local API from shard-api `npx wrangler dev --local --port 8787 --var
+  DEV_AUTH:1`, seeded with `node tools/smoke-wardrobe-seed.mjs`, plus `-PapiBase` and
+  `-PcatalogueUrl`) passed on 1.21.11, 1.21 and 26.3: opens on Mods, survives 20 frames hovering a
+  segment, equips the Halloween cape from the tab (worn in F5), takes it off. Shots in
+  `smoke-wardrobe*/`. Not yet run on the other 14 versions.
+- To release: meta `shard-manifest.json` builds for 0.11.0 and a GitHub release with the 17 jars
+  (`build/libs/0.11.0/`), as for 0.10.0.
+
 ## 0.10.0: every Minecraft version from 1.21 to 26.3 (2026-10-10, released)
 - One source tree, built for 17 Minecraft versions with Stonecutter (1.21, 1.21.1 … 1.21.11,
   26.1, 26.1.1, 26.1.2, 26.2, 26.3). `src/` is written for 1.21.11; per-version code uses

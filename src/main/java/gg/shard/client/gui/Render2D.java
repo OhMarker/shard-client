@@ -69,6 +69,12 @@ public final class Render2D {
         return (int) Math.round(r - Math.sqrt(inside));
     }
 
+    /** A whole square texture ({@code texSize} px) stretched over {@code size} design units, tinted {@code color}. */
+    public static void image(GuiGraphics g, Identifier tex, int x, int y, int size, int texSize, int color) {
+        if (size <= 0 || tex == null) return;
+        g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0f, 0f, size, size, texSize, texSize, texSize, texSize, color);
+    }
+
     /** Filled rectangle with circular corners of radius {@code r} (design units). */
     public static void roundedRect(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
         if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) return;

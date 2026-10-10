@@ -44,8 +44,16 @@ public final class PlayerCosmetics {
         return out;
     }
 
-    /** A catalogue entry the client can draw: its slot type (cape, cloak, shield, bandana) and texture URL. */
-    public record Item(String id, String type, String textureUrl) {
+    /**
+     * A catalogue entry the client can draw: its slot type (cape, cloak, shield, bandana) and texture
+     * URL, plus the name, rarity and preview picture the in-game Cosmetics tab shows (preview may be null).
+     */
+    public record Item(String id, String type, String textureUrl, String name, String rarity, String previewUrl) {
+        /** An entry without the Cosmetics tab's details (name = id, common, no preview). */
+        public Item(String id, String type, String textureUrl) {
+            this(id, type, textureUrl, id, "common", null);
+        }
+
         /** The equip slot: capes and cloaks share the back slot "cape". */
         public String slot() {
             return "cloak".equals(type) ? "cape" : type;
@@ -73,7 +81,13 @@ public final class PlayerCosmetics {
             String url = string(o, "textureUrl");
             if (id == null || !SAFE_ID.matcher(id).matches() || type == null || !DRAWN_TYPES.contains(type) || url == null) continue;
             if (!allowedUrl(url, allowLocal)) continue;
-            out.put(id, new Item(id, type, url));
+            // Name, rarity and preview are only for the in-game Cosmetics tab; missing ones get defaults.
+            String name = string(o, "name");
+            String rarity = string(o, "rarity");
+            String preview = string(o, "previewUrl");
+            out.put(id, new Item(id, type, url, name == null || name.isBlank() ? id : name,
+                    rarity == null ? "common" : rarity.toLowerCase(Locale.ROOT),
+                    preview != null && allowedUrl(preview, allowLocal) ? preview : null));
         }
         return out;
     }

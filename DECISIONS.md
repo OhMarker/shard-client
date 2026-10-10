@@ -310,3 +310,25 @@
 ## Deferred
 
 Cosmetics rendering and the emote wheel, environment colours, shield state colours, totem pop ghosts, and additional Minecraft targets. The wildcard server-rule editor shipped in 0.3.0.
+
+## 0.11.0: in-game cosmetics, Mods first, hover crash
+
+- **The crash** (owner's 1.21.11 report, 2026-10-09 16:40): `segmented()` looked up the control's
+  own hit with `hitFor(key)` to test hover, but that hit is registered after the segments (so clicks
+  find it), so the lookup returned null and `hoverable` dereferenced it on the first frame the
+  pointer touched a segment. Hover now tests the segment's own probe, and `hoverable(null)` is
+  false. The click audit missed it because it moved the pointer without rendering; the new
+  `-PsmokeOnly=wardrobe` pass rests the pointer on a segment for twenty rendered frames.
+- **Always open on Mods.** A remembered Settings/Cosmetics tab reopened straight into the crash;
+  the owner asked for Mods every time. Only the Mods category is remembered now.
+- **Once signed in, the account is the truth for what you wear.** Before 0.11.0 the launcher's
+  equipped.json won for your own player, so an in-game change would not show until the next launch.
+  Now `CosmeticsModule.wearing(slot)` is the launcher's pick only until the Shard sign-in answers,
+  then `me.equipped`; equipping updates `me` and the local `worn` entry at once.
+- **Previews are fitted on the CPU** (`PreviewFit`, alpha-weighted area average into a 256 px
+  square) because the catalogue previews have odd sizes (450x720, 725x720) that get no mip chain,
+  and drawing a 720 px picture at 96 units shimmers. The square then gets a normal `MipChain` and
+  `CapeTexture` (trilinear on every version). Drawn with `Render2D.image`, which goes through the
+  existing per-version blit rules.
+- No 3D player preview in the tab: the in-world F5 view already shows the change, and the
+  picture-in-picture player model has different APIs on almost every supported version.
