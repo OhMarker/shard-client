@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0
+
+- **New mod menu.** A sidebar on the left with search, All mods, Favorites, Enabled and every
+  category with how many mods it has; Cosmetics, Friends, Profiles, Edit HUD and Settings at the
+  bottom, with your name and Shards.
+- **Mods are bigger cards, two per row:** icon, name, on/off switch, what it does, whether it is on,
+  its key and a Settings link. Filter any list by All, Enabled or Off.
+- **A mod's settings open as a full page:** back button, the mod's card with Favorite and its
+  switch, then its settings in boxes side by side. Reset module and Disable on this server sit at
+  the bottom; Reset category on a category page.
+
 ## 0.13.1
 
 - Fixed: backing out of Create World (what Singleplayer opens when you have no worlds yet) showed
