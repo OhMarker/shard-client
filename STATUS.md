@@ -1,5 +1,14 @@
 # Status (handoff for a new session)
 
+## 0.13.1: Shard title screen after cancelling Create World (released 2026-10-10)
+- Released: https://github.com/OhMarker/shard-client/releases/tag/v0.13.1 (commit 8a9dd21, clean
+  worktree), meta latest 0.13.1 (b91ff08). Owner reported: Singleplayer, then back, showed vanilla's
+  title screen. Cause: with no worlds, Singleplayer opens Create World, whose cancel calls
+  setScreen(null); vanilla then builds `new TitleScreen()` inside setScreen, after the HEAD hook.
+  `MenuScreens.replace(null)` now returns ShardTitleScreen when there is no level (same in 26.2+'s
+  Gui.setScreen). Smoke `screensNullIsShard` passed on 1.21.11, 1.21, 26.3 (1.21.11 needed a second
+  run: the known SafetyScreen flake).
+
 ## 0.13.0: Singleplayer first, title shortcuts, capacity bar (released 2026-10-10)
 - Released: https://github.com/OhMarker/shard-client/releases/tag/v0.13.0 (17 jars built from a clean
   worktree of commit d48d7ab, which sits on 0.12.0 alone), meta latest 0.13.0 (meta commit 1a39cb3);
