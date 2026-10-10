@@ -18,31 +18,34 @@ import java.util.Map;
 import java.util.function.IntConsumer;
 
 /**
- * Base for Shard's title screen and server list: the mod menu's design language (neutral greys,
- * Inter, Lucide icons, rounded corners) drawn in design units at the mod menu's density, so text is
- * drawn 1:1 ({@link Scale#menuPixelsPerUnit}). Over the vanilla panorama, dimmed. Input goes through
+ * Base for Shard's title screen and server list: Shard Launcher's look (its blue-black palette,
+ * cyan accent, drifting crystal backdrop, Inter, Lucide icons, rounded corners) drawn in design
+ * units at the mod menu's density, so text is drawn 1:1 ({@link Scale#menuPixelsPerUnit}). Settings
+ * → Menus → Minecraft background puts the vanilla panorama back instead. Input goes through
  * "hits" registered while rendering, like the mod menu: the last one registered under the pointer
  * wins, so popovers drawn last take the click.
  */
 public abstract class MenuScreen extends DesignScreen {
-    // Palette (the mod menu's tokens).
-    static final int BG = 0xFF141416;
-    static final int SURFACE = 0xFF1A1A1D;
-    static final int INPUT = 0xFF1C1C1F;
-    static final int HOVER = 0xFF1F1F22;
-    static final int ACTIVE = 0xFF232326;
-    static final int BORDER = 0xFF232326;
-    static final int BORDER_HOVER = 0xFF38383D;
-    static final int TEXT = 0xFFEDEDED;
-    static final int MUTED = 0xFF7C7C82;
-    static final int SOFT = 0xFFA9A9AF;
-    static final int SUBTLE = 0xFF55555B;
-    static final int SUCCESS = 0xFF4ADE80;
-    static final int WARNING = 0xFFFACC15;
-    static final int DANGER = 0xFFF87171;
+    // Palette: Shard Launcher's tokens (launcher src/renderer/src/styles/globals.css) over its
+    // #07090f page; the accent is the launcher's (Theme.accent()).
+    static final int BG = 0xFF07090F;
+    static final int SURFACE = 0xFF0E121B;
+    static final int INPUT = 0xFF0B0F18;
+    static final int HOVER = 0xFF151A24;
+    static final int ACTIVE = 0xFF1A202B;
+    static final int BORDER = 0xFF1A1F29;
+    static final int BORDER_HOVER = 0xFF2C323D;
+    static final int TEXT = 0xFFE8ECF4;
+    static final int MUTED = 0xFF7B8496;
+    static final int SOFT = 0xFF9AA3B5;
+    static final int SUBTLE = 0xFF5F6779;
+    static final int SUCCESS = 0xFF34D399;
+    static final int WARNING = 0xFFFBBF24;
+    static final int DANGER = 0xFFFB7185;
     static final float HOVER_MS = 120f;
 
-    enum Style { PRIMARY, NORMAL, DANGER, GHOST }
+    /** QUIT looks NORMAL and turns red on hover. */
+    enum Style { PRIMARY, NORMAL, DANGER, GHOST, QUIT }
 
     /** A clickable rectangle registered during rendering. */
     record Hit(String key, int x, int y, int w, int h, int[] clip, IntConsumer onClick) {
@@ -76,12 +79,24 @@ public abstract class MenuScreen extends DesignScreen {
         return perUnit / Math.max(1, guiScale);
     }
 
-    /** Panorama, blurred when {@link #blurBackground}, then a quiet dim. */
+    /**
+     * The launcher's crystal backdrop; in a world, or with Minecraft background on, the panorama
+     * (blurred when {@link #blurBackground}) under a quiet dim.
+     */
     @Override
     public void renderBackground(GuiGraphics g, int mx, int my, float partialTick) {
+        boolean vanilla = ShardClient.modules().get(gg.shard.client.modules.settings.MenuScreensModule.class).minecraftBackground.get();
+        if (minecraft.level == null && !vanilla) {
+            ShardBackdrop.render(g, width, height);
+            return;
+        }
         if (minecraft.level == null) renderPanorama(g, partialTick);
         if (blurBackground() || minecraft.level != null) renderBlurredBackground(g);
         g.fill(0, 0, width, height, dimColor());
+    }
+
+    static int accent() {
+        return gg.shard.client.gui.Theme.accent() | 0xFF000000;
     }
 
     protected boolean blurBackground() {
@@ -205,9 +220,9 @@ public abstract class MenuScreen extends DesignScreen {
         int color;
         switch (style) {
             case PRIMARY -> {
-                fill = Colors.mix(TEXT, 0xFFFFFFFF, hov);
+                fill = Colors.mix(accent(), Colors.mix(accent(), 0xFFFFFFFF, 0.14f), hov);
                 border = 0;
-                color = BG;
+                color = 0xFF06070B;
             }
             case DANGER -> {
                 fill = Colors.mix(Colors.withAlpha(DANGER, 0x1A), Colors.withAlpha(DANGER, 0x30), hov);
@@ -222,14 +237,19 @@ public abstract class MenuScreen extends DesignScreen {
             default -> {
                 fill = Colors.mix(Colors.withAlpha(SURFACE, 0xEB), Colors.withAlpha(ACTIVE, 0xFA), hov);
                 border = Colors.mix(BORDER, BORDER_HOVER, hov);
-                color = TEXT;
+                color = style == Style.QUIT ? Colors.mix(TEXT, DANGER, hov) : TEXT;
             }
         }
         if (!enabled) {
-            fill = Colors.withAlpha(fill, Colors.alpha(fill) / 2);
-            color = SUBTLE;
+            // Disabled stays legible: an outline with a dimmed label, not a washed-out block.
+            fill = Colors.withAlpha(SURFACE, 0x60);
+            border = BORDER_HOVER;
+            color = MUTED;
         }
-        int r = 6;
+        int r = 8;
+        if (style == Style.PRIMARY && enabled) glow(g, x, y, w, h, r, 0.55f + 0.25f * hov);
+        int lift = Math.round(hov);
+        y -= enabled && style != Style.GHOST ? lift : 0;
         Render2D.roundedRect(g, x, y, w, h, r, fill);
         if (border != 0) Render2D.roundedOutline(g, x, y, w, h, r, border);
         int iconSize = textSize + 3;
@@ -242,8 +262,19 @@ public abstract class MenuScreen extends DesignScreen {
         String shown = Fonts.clip(label, Fonts.Weight.MEDIUM, textSize, w - 20 - gap);
         int tw = Fonts.widthInt(shown, Fonts.Weight.MEDIUM, textSize);
         int start = x + (w - tw - gap) / 2;
-        if (icon != null) Icons.draw(g, icon, start, y + (h - iconSize) / 2, iconSize, style == Style.PRIMARY || !enabled ? color : Colors.mix(SOFT, TEXT, hov));
+        if (icon != null) Icons.draw(g, icon, start, y + (h - iconSize) / 2, iconSize, style == Style.PRIMARY || style == Style.DANGER || style == Style.QUIT || !enabled ? color : Colors.mix(SOFT, TEXT, hov));
         Fonts.draw(g, shown, Fonts.Weight.MEDIUM, textSize, start + gap, y + (h - Fonts.lineHeight(textSize)) / 2, color);
+    }
+
+    /** The launcher's accent glow around a rounded shape ({@code strength} 0..1). */
+    protected void glow(GuiGraphics g, int x, int y, int w, int h, int r, float strength) {
+        int a = accent();
+        int[] spread = {2, 5, 9, 14};
+        int[] alpha = {0x2C, 0x18, 0x0C, 0x05};
+        for (int i = spread.length - 1; i >= 0; i--) {
+            int s = spread[i];
+            Render2D.roundedRect(g, x - s, y - s + 3, w + 2 * s, h + 2 * s, r + s, Colors.withAlpha(a, Math.round(alpha[i] * strength)));
+        }
     }
 
     /** Square icon-only button that lights up on hover. */
@@ -251,8 +282,8 @@ public abstract class MenuScreen extends DesignScreen {
         hit(key, x, y, size, size, onClick);
         boolean hover = hovered(key, x, y, size, size);
         float hov = hoverAnim(key, hover);
-        Render2D.roundedRect(g, x, y, size, size, 6, Colors.mix(Colors.withAlpha(SURFACE, 0xC8), Colors.withAlpha(ACTIVE, 0xFA), hov));
-        Render2D.roundedOutline(g, x, y, size, size, 6, Colors.mix(BORDER, BORDER_HOVER, hov));
+        Render2D.roundedRect(g, x, y, size, size, 8, Colors.mix(Colors.withAlpha(SURFACE, 0xC8), Colors.withAlpha(ACTIVE, 0xFA), hov));
+        Render2D.roundedOutline(g, x, y, size, size, 8, Colors.mix(BORDER, BORDER_HOVER, hov));
         Icons.draw(g, icon, x + (size - iconSize) / 2, y + (size - iconSize) / 2, iconSize, Colors.mix(SOFT, TEXT, hov));
         if (hover && tooltip != null) pendingTooltip = new Object[]{tooltip, x + size / 2, y};
     }
@@ -272,7 +303,7 @@ public abstract class MenuScreen extends DesignScreen {
         int y = top - th - 6;
         if (y < 4) y = top + 6;
         g.nextStratum();
-        Render2D.panel(g, x, y, tw, th, 6, SURFACE, BORDER_HOVER);
+        Render2D.panel(g, x, y, tw, th, 6, 0xFF0B0E15, BORDER_HOVER);
         Fonts.draw(g, text, Fonts.Weight.MEDIUM, 11, x + 8, y + (th - Fonts.lineHeight(11)) / 2, TEXT);
     }
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.12.0
+
+- **New title screen and server list in Shard Launcher's look.** The launcher's dark backdrop with
+  its slowly drifting cyan crystals, its shard logo and its colours. Multiplayer is the main button;
+  Options, Mods and Quit sit in one row; your Shard version sits in a small pill.
+- **Jump back in.** The title screen shows the last server you played on, with its ping; one click
+  joins it. Turn it off under Settings → Menus.
+- **A better server list.** The panel is only as tall as your servers. Servers still called
+  "Minecraft Server" show their address instead. Server messages are easier to read. The selected
+  server is clearly highlighted, and hovering a server shows favourite, move, edit and delete
+  buttons. Favourites stay at the top. Search with Ctrl+F (or just start typing). The Join button
+  says which server it joins.
+- **Prefer the Minecraft world behind the menus?** Settings → Menus → Minecraft background brings
+  it back.
+- Fixed: on Minecraft 1.21 and 1.21.1, faint see-through highlights in Shard's screens were not drawn.
+
 ## 0.11.0
 
 - **Change your cosmetics in game.** The Cosmetics tab of the Shard menu now shows what you wear

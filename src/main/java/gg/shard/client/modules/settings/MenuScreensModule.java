@@ -3,6 +3,7 @@ package gg.shard.client.modules.settings;
 import gg.shard.client.module.Module;
 import gg.shard.client.module.ModuleCategory;
 import gg.shard.client.module.setting.BoolSetting;
+import gg.shard.client.module.setting.StringSetting;
 
 /**
  * Settings for Shard's title screen and server list (gg.shard.client.gui.menu). Hidden, always-on
@@ -13,6 +14,14 @@ public final class MenuScreensModule extends Module {
             "Shard's title screen and server list instead of vanilla's", true));
     public final BoolSetting realmsButton = add(new BoolSetting("Realms button",
             "Show Minecraft Realms on Shard's title screen", false));
+    public final BoolSetting minecraftBackground = add(new BoolSetting("Minecraft background",
+            "Show the Minecraft world behind Shard's menus instead of the launcher's crystal backdrop", false));
+    public final BoolSetting jumpBackIn = add(new BoolSetting("Jump back in",
+            "Show the last server you played on under the title screen buttons", true));
+    /** Address of the last server joined from Shard's server list (title screen's Jump back in). */
+    public final StringSetting lastServer = (StringSetting) add(new StringSetting("Last server", "", "", 255)).visibleWhen(() -> false);
+    /** Favourite server addresses, one per line; they stay at the top of the server list. */
+    public final StringSetting favouriteServers = (StringSetting) add(new StringSetting("Favourite servers", "", "", 8000)).visibleWhen(() -> false);
 
     public MenuScreensModule() {
         super("Menu Screens", "Shard's title screen and server list.", ModuleCategory.UTILITY);

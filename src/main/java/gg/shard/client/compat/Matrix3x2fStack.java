@@ -48,6 +48,11 @@ public final class Matrix3x2fStack {
         return scale(s, s);
     }
 
+    public Matrix3x2fStack rotate(float radians) {
+        stack.mulPose(com.mojang.math.Axis.ZP.rotation(radians));
+        return this;
+    }
+
     private Matrix4f last() {
         return stack.last().pose();
     }

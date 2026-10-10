@@ -41,7 +41,7 @@ public final class TextInput {
         return this;
     }
 
-    TextInput padLeft(int units) {
+    public TextInput padLeft(int units) {
         this.padLeft = units;
         return this;
     }

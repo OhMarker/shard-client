@@ -76,6 +76,11 @@ final class ScreensSmoke {
         step(mc, t++);
     }
 
+    private static int indexOf(ServerList list, String ip) {
+        for (int i = 0; i < list.size(); i++) if (list.get(i).ip.equals(ip)) return i;
+        return 0;
+    }
+
     /** A control to click as soon as a frame has drawn it (the dev window can render slowly). */
     private static String pendingClick;
 
@@ -100,9 +105,13 @@ final class ScreensSmoke {
                 settings.shardScreens.set(true);
                 ServerList list = new ServerList(mc);
                 list.load();
+                list.unhide(server); // an earlier pass may have saved it as a hidden direct connection
                 if (list.get(server) == null) list.add(new ServerData("Shard smoke server", server, ServerData.Type.OTHER), false);
                 if (list.get("localhost:1") == null) list.add(new ServerData("Offline example", "localhost:1", ServerData.Type.OTHER), false);
                 list.save();
+                // The title screen's Jump back in card shows the smoke server.
+                settings.lastServer.set(server);
+                settings.jumpBackIn.set(true);
                 mc.setScreen(new TitleScreen());
                 SmokeTest.SUMMARY.addProperty("screensTitleIsShard", mc.screen instanceof ShardTitleScreen);
                 SmokeTest.SUMMARY.addProperty("screensBridge", AccountManager.get().available());
@@ -181,12 +190,19 @@ final class ScreensSmoke {
                 mc.setScreen(new TitleScreen());
             }
             case 404 -> mc.setScreen(new JoinMultiplayerScreen(mc.screen));
+            case 420 -> {
+                if (mc.screen instanceof ShardMultiplayerScreen s) s.searchFor("offline");
+            }
+            case 432 -> SmokeTest.shot(mc, "screens-multiplayer-search.png", null);
+            case 434 -> {
+                if (mc.screen instanceof ShardMultiplayerScreen s) s.searchFor("");
+            }
             case 456 -> {
-                if (mc.screen instanceof ShardMultiplayerScreen s) s.selectServer(0);
+                if (mc.screen instanceof ShardMultiplayerScreen s) s.selectServer(indexOf(s.serverList(), server));
             }
             case 460 -> {
                 if (mc.screen instanceof ShardMultiplayerScreen s) {
-                    ShardClient.LOGGER.info("Smoke screens: joining {} from Shard's list", s.serverList().get(0).ip);
+                    ShardClient.LOGGER.info("Smoke screens: joining {} from Shard's list", s.serverList().get(indexOf(s.serverList(), server)).ip);
                     click("join");
                 }
             }

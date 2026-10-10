@@ -79,17 +79,22 @@ public final class GuiDraw {
         if (width == 0 || height == 0) return;
         graphics.flush();
         RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorShader);
+        // position_tex_color discards below alpha 0.1 before 1.21.2, which drops faint tints (the
+        // menus' backdrop facets and glows); position_tex only discards fully clear texels and
+        // applies the colour as the shader's ColorModulator afterwards.
+        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderColor((color >> 16 & 0xFF) / 255f, (color >> 8 & 0xFF) / 255f, (color & 0xFF) / 255f, (color >>> 24) / 255f);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         org.joml.Matrix4f m = graphics.pose().last().pose();
         com.mojang.blaze3d.vertex.BufferBuilder buffer = com.mojang.blaze3d.vertex.Tesselator.getInstance()
-                .begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR);
-        buffer.addVertex(m, x, y, 0).setUv(u0, v0).setColor(color);
-        buffer.addVertex(m, x, y + height, 0).setUv(u0, v1).setColor(color);
-        buffer.addVertex(m, x + width, y + height, 0).setUv(u1, v1).setColor(color);
-        buffer.addVertex(m, x + width, y, 0).setUv(u1, v0).setColor(color);
+                .begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX);
+        buffer.addVertex(m, x, y, 0).setUv(u0, v0);
+        buffer.addVertex(m, x, y + height, 0).setUv(u0, v1);
+        buffer.addVertex(m, x + width, y + height, 0).setUv(u1, v1);
+        buffer.addVertex(m, x + width, y, 0).setUv(u1, v0);
         com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(buffer.buildOrThrow());
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.disableBlend();
     }
     ^///?}

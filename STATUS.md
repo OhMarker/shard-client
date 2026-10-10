@@ -1,5 +1,27 @@
 # Status (handoff for a new session)
 
+## 0.12.0: menus in the launcher's look (2026-10-10)
+- Title screen and server list redesigned to match Shard Launcher (owner approved the mockup at
+  https://claude.ai/artifact/YBpzVmNjMBApnVoiiNbMVZ after rejecting the panorama version): launcher
+  backdrop (`gui/menu/ShardBackdrop`), launcher shard mark (`ShardMarkRaster`), launcher palette in
+  `MenuScreen`, accent Multiplayer/Join buttons with glow, Jump back in card, server cards with
+  ping pill, address fallback for "Minecraft Server", hover actions (favourite/move/edit/delete),
+  favourites on top, search (Ctrl+F or type), panel sized to its rows, empty state. Shared server
+  code in `ServerCards`. Settings → Menus: Minecraft background, Jump back in. Why: DECISIONS.md.
+- Verified: all 17 versions build with their tests (`./gradlew build --continue --no-parallel`;
+  151 JUnit tests on 1.21.11). `-PsmokeOnly=screens -PfakeBridge` at 1920x1080 passed on 1.21.11,
+  1.21, 1.21.5 and 26.3 (Shard screens, ping, joined the smoke server from the list, no clipped
+  text, same layout at GUI scale 3); shots look alike, copies in docs/screenshots/0.12.0/.
+  The pass now also shoots `screens-multiplayer-search.png`, points Jump back in at the smoke
+  server, unhides it and joins it by address. Not run yet on the other 13 versions.
+- 1.21 and 1.21.1: compat.GuiDraw's blit now uses position_tex + shader colour (vanilla's
+  position_tex_color there discards alpha < 0.1, which hid the backdrop and every other faint
+  tinted blit). One 1.21 screens run failed once with a SafetyScreen at tick 56 (harness, not
+  reproduced in the next two runs). Running with `-PcountInjections` on 1.21.11 breaks Sodium
+  (as PORTING.md says); leave it off there.
+- Not tried by clicking: favourite/move/edit/delete buttons, typing into search (set through the
+  smoke hook), Jump back in's join, Minecraft background switch, empty server list.
+
 ## 0.11.0: in-game cosmetics, menu opens on Mods, hover crash fixed, Shards (released 2026-10-10)
 - Released: https://github.com/OhMarker/shard-client/releases/tag/v0.11.0 (17 jars built from a clean
   worktree of commit 43f8067, so another session's uncommitted menu work is not in them); meta latest 0.11.0.

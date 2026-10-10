@@ -48,7 +48,7 @@ public final class Fonts {
     }
 
     /** Sizes that have a font definition; other sizes snap to the nearest one. */
-    public static final int[] SIZES = {10, 11, 12, 13, 14, 15, 16, 18, 20, 24};
+    public static final int[] SIZES = {10, 11, 12, 13, 14, 15, 16, 18, 20, 24, 32};
     /** Raster densities are the on-screen density rounded to hundredths, within these bounds. */
     static final double MIN_DENSITY = 0.5;
     static final double MAX_DENSITY = 12.0;

@@ -332,3 +332,32 @@ Cosmetics rendering and the emote wheel, environment colours, shield state colou
   existing per-version blit rules.
 - No 3D player preview in the tab: the in-world F5 view already shows the change, and the
   picture-in-picture player model has different APIs on almost every supported version.
+
+## 0.12.0: title screen and server list in the launcher's look
+
+- **The owner turned down the Minecraft panorama.** A first mockup kept the world behind the menus;
+  the owner wanted the launcher's look instead, so the backdrop is a port of the launcher's
+  `Backdrop.tsx` (gradient, three accent glows, about fourteen drifting translucent facets) and
+  the palette is the launcher's `globals.css` tokens. The panorama is still one switch away
+  (Settings → Menus → Minecraft background), and in a world the menus keep the blurred world.
+- **Rasterise once, tint per draw.** Each facet shape (3, 4 and 5 sides), the radial glow and the
+  launcher's shard mark are drawn once in software into white alpha textures (`ShardBackdrop`,
+  `ShardMarkRaster`, supersampled) and blitted with the accent as tint and a rotating pose, so a
+  frame is a gradient plus about twenty quads on every version with no shader or render-type
+  work. The mark is redrawn only when the accent changes. Facet positions are fractions of the
+  screen and live in static fields, so they keep drifting from where they were when you go from
+  the title screen to the server list.
+- **Rotation before 1.21.6** goes through `compat.Matrix3x2fStack.rotate` (a Z rotation on the
+  PoseStack); 1.21.6+ uses JOML's own `rotate`.
+- **Jump back in remembers servers joined from Shard's list** (`MenuScreensModule.lastServer`,
+  hidden setting). It looks the address up with `ServerList.get`, which also finds servers saved
+  hidden by Direct Connection. Without the multiplayer safety notice accepted it opens the server
+  list instead of joining. Favourites are a hidden setting of lower-cased addresses; starring
+  moves the server up to sit after the other favourites in the real `servers.dat` order, so
+  vanilla's list shows the same order.
+- **Font size 32** joined `Fonts.SIZES` for the wordmark (fonts are built lazily, so it costs
+  nothing until drawn).
+- **Faint tints on 1.21 and 1.21.1.** Vanilla's `position_tex_color` fragment shader discards alpha
+  below 0.1 there (1.21.2 changed it to `== 0`), so the backdrop's facets (alpha 4–12%) vanished
+  and glows became stepped discs. `compat.GuiDraw.quad` now draws with `position_tex` and passes
+  the tint as the shader colour, which is only multiplied in after that shader's `a == 0` check.
