@@ -78,16 +78,25 @@ public final class ClickGuiScreen extends DesignScreen {
     /** The Cosmetics tab's item grid is wider than a settings section. */
     static final int COSMETICS_MAX_W = 760;
     // ---- menu frame (design units = physical pixels at 1080p) -------------------------------
-    static final int MENU_W = 960;
-    static final int MENU_H = 580;
-    static final int TOP_H = 52;
-    static final int FOOT_H = 40;
-    static final int CAT_H = 27;
-    static final int COLS = 6;
-    static final int TILE_H = 118;
-    static final int TILE_GAP = 8;
+    static final int MENU_W = 1280;
+    static final int MENU_H = 688;
+    /** The smallest the menu gets before the whole page scales down (keeps 720p at 1:1). */
+    static final int MENU_MIN_W = 1040;
+    static final int MENU_MIN_H = 600;
+    static final int SIDE_W = 240;
+    static final int SIDE_PAD = 18;
+    static final int NAV_H = 30;
+    static final int MAIN_PAD = 24;
+    static final int HEAD_H = 48;
+    static final int FOOT_H = 30;
+    static final int COLS = 2;
+    static final int CARD_H = 114;
+    static final int CARD_GAP = 10;
+    static final int CARD_PAD = 14;
+    static final int CARD_FOOT_H = 30;
+    static final int BOX_GAP = 10;
     static final int GRID_PAD = 14;
-    static final int STRIP_H = 26;
+    static final int TITLE = 20;
     // ---- typography ---------------------------------------------------------------------------
     static final int NAME = 15;
     static final int SECTION = 13;
@@ -159,7 +168,15 @@ public final class ClickGuiScreen extends DesignScreen {
     private int menuY;
     private int menuW;
     private int menuH;
-    private int catY;
+    /** The main column right of the sidebar, and its inner (padded) area. */
+    private int bodyX;
+    private int bodyW;
+    private int mainX;
+    private int mainW;
+    private int headY;
+    private int footY;
+    /** All / Enabled / Off at the top right of a mod list. */
+    private int showOnly;
     /** Thin lines between setting rows (the menu's settings view). */
     private boolean rowDividers;
     private PanelPreview previewDragging;
@@ -322,7 +339,7 @@ public final class ClickGuiScreen extends DesignScreen {
     protected double pageScaleFor(int guiScale, double interfaceSize) {
         if (embedded) return super.pageScaleFor(guiScale, interfaceSize);
         double perUnit = Scale.menuPixelsPerUnit(minecraft.getWindow().getWidth(), minecraft.getWindow().getHeight(), interfaceSize,
-                MENU_W + 2 * PAD, MENU_H + 2 * PAD);
+                MENU_MIN_W + 2 * PAD, MENU_MIN_H + 2 * PAD);
         return perUnit / Math.max(1, guiScale);
     }
 
@@ -412,9 +429,11 @@ public final class ClickGuiScreen extends DesignScreen {
         selectFilter(Filter.ALL);
     }
 
-    /** Centre of the n-th tile in the first row, in design units (smoke test). */
+    /** Centre of the n-th card (two per row), in design units (smoke test). */
     public int[] tileCentre(int index) {
-        return new int[]{contentX + index * (cardWidth + TILE_GAP) + cardWidth / 2, contentY + TILE_H / 2};
+        int col = index % COLS;
+        int row = index / COLS;
+        return new int[]{contentX + col * (cardWidth + CARD_GAP) + cardWidth / 2, contentY + row * (CARD_H + CARD_GAP) + CARD_H / 2};
     }
 
     /** Centre (design units) of the last frame's first control whose key matches {@code regex}, or null (smoke test). */
@@ -465,7 +484,7 @@ public final class ClickGuiScreen extends DesignScreen {
     }
 
     public LayoutInfo layoutInfo() {
-        return new LayoutInfo(designW, designH, false, COLS, cardWidth, TILE_H, 0, panelW, modSettingsOpen(), pageScale);
+        return new LayoutInfo(designW, designH, false, COLS, cardWidth, CARD_H, SIDE_W, panelW, modSettingsOpen(), pageScale);
     }
 
     // ---- animation helpers ---------------------------------------------------------------------
@@ -607,25 +626,33 @@ public final class ClickGuiScreen extends DesignScreen {
         panelX = contentX + Math.round((1f - eased) * (panelW + PAD));
     }
 
-    /** The centred panel and its regions; the settings view and the other tabs use the whole body. */
+    /**
+     * The centred panel: a sidebar on the left, and on the right a heading, the scrolling content
+     * and (on the mod pages) a footer row. Everything is laid out in design units.
+     */
     private void layoutMenu() {
         menuW = Math.min(MENU_W, designW - 2 * PAD);
         menuH = Math.min(MENU_H, designH - 2 * PAD);
         menuX = (designW - menuW) / 2;
         menuY = (designH - menuH) / 2;
-        int bodyTop = menuY + TOP_H;
-        int bodyBottom = menuY + menuH - FOOT_H;
-        catY = bodyTop + 12;
-        contentX = menuX + GRID_PAD;
-        contentW = menuW - 2 * GRID_PAD;
-        contentY = tab == Tab.MODS && !modSettingsOpen() ? catY + CAT_H + GRID_PAD : bodyTop + GRID_PAD;
-        contentH = bodyBottom - contentY;
+        bodyX = menuX + SIDE_W;
+        bodyW = menuW - SIDE_W;
+        mainX = bodyX + MAIN_PAD;
+        mainW = bodyW - 2 * MAIN_PAD;
+        headY = menuY + MAIN_PAD;
+        boolean modsFooter = tab == Tab.MODS;
+        footY = menuY + menuH - MAIN_PAD - FOOT_H;
+        contentX = mainX;
+        contentW = mainW;
+        contentY = headY + HEAD_H;
+        int bottom = modsFooter ? footY - 14 : menuY + menuH - MAIN_PAD;
+        contentH = bottom - contentY;
         gridColumns = COLS;
-        cardWidth = (contentW - (COLS - 1) * TILE_GAP) / COLS;
-        panelX = menuX;
-        panelY = bodyTop;
-        panelW = menuW;
-        panelH = bodyBottom - bodyTop;
+        cardWidth = (contentW - (COLS - 1) * CARD_GAP) / COLS;
+        panelX = mainX;
+        panelY = headY;
+        panelW = mainW;
+        panelH = bottom - headY;
     }
 
     /** One frame of scroll easing toward {@code target} (instant with Reduce motion). */
@@ -656,21 +683,33 @@ public final class ClickGuiScreen extends DesignScreen {
     private void renderMenu(GuiGraphics g) {
         Render2D.panel(g, menuX, menuY, menuW, menuH, Theme.radiusLarge(), Theme.surface(), Theme.line());
         hit("menu", menuX, menuY, menuW, menuH, false, b -> {});
-        renderMenuTop(g);
+        renderSidebar(g);
         switch (tab) {
             case MODS -> {
-                if (modSettingsOpen()) renderPanel(g);
+                if (modSettingsOpen()) renderModulePage(g);
                 else {
-                    renderCategoryRow(g);
+                    renderModsHeader(g);
                     renderTiles(g);
+                    renderModsFooter(g);
                 }
             }
-            case SETTINGS -> renderSettingsPage(g);
-            case PROFILES -> renderProfilesPage(g);
-            case COSMETICS -> renderCosmeticsPage(g);
-            case FRIENDS -> renderFriendsPage(g);
+            case SETTINGS -> {
+                renderPageHeader(g, "Settings", "How the Shard menu and client behave.");
+                renderSettingsPage(g);
+            }
+            case PROFILES -> {
+                renderPageHeader(g, "Profiles", "Save mods, settings and HUD layout under a name, then switch in one click.");
+                renderProfilesPage(g);
+            }
+            case COSMETICS -> {
+                renderPageHeader(g, "Cosmetics", "What you wear, and what you see on other players.");
+                renderCosmeticsPage(g);
+            }
+            case FRIENDS -> {
+                renderPageHeader(g, "Friends", "Who is online, and requests waiting for you.");
+                renderFriendsPage(g);
+            }
         }
-        renderMenuFooter(g);
     }
 
     private static String tabName(Tab t) {
@@ -683,88 +722,198 @@ public final class ClickGuiScreen extends DesignScreen {
         };
     }
 
-    /** Wordmark, text tabs with a 1-unit underline on the active one, search on the right. */
-    private void renderMenuTop(GuiGraphics g) {
-        int y = menuY;
-        g.fill(menuX + 1, y + TOP_H - 1, menuX + menuW - 1, y + TOP_H, Theme.line());
-        int x = menuX + 18;
-        Icons.draw(g, "logo", x, y + (TOP_H - 18) / 2, 18, Theme.text());
-        x += 26;
-        Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, 14, x, y + (TOP_H - Fonts.lineHeight(14)) / 2, Theme.text());
-        int tx = x + Fonts.widthInt("Shard", Fonts.Weight.SEMIBOLD, 14) + 24;
-        int textY = y + (TOP_H - Fonts.lineHeight(SECTION)) / 2;
-        for (Tab t : Tab.values()) {
-            String label = tabName(t);
-            int w = Fonts.widthInt(label, Fonts.Weight.MEDIUM, SECTION);
-            String key = "tab:" + t.name().toLowerCase(Locale.ROOT);
-            Hit probe = new Hit(key, tx - 6, y, w + 12, TOP_H, currentClip, true, b -> selectTab(t));
-            hits.add(probe);
-            boolean on = tab == t;
-            float hov = Render2D.easeInOut(anim(key + ":hov", hoverable(probe) ? 1f : 0f, HOVER_MS));
-            int color = on ? Theme.text() : Colors.mix(Theme.muted(), Theme.icon(), hov);
-            Fonts.draw(g, label, Fonts.Weight.MEDIUM, SECTION, tx, textY, color);
-            if (on) g.fill(tx, y + TOP_H - 1, tx + w, y + TOP_H, Theme.text());
-            if (focused(key)) Render2D.roundedOutline(g, tx - 6, y + 13, w + 12, TOP_H - 26, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
-            tx += w + 20;
-        }
-        renderSearch(g, menuX + menuW - 18 - 200, y + (TOP_H - 30) / 2, 200, 30);
-    }
+    /**
+     * Wordmark and version, search, All / Favorites / Enabled, the categories with their mod
+     * counts, and at the bottom the other pages and who is signed in.
+     */
+    private void renderSidebar(GuiGraphics g) {
+        g.fill(bodyX - 1, menuY + 1, bodyX, menuY + menuH - 1, Theme.line());
+        int x = menuX + SIDE_PAD;
+        int w = SIDE_W - 2 * SIDE_PAD;
+        int y = menuY + 22;
+        Icons.draw(g, "logo", x + 6, y, 20, Theme.accent());
+        Fonts.draw(g, "Shard", Fonts.Weight.SEMIBOLD, 15, x + 34, y + (20 - Fonts.lineHeight(15)) / 2, Theme.text());
+        Fonts.drawRight(g, version(), Fonts.Weight.REGULAR, HINT, x + w - 6, y + (20 - Fonts.lineHeight(HINT)) / 2, Theme.subtle());
+        y += 38;
+        renderSearch(g, x, y, w, 34);
+        y += 34 + 14;
 
-    private static int pillWidth(String label) {
-        return Fonts.widthInt(label, Fonts.Weight.MEDIUM, LABEL) + 22;
-    }
-
-    /** All and the categories on the left, Favorites and Enabled on the right. */
-    private void renderCategoryRow(GuiGraphics g) {
         boolean noSearch = search.isEmpty();
-        int x = menuX + GRID_PAD;
-        x += pill(g, "cat:all", "All", noSearch && filter == Filter.ALL, x, catY, () -> selectFilter(Filter.ALL));
-        for (ModuleCategory c : categories()) {
-            x += pill(g, "cat:" + c.name(), c.displayName(), noSearch && filter == Filter.CATEGORY && c == category, x, catY, () -> selectCategory(c));
-        }
-        int rx = menuX + menuW - GRID_PAD - pillWidth("Enabled");
-        pill(g, "nav:enabled", "Enabled", noSearch && filter == Filter.ENABLED, rx, catY, () -> selectFilter(Filter.ENABLED));
-        rx -= 4 + pillWidth("Favorites");
-        pill(g, "nav:favorites", "Favorites", noSearch && filter == Filter.FAVORITES, rx, catY, () -> selectFilter(Filter.FAVORITES));
-    }
-
-    private int pill(GuiGraphics g, String key, String label, boolean selected, int x, int y, Runnable onSelect) {
-        int w = pillWidth(label);
-        Hit probe = new Hit(key, x, y, w, CAT_H, currentClip, true, b -> onSelect.run());
-        hits.add(probe);
-        boolean hover = hoverable(probe);
-        float sel = Render2D.easeInOut(anim(key + ":sel", selected ? 1f : 0f, HOVER_MS));
-        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
-        int fill = Colors.mix(Colors.mix(0x00000000, Theme.surfaceHover(), hov), Theme.control(), sel);
-        if (Colors.alpha(fill) > 4) Render2D.roundedRect(g, x, y, w, CAT_H, Theme.radiusSmall(), fill);
-        if (focused(key)) Render2D.roundedOutline(g, x, y, w, CAT_H, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
-        int color = Colors.mix(Colors.mix(Theme.soft(), Theme.icon(), hov), Theme.text(), sel);
-        Fonts.draw(g, label, Fonts.Weight.MEDIUM, LABEL, x + 11, y + (CAT_H - Fonts.lineHeight(LABEL)) / 2, color);
-        return w + 4;
-    }
-
-    /** Status line and the Edit HUD Layout button. */
-    private void renderMenuFooter(GuiGraphics g) {
-        int y = menuY + menuH - FOOT_H;
-        g.fill(menuX + 1, y, menuX + menuW - 1, y + 1, Theme.line());
+        boolean mods = tab == Tab.MODS && noSearch;
+        int all = 0;
         int on = 0;
-        for (Module m : ShardClient.modules().all()) if (!m.hidden() && m.isToggledOn()) on++;
-        String status = on + " enabled · Right-click a mod for settings";
-        Fonts.draw(g, status, Fonts.Weight.REGULAR, DESC, menuX + 18, y + (FOOT_H - Fonts.lineHeight(DESC)) / 2, Theme.subtle());
+        int favCount = 0;
+        for (Module m : ShardClient.modules().all()) {
+            if (m.hidden()) continue;
+            all++;
+            if (m.isToggledOn()) on++;
+            if (favorites.contains(m.key())) favCount++;
+        }
+        y += navItem(g, "cat:all", "grid", "All mods", String.valueOf(all), mods && filter == Filter.ALL, x, y, w, () -> selectFilter(Filter.ALL));
+        y += navItem(g, "nav:favorites", "favorites", "Favorites", String.valueOf(favCount), mods && filter == Filter.FAVORITES, x, y, w, () -> selectFilter(Filter.FAVORITES));
+        y += navItem(g, "nav:enabled", "enabled", "Enabled", String.valueOf(on), mods && filter == Filter.ENABLED, x, y, w, () -> selectFilter(Filter.ENABLED));
+        y += 10;
+        Fonts.draw(g, "CATEGORIES", Fonts.Weight.SEMIBOLD, HINT, x + 12, y, Theme.subtle());
+        y += Fonts.lineHeight(HINT) + 6;
+        for (ModuleCategory c : categories()) {
+            boolean sel = mods && filter == Filter.CATEGORY && c == category;
+            y += navItem(g, "cat:" + c.name(), Icons.categoryIcon(c), c.displayName(), String.valueOf(ShardClient.modules().byCategory(c).size()), sel, x, y, w, () -> selectCategory(c));
+        }
+
+        // Bottom: who is signed in, and above it the other pages.
+        int userH = 36;
+        int uy = menuY + menuH - SIDE_PAD - userH;
+        Render2D.roundedRect(g, x + 6, uy + (userH - 28) / 2, 28, 28, Theme.radiusSmall(), Theme.iconWell());
+        Icons.draw(g, "user", x + 12, uy + (userH - 16) / 2, 16, Theme.icon());
+        String name = minecraft.getUser().getName();
+        CosmeticsModule cosmetics = ShardClient.modules().get(CosmeticsModule.class);
+        ShardApi.Me me = cosmetics == null ? null : cosmetics.account();
+        int balanceW = 0;
+        if (me != null) {
+            String shards = String.format(Locale.ROOT, "%,d", me.tokens());
+            balanceW = Fonts.widthInt(shards, Fonts.Weight.MEDIUM, HINT) + 16;
+            Fonts.drawRight(g, shards, Fonts.Weight.MEDIUM, HINT, x + w - 6, uy + (userH - Fonts.lineHeight(HINT)) / 2, Theme.muted());
+            Icons.draw(g, "crystal", x + w - 6 - balanceW + 2, uy + (userH - 11) / 2, 11, Theme.accent());
+        }
+        Fonts.drawClipped(g, name, Fonts.Weight.SEMIBOLD, LABEL, x + 42, uy + (userH - Fonts.lineHeight(LABEL)) / 2, w - 48 - balanceW, Theme.text());
+        int by = uy - 8 - 5 * NAV_H;
+        g.fill(x, by - 9, x + w, by - 8, Theme.line());
+        by += navItem(g, "tab:cosmetics", "cape", "Cosmetics", null, tab == Tab.COSMETICS, x, by, w, () -> selectTab(Tab.COSMETICS));
+        by += navItem(g, "tab:friends", "user-plus", "Friends", null, tab == Tab.FRIENDS, x, by, w, () -> selectTab(Tab.FRIENDS));
+        by += navItem(g, "tab:profiles", "profile", "Profiles", null, tab == Tab.PROFILES, x, by, w, () -> selectTab(Tab.PROFILES));
         boolean canEdit = minecraft.player != null;
-        String label = "Edit HUD Layout";
-        int bw = Fonts.widthInt(label, Fonts.Weight.MEDIUM, LABEL) + 24;
-        int bh = 26;
-        button(g, "nav:hud-editor", menuX + menuW - 18 - bw, y + (FOOT_H - bh) / 2, bw, bh, label, false, canEdit, b -> {
+        by += navItem(g, "nav:hud-editor", "edit-hud", "Edit HUD", null, false, x, by, w, () -> {
             if (canEdit) minecraft.setScreen(new HudEditorScreen(this, ShardClient.hud()));
         });
+        navItem(g, "tab:settings", "settings", "Settings", null, tab == Tab.SETTINGS, x, by, w, () -> selectTab(Tab.SETTINGS));
+    }
+
+    /** One sidebar row: icon, label, an optional count on the right; returns its height. */
+    private int navItem(GuiGraphics g, String key, String icon, String label, String count, boolean selected, int x, int y, int w, Runnable onSelect) {
+        Hit probe = new Hit(key, x, y, w, NAV_H, currentClip, true, b -> onSelect.run());
+        hits.add(probe);
+        float sel = Render2D.easeInOut(anim(key + ":sel", selected ? 1f : 0f, HOVER_MS));
+        float hov = Render2D.easeInOut(anim(key + ":hov", hoverable(probe) ? 1f : 0f, HOVER_MS));
+        int fill = Colors.mix(Colors.mix(0x00000000, Theme.surfaceHover(), hov), Theme.accentAlpha(0x24), sel);
+        if (Colors.alpha(fill) > 4) Render2D.roundedRect(g, x, y, w, NAV_H, Theme.radiusSmall(), fill);
+        if (focused(key)) Render2D.roundedOutline(g, x, y, w, NAV_H, Theme.radiusSmall(), Theme.accentAlpha(0xA0));
+        int iconColor = Colors.mix(Colors.mix(Theme.muted(), Theme.icon(), hov), Theme.accent(), sel);
+        Icons.draw(g, icon, x + 12, y + (NAV_H - 15) / 2, 15, iconColor);
+        int color = Colors.mix(Colors.mix(Theme.soft(), Theme.text(), hov), Theme.text(), sel);
+        Fonts.drawClipped(g, label, Fonts.Weight.MEDIUM, LABEL, x + 36, y + (NAV_H - Fonts.lineHeight(LABEL)) / 2, w - 70, color);
+        if (count != null) {
+            Fonts.drawRight(g, count, Fonts.Weight.MEDIUM, HINT, x + w - 12, y + (NAV_H - Fonts.lineHeight(HINT)) / 2, Colors.mix(Theme.subtle(), Theme.accent(), sel));
+        }
+        return NAV_H;
+    }
+
+    /** Big title and one line under it, at the top of the main column. */
+    private void renderPageHeader(GuiGraphics g, String title, String sub) {
+        Fonts.drawClipped(g, title, Fonts.Weight.SEMIBOLD, TITLE, mainX, headY, mainW - 260, Theme.text());
+        Fonts.drawClipped(g, sub, Fonts.Weight.REGULAR, DESC, mainX, headY + Fonts.lineHeight(TITLE) + 2, mainW - 260, Theme.muted());
+    }
+
+    /** The mod list's title (category, filter or search) and the All / Enabled / Off control. */
+    private void renderModsHeader(GuiGraphics g) {
+        String q = search.value().trim();
+        String title;
+        String sub;
+        if (!q.isEmpty()) {
+            title = "Results for “" + q + "”";
+            int settings = settingResults().size();
+            int modCount = shownModules().size();
+            sub = modCount + (modCount == 1 ? " mod" : " mods") + " · " + settings + (settings == 1 ? " setting" : " settings");
+        } else {
+            switch (filter) {
+                case ALL -> { title = "All mods"; sub = "Every Shard mod, by category."; }
+                case FAVORITES -> { title = "Favorites"; sub = "Your starred mods, from every category."; }
+                case ENABLED -> { title = "Enabled"; sub = "The mods that are on right now."; }
+                default -> { title = category.displayName(); sub = category.description(); }
+            }
+        }
+        renderPageHeader(g, title, sub);
+        String[] labels = {"All", "Enabled", "Off"};
+        int segW = 6;
+        for (String l : labels) segW += Fonts.widthInt(l, Fonts.Weight.MEDIUM, LABEL) + 22;
+        int sx = mainX + mainW - segW;
+        int sy = headY + 2;
+        int h = 30;
+        Render2D.panel(g, sx, sy, segW, h, Theme.radiusSmall(), Theme.surfaceRaised(), Theme.line());
+        int px = sx + 3;
+        for (int i = 0; i < labels.length; i++) {
+            int lw = Fonts.widthInt(labels[i], Fonts.Weight.MEDIUM, LABEL) + 22;
+            final int value = i;
+            String key = "show:" + i;
+            Hit probe = new Hit(key, px, sy + 3, lw, h - 6, currentClip, true, b -> {
+                showOnly = value;
+                gridScroll = 0;
+                gridShown = 0;
+            });
+            hits.add(probe);
+            boolean on = showOnly == i;
+            if (on) Render2D.roundedRect(g, px, sy + 3, lw, h - 6, 5, Theme.control());
+            else if (hoverable(probe)) Render2D.roundedRect(g, px, sy + 3, lw, h - 6, 5, Theme.surfaceHover());
+            if (focused(key)) Render2D.roundedOutline(g, px, sy + 3, lw, h - 6, 5, Theme.accentAlpha(0xA0));
+            Fonts.drawCentered(g, labels[i], Fonts.Weight.MEDIUM, LABEL, px + lw / 2, sy + (h - Fonts.lineHeight(LABEL)) / 2, on ? Theme.text() : Theme.muted());
+            px += lw;
+        }
+    }
+
+    /** How many are on, and Reset category / Edit HUD Layout. */
+    private void renderModsFooter(GuiGraphics g) {
+        int y = footY;
+        int on = 0;
+        int total = 0;
+        for (Module m : visibleModules()) {
+            total++;
+            if (m.isToggledOn()) on++;
+        }
+        Icons.draw(g, "enabled", mainX, y + (FOOT_H - 14) / 2, 14, Theme.subtle());
+        Fonts.draw(g, on + " of " + total + " on · Right-click a card for its settings", Fonts.Weight.REGULAR, DESC, mainX + 22,
+                y + (FOOT_H - Fonts.lineHeight(DESC)) / 2, Theme.subtle());
+        boolean canEdit = minecraft.player != null;
+        int bx = mainX + mainW;
+        int bw = labelButtonWidth("Edit HUD Layout");
+        bx -= bw;
+        labelButton(g, "nav:hud-layout", "edit-hud", "Edit HUD Layout", bx, y, bw, FOOT_H, true, false, canEdit, b -> {
+            if (canEdit) minecraft.setScreen(new HudEditorScreen(this, ShardClient.hud()));
+        });
+        if (search.isEmpty() && filter == Filter.CATEGORY) {
+            String label = "Reset category";
+            int rw = labelButtonWidth(label);
+            bx -= 10 + rw;
+            ModuleCategory c = category;
+            labelButton(g, "nav:reset-category", "reset", label, bx, y, rw, FOOT_H, false, false, true, b ->
+                    popover = new ConfirmPopover("Reset " + c.displayName() + "?",
+                            "Every " + c.displayName() + " mod goes back to its default settings. Which mods are on stays the same.",
+                            "Reset", true, () -> {
+                                for (Module m : ShardClient.modules().byCategory(c)) for (Setting<?> s : m.settings()) s.reset();
+                                stringInputs.clear();
+                                numericInputs.clear();
+                                showToast(c.displayName() + " reset");
+                            }, designW, designH));
+        }
+    }
+
+    private static int labelButtonWidth(String label) {
+        return Fonts.widthInt(label, Fonts.Weight.MEDIUM, LABEL) + 48;
+    }
+
+    /** A button with an icon before its label. */
+    private void labelButton(GuiGraphics g, String key, String icon, String label, int x, int y, int w, int h, boolean primary, boolean danger, boolean enabled, IntConsumer onClick) {
+        button(g, key, x, y, w, h, "", primary, danger, enabled, onClick);
+        int color = primary ? Theme.accentText() : danger ? Theme.danger() : enabled ? Theme.text() : Theme.subtle();
+        int tw = Fonts.widthInt(label, Fonts.Weight.MEDIUM, LABEL);
+        int tx = x + (w - 20 - tw) / 2;
+        Icons.draw(g, icon, tx, y + (h - 14) / 2, 14, color);
+        Fonts.draw(g, label, Fonts.Weight.MEDIUM, LABEL, tx + 20, y + (h - Fonts.lineHeight(LABEL)) / 2, color);
     }
 
     private void renderSearch(GuiGraphics g, int x, int y, int w, int h) {
         boolean isFocused = activeInput == search;
         search.render(g, x, y, w, h, isFocused);
         Icons.draw(g, "search", x + 10, y + (h - 13) / 2, 13, isFocused ? Theme.muted() : Theme.subtle());
-        if (search.isEmpty() && !isFocused && w >= 240) {
+        if (search.isEmpty() && !isFocused && w >= 180) {
             String hint = "Ctrl F";
             int hw = Fonts.widthInt(hint, Fonts.Weight.MEDIUM, HINT) + 10;
             int hx = x + w - 6 - hw;
@@ -894,108 +1043,369 @@ public final class ClickGuiScreen extends DesignScreen {
         focusKey = "row:" + m.key();
     }
 
-    /** The tile grid (or search results: matching tiles, then matching settings). */
+    /** The list after the All / Enabled / Off control. */
+    private List<Module> shownModules() {
+        List<Module> out = visibleModules();
+        if (showOnly == 0) return out;
+        List<Module> kept = new ArrayList<>();
+        for (Module m : out) if (m.isToggledOn() == (showOnly == 1)) kept.add(m);
+        return kept;
+    }
+
+    /** Two columns of mod cards (or search results: matching cards, then matching settings). */
     private void renderTiles(GuiGraphics g) {
-        List<Module> modules = visibleModules();
+        List<Module> modules = shownModules();
         List<SettingHit> settings = settingResults();
         int top = contentY;
         int viewH = contentH;
         if (modules.isEmpty() && settings.isEmpty()) {
             boolean searching = !search.isEmpty();
-            String icon = filter == Filter.FAVORITES && !searching ? "favorites" : "search";
-            int cx = menuX + menuW / 2;
+            boolean favs = filter == Filter.FAVORITES && !searching && visibleModules().isEmpty();
+            String icon = favs ? "favorites" : "search";
+            int cx = bodyX + bodyW / 2;
             Icons.draw(g, icon, cx - 11, top + viewH / 2 - 40, 22, Theme.subtle());
-            String msg = searching ? "Nothing matches \"" + search.value().trim() + "\"" : filter == Filter.FAVORITES ? "No favorites yet" : "Nothing here yet";
+            String msg = searching ? "Nothing matches \"" + search.value().trim() + "\""
+                    : favs ? "No favorites yet"
+                    : showOnly == 1 ? "Nothing here is on" : showOnly == 2 ? "Everything here is on" : "Nothing here yet";
             Fonts.drawCentered(g, msg, Fonts.Weight.MEDIUM, LABEL, cx, top + viewH / 2 - 8, Theme.muted());
-            if (filter == Filter.FAVORITES && !searching) {
+            if (favs) {
                 Fonts.drawCentered(g, "Open a mod's settings and star it to pin it here", Fonts.Weight.REGULAR, DESC, cx, top + viewH / 2 + 10, Theme.subtle());
             }
             return;
         }
         gridShown = ease(gridShown, gridScroll);
         int scroll = Math.round(gridShown);
-        clip(g, menuX + 1, top - 8, menuW - 2, viewH + 7);
+        clip(g, bodyX + 1, top - 4, bodyW - 2, viewH + 4);
         int y = top - scroll;
         for (int i = 0; i < modules.size(); i++) {
             Module m = modules.get(i);
-            int tx = contentX + (i % COLS) * (cardWidth + TILE_GAP);
-            int ty = y + (i / COLS) * (TILE_H + TILE_GAP);
+            int tx = contentX + (i % COLS) * (cardWidth + CARD_GAP);
+            int ty = y + (i / COLS) * (CARD_H + CARD_GAP);
             cardOrder.add("row:" + m.key());
-            if (ty + TILE_H >= top - 8 && ty <= top + viewH) renderTile(g, m, tx, ty, cardWidth, TILE_H);
+            if (ty + CARD_H >= top - 4 && ty <= top + viewH) renderTile(g, m, tx, ty, cardWidth, CARD_H);
         }
-        y += ((modules.size() + COLS - 1) / COLS) * (TILE_H + TILE_GAP);
+        y += ((modules.size() + COLS - 1) / COLS) * (CARD_H + CARD_GAP);
         if (!settings.isEmpty()) {
             y += 6;
-            Fonts.draw(g, "Settings", Fonts.Weight.SEMIBOLD, LABEL, contentX + 2, y, Theme.soft());
-            y += Fonts.lineHeight(LABEL) + 6;
+            Fonts.draw(g, "SETTINGS", Fonts.Weight.SEMIBOLD, HINT, contentX + 2, y, Theme.subtle());
+            y += Fonts.lineHeight(HINT) + 8;
             for (SettingHit sh : settings) {
                 if (y + 36 >= top && y <= top + viewH) renderSettingResult(g, sh, contentX, y, contentW);
                 y += 38;
             }
         }
-        int contentHeight = y + scroll - top + GRID_PAD - TILE_GAP;
+        int contentHeight = y + scroll - top - CARD_GAP;
         int max = Math.max(0, contentHeight - viewH);
         gridScroll = Math.max(0, Math.min(gridScroll, max));
         gridShown = Math.max(0, Math.min(gridShown, max));
+        if (scroll < max) Render2D.gradientV(g, bodyX + 1, top + viewH - 28, bodyW - 2, 28, 0x00000000, Colors.withAlpha(Theme.surface(), 0xF0));
         unclip(g);
     }
 
     /**
-     * One mod tile: centred line icon and name, a dim gear top-right for settings, and a status
-     * strip. A click toggles the mod; the gear or a right-click opens its settings.
+     * One mod card: icon, name (and a star for favourites) with its switch; one line of what it
+     * does; then the status, its key and a Settings link. A click on the card toggles it, a
+     * right-click or the Settings link opens its settings page.
      */
     private void renderTile(GuiGraphics g, Module m, int x, int y, int w, int h) {
         String key = "row:" + m.key();
         String gearKey = "gear:" + m.key();
+        String switchKey = "sw:" + m.key();
         hits.add(new Hit(key, x, y, w, h, currentClip, true, b -> {
             if (b == GLFW.GLFW_MOUSE_BUTTON_RIGHT) selectModule(m);
             else m.toggle();
         }));
-        int gs = 13;
-        int gx = x + w - 8 - gs;
-        int gy = y + 8;
-        hits.add(new Hit(gearKey, gx - 5, gy - 5, gs + 10, gs + 10, currentClip, false, b -> selectModule(m)));
-        Hit top = popover == null ? hitAt(mouseX, mouseY) : null;
-        boolean hover = top != null && (top.key.equals(key) || top.key.equals(gearKey));
-        boolean gearHover = top != null && top.key.equals(gearKey);
-        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
-        boolean on = m.isEnabled();
         String notice = notice(m);
+        boolean on = m.isEnabled();
 
-        Render2D.roundedRect(g, x, y, w, h, Theme.radius(), Theme.surfaceRaised());
-        int stripY = y + h - STRIP_H;
-        if (on) {
-            // A very faint green behind the status, kept inside the rounded bottom corners.
-            int tint = Colors.withAlpha(Theme.accent(), 0x0F);
-            g.fill(x + 1, stripY + 1, x + w - 1, y + h - 4, tint);
-            g.fill(x + 2, y + h - 4, x + w - 2, y + h - 2, tint);
-            g.fill(x + 4, y + h - 2, x + w - 4, y + h - 1, tint);
-        }
-        g.fill(x + 1, stripY, x + w - 1, stripY + 1, Theme.line());
-        int border = focused(key) ? Theme.accentAlpha(0xC0) : Colors.mix(Theme.line(), Theme.lineHover(), hov);
+        int footTop = y + h - CARD_FOOT_H;
+        String link = "Settings";
+        int linkW = Fonts.widthInt(link, Fonts.Weight.MEDIUM, HINT) + 18;
+        int linkX = x + w - CARD_PAD - linkW;
+        hits.add(new Hit(gearKey, linkX - 6, footTop + 2, linkW + 12, CARD_FOOT_H - 4, currentClip, false, b -> selectModule(m)));
+        int switchX = x + w - CARD_PAD - SWITCH_W;
+        int iconBox = 32;
+        int hy = y + 12;
+        // The switch's hit goes in now (above the card's), and it is drawn after the card.
+        Hit switchHit = new Hit(switchKey, switchX - 6, hy + (iconBox - SWITCH_H) / 2 - 6, SWITCH_W + 12, SWITCH_H + 12, currentClip, true, b -> m.toggle());
+        hits.add(switchHit);
+
+        Hit topHit = popover == null ? hitAt(mouseX, mouseY) : null;
+        boolean hover = topHit != null && (topHit.key.equals(key) || topHit.key.equals(gearKey) || topHit.key.equals(switchKey));
+        boolean linkHover = topHit != null && topHit.key.equals(gearKey);
+        float hov = Render2D.easeInOut(anim(key + ":hov", hover ? 1f : 0f, HOVER_MS));
+        boolean selected = panelModule == m;
+
+        int fill = selected ? Colors.mix(Theme.surfaceRaised(), Theme.accent(), 0.05f) : Colors.mix(Theme.surfaceRaised(), Theme.surfaceHover(), hov * 0.5f);
+        Render2D.roundedRect(g, x, y, w, h, Theme.radius(), fill);
+        int rest = selected ? Theme.accentAlpha(0x70) : on ? Theme.accentAlpha(0x38) : Theme.line();
+        int border = focused(key) ? Theme.accentAlpha(0xC0) : Colors.mix(rest, Theme.lineHover(), hov * 0.6f);
         Render2D.roundedOutline(g, x, y, w, h, Theme.radius(), border);
 
-        int blockH = 22 + 10 + Fonts.lineHeight(LABEL);
-        int iconY = y + (h - blockH) / 2;
-        Icons.draw(g, m, x + (w - 22) / 2, iconY, 22, on ? Theme.text() : Theme.icon());
-        String name = Fonts.clip(m.name(), Fonts.Weight.MEDIUM, LABEL, w - 16);
-        Fonts.drawCentered(g, name, Fonts.Weight.MEDIUM, LABEL, x + w / 2, iconY + 32, on ? 0xFFFFFFFF : 0xFFCFCFD4);
-        Icons.draw(g, "settings", gx, gy, gs, gearHover ? Theme.icon() : 0xFF4A4A50);
-        if (favorites.contains(m.key())) Icons.draw(g, "favorite-on", x + 8, y + 8, 11, 0xFF4A4A50);
-
-        String status = notice != null ? (m.blockedBy() != null ? "BLOCKED" : "OFF HERE") : on ? "ENABLED" : "DISABLED";
-        int statusColor = notice != null ? Theme.warning() : on ? Theme.accent() : 0xFF6A6A70;
-        Fonts.drawCentered(g, status, Fonts.Weight.SEMIBOLD, HINT, x + w / 2, stripY + (STRIP_H - Fonts.lineHeight(HINT)) / 2, statusColor);
-        if (hover && notice == null && ShardClient.appearance().tileTooltips.get()) {
-            hoverDetails = m.description();
-            hoverDetailsX = mouseX + 12;
-            hoverDetailsY = mouseY + 16;
+        // Head: icon well, name, star, switch.
+        float knob = Render2D.easeInOut(anim(switchKey, m.isToggledOn() ? 1f : 0f, SWITCH_MS));
+        int switchY = hy + (iconBox - SWITCH_H) / 2;
+        Render2D.toggle(g, switchX, switchY, SWITCH_W, SWITCH_H, knob, m.isToggledOn(), focused(switchKey));
+        if (notice != null) Render2D.roundedRect(g, switchX, switchY, SWITCH_W, SWITCH_H, SWITCH_H / 2, Colors.withAlpha(Theme.surface(), 0x90));
+        int ix = x + CARD_PAD;
+        Render2D.roundedRect(g, ix, hy, iconBox, iconBox, Theme.radiusSmall(), on ? Theme.accentAlpha(0x22) : Theme.iconWell());
+        Icons.draw(g, m, ix + (iconBox - 16) / 2, hy + (iconBox - 16) / 2, 16, on ? Theme.accent() : Theme.icon());
+        int nameX = ix + iconBox + 12;
+        int nameMax = switchX - 12 - nameX - 18;
+        String name = Fonts.clip(m.name(), Fonts.Weight.SEMIBOLD, LABEL, nameMax);
+        int nameY = hy + (iconBox - Fonts.lineHeight(LABEL)) / 2;
+        Fonts.draw(g, name, Fonts.Weight.SEMIBOLD, LABEL, nameX, nameY, Theme.text());
+        if (favorites.contains(m.key())) {
+            Icons.draw(g, "favorite-on", nameX + Fonts.widthInt(name, Fonts.Weight.SEMIBOLD, LABEL) + 7, hy + (iconBox - 11) / 2, 11, Theme.warning());
         }
-        if (notice != null && hover) {
+
+        // What it does, on as many lines as fit above the foot (two on a normal card).
+        int descY = hy + iconBox + 8;
+        int descW = w - 2 * CARD_PAD;
+        int maxLines = Math.max(1, (footTop - 4 - descY) / Fonts.lineHeight(DESC));
+        List<String> lines = Fonts.wrap(m.description(), Fonts.Weight.REGULAR, DESC, descW);
+        for (int i = 0; i < Math.min(maxLines, lines.size()); i++) {
+            String line = lines.get(i);
+            if (i == maxLines - 1 && lines.size() > maxLines) line = Fonts.clip(line + " …", Fonts.Weight.REGULAR, DESC, descW);
+            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, ix, descY + i * Fonts.lineHeight(DESC), Theme.muted());
+        }
+
+        // Foot: status, key, Settings link.
+        g.fill(ix, footTop, x + w - CARD_PAD, footTop + 1, Theme.line());
+        String status = notice != null ? (m.blockedBy() != null ? "BLOCKED" : "OFF HERE") : on ? "ENABLED" : "DISABLED";
+        int statusColor = notice != null ? Theme.warning() : on ? Theme.accent() : Theme.subtle();
+        int fy = footTop + (CARD_FOOT_H - Fonts.lineHeight(HINT)) / 2;
+        Fonts.draw(g, status, Fonts.Weight.SEMIBOLD, HINT, ix, fy, statusColor);
+        if (m.keybind() >= 0) {
+            String bind = Keys.name(m.keybind());
+            int kx = ix + Fonts.widthInt(status, Fonts.Weight.SEMIBOLD, HINT) + 10;
+            int kw = Fonts.widthInt(bind, Fonts.Weight.MEDIUM, HINT) + 12;
+            int ky = footTop + (CARD_FOOT_H - 18) / 2;
+            Render2D.roundedOutline(g, kx, ky, kw, 18, 4, Theme.lineStrong());
+            Fonts.draw(g, bind, Fonts.Weight.MEDIUM, HINT, kx + 6, ky + (18 - Fonts.lineHeight(HINT)) / 2, Theme.muted());
+        }
+        int linkColor = linkHover ? Theme.text() : Theme.subtle();
+        Icons.draw(g, "settings", linkX, footTop + (CARD_FOOT_H - 12) / 2, 12, linkColor);
+        Fonts.draw(g, link, Fonts.Weight.MEDIUM, HINT, linkX + 18, fy, linkColor);
+
+        if (hover && notice != null) {
             hoverDetails = notice;
             hoverDetailsX = mouseX + 12;
             hoverDetailsY = mouseY + 16;
         }
+    }
+
+    // ---- a mod's settings page -----------------------------------------------------------------
+
+    /** One box of settings on a mod's page: a caption and what goes in it. */
+    private record SettingsBox(String id, String title, List<Setting<?>> settings, SectionBody extra) {}
+
+    /**
+     * A mod's settings as a page of its own: a back button and breadcrumb, a card with the icon,
+     * name, what it does, its key, Favorite and the switch, then the settings in boxes (one per
+     * group) laid out in two columns, and Reset module / Disable on this server at the bottom.
+     */
+    private void renderModulePage(GuiGraphics g) {
+        Module m = panelModule;
+        if (m == null) return;
+        hit("panel", panelX, panelY, panelW, panelH, false, b -> {});
+        int x = mainX;
+        int w = mainW;
+        int y = headY;
+
+        // Back and breadcrumb.
+        int backS = 28;
+        Render2D.roundedRect(g, x, y, backS, backS, Theme.radiusSmall(), Theme.surfaceRaised());
+        Render2D.roundedOutline(g, x, y, backS, backS, Theme.radiusSmall(), Theme.line());
+        iconButton(g, "panel-back", "chevron-left", x, y, backS, Theme.text(), b -> closePanel());
+        int cy = y + (backS - Fonts.lineHeight(LABEL)) / 2;
+        int cx = x + backS + 12;
+        String crumb = m.category().displayName();
+        int crumbW = Fonts.widthInt(crumb, Fonts.Weight.MEDIUM, LABEL);
+        Hit crumbHit = new Hit("crumb:category", cx - 4, y, crumbW + 8, backS, currentClip, true, b -> {
+            ModuleCategory c = m.category();
+            closePanel();
+            selectCategory(c);
+        });
+        hits.add(crumbHit);
+        Fonts.draw(g, crumb, Fonts.Weight.MEDIUM, LABEL, cx, cy, hoverable(crumbHit) ? Theme.accentHover() : Theme.accent());
+        cx += crumbW + 8;
+        Fonts.draw(g, "/", Fonts.Weight.REGULAR, LABEL, cx, cy, Theme.subtle());
+        cx += Fonts.widthInt("/", Fonts.Weight.REGULAR, LABEL) + 8;
+        Fonts.drawClipped(g, m.name(), Fonts.Weight.REGULAR, LABEL, cx, cy, x + w - cx, Theme.muted());
+        y += backS + 12;
+
+        // The mod's card.
+        String notice = notice(m);
+        int pad = 16;
+        int iconBox = 44;
+        boolean fav = favorites.contains(m.key());
+        String favLabel = "Favorite";
+        int favW = labelButtonWidth(favLabel);
+        String bind = m.keybind() >= 0 ? Keys.name(m.keybind()) : null;
+        int bindW = bind == null ? 0 : Fonts.widthInt(bind, Fonts.Weight.MEDIUM, HINT) + 14;
+        int rightW = SWITCH_W + 14 + favW + (bind == null ? 0 : bindW + 12);
+        int textX = x + pad + iconBox + 16;
+        int textW = x + w - pad - rightW - 24 - textX;
+        List<String> about = Fonts.wrap(m.about(), Fonts.Weight.REGULAR, DESC, textW);
+        if (about.size() > 3) about = new ArrayList<>(about.subList(0, 3));
+        List<String> noticeLines = notice == null ? List.of() : Fonts.wrap(notice, Fonts.Weight.REGULAR, DESC, textW - 20);
+        int textH = Fonts.lineHeight(18) + 4 + about.size() * Fonts.lineHeight(DESC) + (noticeLines.isEmpty() ? 0 : 6 + noticeLines.size() * Fonts.lineHeight(DESC));
+        int cardH = Math.max(iconBox, textH) + 2 * pad;
+        Render2D.roundedRect(g, x, y, w, cardH, Theme.radius(), Colors.mix(Theme.surfaceRaised(), Theme.accent(), 0.05f));
+        Render2D.roundedOutline(g, x, y, w, cardH, Theme.radius(), Theme.accentAlpha(0x60));
+        int iy = y + (cardH - iconBox) / 2;
+        Render2D.roundedRect(g, x + pad, iy, iconBox, iconBox, Theme.radius(), Theme.accentAlpha(0x22));
+        Icons.draw(g, m, x + pad + (iconBox - 22) / 2, iy + (iconBox - 22) / 2, 22, m.isEnabled() ? Theme.accent() : Theme.icon());
+        int ty = y + (cardH - textH) / 2;
+        Fonts.drawClipped(g, m.name(), Fonts.Weight.SEMIBOLD, 18, textX, ty, textW, Theme.text());
+        ty += Fonts.lineHeight(18) + 4;
+        for (String line : about) {
+            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, textX, ty, Theme.muted());
+            ty += Fonts.lineHeight(DESC);
+        }
+        if (!noticeLines.isEmpty()) {
+            ty += 6;
+            Icons.draw(g, "warning", textX, ty, 14, Theme.warning());
+            for (String line : noticeLines) {
+                Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, textX + 20, ty, Theme.warning());
+                ty += Fonts.lineHeight(DESC);
+            }
+        }
+        int rx = x + w - pad - SWITCH_W;
+        int midY = y + cardH / 2;
+        renderSwitch(g, "panel-enabled", rx, midY - SWITCH_H / 2, m.isToggledOn(), notice == null, m::toggle);
+        rx -= 14 + favW;
+        int bh = 30;
+        button(g, "panel-star", rx, midY - bh / 2, favW, bh, "", false, true, b -> {
+            if (!favorites.remove(m.key())) favorites.add(m.key());
+        });
+        int favColor = fav ? Theme.warning() : Theme.text();
+        int ftw = Fonts.widthInt(favLabel, Fonts.Weight.MEDIUM, LABEL);
+        int fx = rx + (favW - 20 - ftw) / 2;
+        Icons.draw(g, fav ? "favorite-on" : "favorites", fx, midY - 7, 14, fav ? Theme.warning() : Theme.muted());
+        Fonts.draw(g, favLabel, Fonts.Weight.MEDIUM, LABEL, fx + 20, midY - Fonts.lineHeight(LABEL) / 2, favColor);
+        if (bind != null) {
+            rx -= 12 + bindW;
+            Render2D.roundedOutline(g, rx, midY - 10, bindW, 20, 4, Theme.lineStrong());
+            Fonts.draw(g, bind, Fonts.Weight.MEDIUM, HINT, rx + 7, midY - Fonts.lineHeight(HINT) / 2, Theme.muted());
+        }
+        y += cardH + 12;
+
+        // Settings boxes in two columns, scrolling together.
+        List<SettingsBox> boxes = new ArrayList<>();
+        if (m instanceof PanelPreview preview) {
+            boxes.add(new SettingsBox("preview", "PREVIEW", List.of(), (bx, by, bw) -> {
+                preview.previewMouse(mouseX, mouseY);
+                int used = preview.renderPreview(g, bx, by, bw);
+                if (used > 0) {
+                    hits.add(new Hit("preview", bx, by, bw, used, currentClip, false, b -> {
+                        String msg = preview.previewInput(mouseX, mouseY, b, false);
+                        if (msg != null) showToast(msg);
+                        previewDragging = preview;
+                        previewButton = b;
+                    }));
+                }
+                return by + Math.max(0, used);
+            }));
+        }
+        Map<String, List<Setting<?>>> groups = new java.util.LinkedHashMap<>();
+        for (Setting<?> s : m.settings()) {
+            if (!s.isVisible()) continue;
+            groups.computeIfAbsent(s.group().isEmpty() ? "Settings" : s.group(), k -> new ArrayList<>()).add(s);
+        }
+        for (var e : groups.entrySet()) boxes.add(new SettingsBox("g:" + e.getKey(), e.getKey().toUpperCase(Locale.ROOT), e.getValue(), null));
+        List<Module> bindable = new ArrayList<>();
+        for (Module other : ShardClient.modules().all()) if (!other.hidden()) bindable.add(other);
+        String conflict = conflictFor(m, bindable);
+        boxes.add(new SettingsBox("general", "KEYBIND", List.of(), (bx, by, bw) -> by + keybindRow(g, "kb:" + m.key(), "Toggle key",
+                conflict != null ? conflict : "Turns the mod on and off in-game", Keys.name(m.keybind()), listeningModule == m, bx, by, bw,
+                () -> {
+                    listeningModule = m;
+                    listeningKey = null;
+                }, () -> m.setKeybind(Keys.NONE))));
+
+        int rowsTop = y;
+        int rowsH = footY - 14 - rowsTop;
+        clip(g, bodyX + 1, rowsTop, bodyW - 2, rowsH);
+        panelShown = ease(panelShown, panelScroll);
+        int scroll = Math.round(panelShown);
+        int colW = (w - BOX_GAP) / 2;
+        int[] colY = {rowsTop - scroll, rowsTop - scroll};
+        for (SettingsBox box : boxes) {
+            String cacheKey = "box-h:" + m.key() + ":" + box.id();
+            int col = colY[1] < colY[0] ? 1 : 0;
+            int bx = x + col * (colW + BOX_GAP);
+            int bh2 = renderSettingsBox(g, m, box, bx, colY[col], colW, cacheKey, rowsTop);
+            colY[col] += bh2 + BOX_GAP;
+        }
+        int contentHeight = Math.max(colY[0], colY[1]) + scroll - rowsTop - BOX_GAP;
+        int max = Math.max(0, contentHeight - rowsH);
+        panelScroll = Math.max(0, Math.min(panelScroll, max));
+        panelShown = Math.max(0, Math.min(panelShown, max));
+        if (scroll < max) Render2D.gradientV(g, bodyX + 1, rowsTop + rowsH - 24, bodyW - 2, 24, 0x00000000, Colors.withAlpha(Theme.surface(), 0xF0));
+        unclip(g);
+
+        // Footer.
+        Fonts.draw(g, "Changes save as you make them", Fonts.Weight.REGULAR, DESC, x, footY + (FOOT_H - Fonts.lineHeight(DESC)) / 2, Theme.subtle());
+        int fbx = x + w;
+        String server = ShardClient.modules().currentServer();
+        if (server != null) {
+            boolean off = ShardClient.modules().blacklist().isDisabled(server, m.key());
+            String label = off ? "Allow on this server" : "Disable on this server";
+            int sw = labelButtonWidth(label);
+            fbx -= sw;
+            labelButton(g, "panel-server", "server-rule", label, fbx, footY, sw, FOOT_H, false, !off, true,
+                    b -> ShardClient.modules().setDisabledOnCurrentServer(m, !off));
+            fbx -= 10;
+        }
+        String reset = "Reset module";
+        int resetW = labelButtonWidth(reset);
+        fbx -= resetW;
+        labelButton(g, "panel-reset", "reset", reset, fbx, footY, resetW, FOOT_H, false, false, true, b -> {
+            for (Setting<?> s : m.settings()) s.reset();
+            stringInputs.clear();
+            numericInputs.clear();
+            showToast(m.name() + " reset");
+        });
+    }
+
+    /** One settings box (height measured last frame, so the frame is drawn behind its rows); returns its height. */
+    private int renderSettingsBox(GuiGraphics g, Module m, SettingsBox box, int x, int y, int w, String cacheKey, int viewTop) {
+        int pad = 16;
+        int cachedH = Math.round(anims.getOrDefault(cacheKey, 120f));
+        Render2D.panel(g, x, y, w, cachedH, Theme.radius(), Theme.surfaceRaised(), Theme.line());
+        Fonts.draw(g, box.title(), Fonts.Weight.SEMIBOLD, HINT, x + pad, y + 14, Theme.subtle());
+        int ry = y + 14 + Fonts.lineHeight(HINT) + 6;
+        int ix = x + pad;
+        int iw = w - 2 * pad;
+        if (box.extra() != null) ry = box.extra().render(ix, ry, iw);
+        List<Setting<?>> list = box.settings();
+        for (int i = 0; i < list.size(); i++) {
+            Setting<?> s = list.get(i);
+            if (s == flashSetting) {
+                long age = System.currentTimeMillis() - flashSince;
+                if (flashScrollPending) {
+                    panelScroll = Math.max(0, panelScroll + (ry - viewTop) - 24);
+                    flashScrollPending = false;
+                }
+                if (age < FLASH_MS) {
+                    float a = 1f - age / (float) FLASH_MS;
+                    int fh = Math.round(anims.getOrDefault("flash-h", (float) ROW_DESC_H));
+                    Render2D.roundedRect(g, ix - 8, ry, iw + 16, fh, Theme.radiusSmall(), Colors.fade(Theme.accentAlpha(0x2A), a));
+                } else flashSetting = null;
+            }
+            int rh = renderSettingRow(g, m, s, ix, ry, iw);
+            if (s == flashSetting) anims.put("flash-h", (float) rh);
+            ry += rh;
+            if (rh > 0 && i < list.size() - 1) {
+                g.fill(ix, ry, ix + iw, ry + 1, Theme.line());
+                ry += 1;
+            }
+        }
+        int h = ry - y + 8;
+        anims.put(cacheKey, (float) h);
+        return h;
     }
 
     /** A setting found by the search; clicking opens its module and flashes the row. */
@@ -1542,11 +1952,11 @@ public final class ClickGuiScreen extends DesignScreen {
     private void renderSettingsPage(GuiGraphics g) {
         int top = contentY;
         int viewH = contentH;
-        clip(g, menuX + 1, top - GRID_PAD + 1, menuW - 2, viewH + GRID_PAD - 1);
+        clip(g, bodyX + 1, top - GRID_PAD + 1, bodyW - 2, viewH + GRID_PAD - 1);
         pageShown = ease(pageShown, pageScroll);
         int y = top - Math.round(pageShown);
         int sectionW = Math.min(contentW, SECTION_MAX_W);
-        int x = menuX + (menuW - sectionW) / 2;
+        int x = mainX;
 
         y += section(g, "favorites", "Quick setup", "One click to a setup made for crystal PvP; change anything afterwards", x, y, sectionW, this::renderQuickSetupBody) + GRID_GAP;
         y += section(g, "appearance", "Appearance", "Accent, interface size, font, blur and motion", x, y, sectionW,
@@ -1575,21 +1985,12 @@ public final class ClickGuiScreen extends DesignScreen {
     private void renderProfilesPage(GuiGraphics g) {
         int top = contentY;
         int viewH = contentH;
-        clip(g, menuX + 1, top - GRID_PAD + 1, menuW - 2, viewH + GRID_PAD - 1);
+        clip(g, bodyX + 1, top - GRID_PAD + 1, bodyW - 2, viewH + GRID_PAD - 1);
         pageShown = ease(pageShown, pageScroll);
         int w = Math.min(contentW, SECTION_MAX_W);
-        int x = menuX + (menuW - w) / 2;
+        int x = mainX;
         int y = top - Math.round(pageShown);
-        Fonts.draw(g, "Profiles", Fonts.Weight.SEMIBOLD, NAME, x, y, Theme.text());
-        y += Fonts.lineHeight(NAME) + 2;
-        for (String line : Fonts.wrap("Save everything (mods, settings, HUD layout) under a name, then switch between profiles in one click, for example one for crystal PvP and one for recording.",
-                Fonts.Weight.REGULAR, DESC, w)) {
-            Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x, y, Theme.muted());
-            y += Fonts.lineHeight(DESC);
-        }
-        y += 12;
-        g.fill(x, y, x + w, y + 1, Theme.line());
-        y = renderProfilesBody(x, y + 13, w);
+        y = renderProfilesBody(x, y, w);
         int contentHeight = y + Math.round(pageShown) - top + GRID_PAD;
         pageScroll = Math.max(0, Math.min(pageScroll, contentHeight - viewH));
         pageShown = Math.max(0, Math.min(pageShown, Math.max(0, contentHeight - viewH)));
@@ -1609,18 +2010,16 @@ public final class ClickGuiScreen extends DesignScreen {
         CosmeticsModule cosmetics = ShardClient.modules().get(CosmeticsModule.class);
         int top = contentY;
         int viewH = contentH;
-        clip(g, menuX + 1, top - GRID_PAD + 1, menuW - 2, viewH + GRID_PAD - 1);
+        clip(g, bodyX + 1, top - GRID_PAD + 1, bodyW - 2, viewH + GRID_PAD - 1);
         pageShown = ease(pageShown, pageScroll);
         int w = Math.min(contentW, COSMETICS_MAX_W);
-        int x = menuX + (menuW - w) / 2;
+        int x = mainX;
         int y = top - Math.round(pageShown);
         Map<String, PlayerCosmetics.Item> catalogue = cosmetics.catalogue();
         ShardApi.Me me = cosmetics.account();
         boolean signedIn = cosmetics.signedIn();
         Set<String> owned = me == null ? Set.of() : new HashSet<>(me.owned());
 
-        Fonts.draw(g, "Cosmetics", Fonts.Weight.SEMIBOLD, NAME, x, y, Theme.text());
-        y += Fonts.lineHeight(NAME) + 2;
         for (String line : Fonts.wrap("Equip anything you own. It saves to your Shard account: you wear it straight away, other Shard players see it within a minute, and the launcher shows it too.",
                 Fonts.Weight.REGULAR, DESC, w)) {
             Fonts.draw(g, line, Fonts.Weight.REGULAR, DESC, x, y, Theme.muted());
@@ -1773,7 +2172,7 @@ public final class ClickGuiScreen extends DesignScreen {
 
     /** Friends are managed in the launcher; the tab points there. */
     private void renderFriendsPage(GuiGraphics g) {
-        int cx = menuX + menuW / 2;
+        int cx = bodyX + bodyW / 2;
         int cy = contentY + contentH / 2 - 30;
         Icons.draw(g, "user", cx - 11, cy - 32, 22, Theme.subtle());
         Fonts.drawCentered(g, "Friends live in Shard Launcher", Fonts.Weight.MEDIUM, LABEL, cx, cy, Theme.text());

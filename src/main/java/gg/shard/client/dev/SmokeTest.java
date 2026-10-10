@@ -1375,11 +1375,11 @@ public final class SmokeTest {
             }
             case 2, 24, 49, 64, 79, 94, 109 -> parkCursor(mc);
             case 20 -> shot(mc, "menu-all.png", null, 3);
-            case 22 -> gui.showCategory(gg.shard.client.module.ModuleCategory.HUD);
-            case 35 -> shot(mc, "menu-hud.png", null, 0);
+            case 22 -> gui.showCategory(gg.shard.client.module.ModuleCategory.COMBAT);
+            case 35 -> shot(mc, "menu-combat.png", null, 0);
             case 37 -> moveCursor(mc, gui, 1);
             case 45 -> shot(mc, "menu-hover.png", null, 0);
-            case 47 -> gui.openModule(module("fps"));
+            case 47 -> gui.openModule(module("crystal-optimizer"));
             case 60 -> shot(mc, "menu-settings-view.png", null, 3);
             case 62 -> gui.selectTab(ClickGuiScreen.Tab.SETTINGS);
             case 75 -> shot(mc, "menu-settings-tab.png", null, 0);
@@ -1407,7 +1407,7 @@ public final class SmokeTest {
         }
     }
 
-    /** Puts the pointer on the n-th tile of the first row. */
+    /** Puts the pointer on the n-th mod card (two per row). */
     private static void moveCursor(Minecraft mc, ClickGuiScreen gui, int tile) {
         int[] c = gui.tileCentre(tile);
         double px = c[0] * gui.pixelsPerUnitNow();
