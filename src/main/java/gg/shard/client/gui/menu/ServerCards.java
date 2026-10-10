@@ -191,6 +191,23 @@ final class ServerCards {
         return ow + mw + 19;
     }
 
+    /** "64 / 500 playing" once the server has answered, else null. */
+    static String playingLine(ServerData data) {
+        if (data.players == null || data.state() != ServerData.State.SUCCESSFUL) return null;
+        return String.format(Locale.ROOT, "%,d / %,d playing", data.players.online(), data.players.max());
+    }
+
+    /** How full the server is, as a thin bar {@code w} wide right-aligned at {@code right}; false when unknown. */
+    static boolean capacityBar(GuiGraphics g, ServerData data, int right, int y, int w) {
+        if (data.players == null || data.state() != ServerData.State.SUCCESSFUL || data.players.max() <= 0) return false;
+        float full = Math.min(1f, Math.max(0f, data.players.online() / (float) data.players.max()));
+        int x = right - w;
+        Render2D.roundedRect(g, x, y, w, 3, 1, 0x1AFFFFFF);
+        int fw = full > 0f ? Math.max(3, Math.round(w * full)) : 0;
+        if (fw > 0) Render2D.roundedRect(g, x, y, fw, 3, 1, full >= 0.9f ? MenuScreen.WARNING : MenuScreen.SOFT);
+        return true;
+    }
+
     // ---- joining and memory ---------------------------------------------------------------------
 
     static void join(Screen from, ServerData data) {

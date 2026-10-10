@@ -18,16 +18,18 @@ import net.minecraft.client.gui.screens.options.AccessibilityOptionsScreen;
 import net.minecraft.client.gui.screens.options.LanguageSelectScreen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.client.multiplayer.ServerStatusPinger;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Shard's title screen in Shard Launcher's look: the launcher's crystal backdrop, its shard mark
- * glowing over the wordmark, then Multiplayer (the accent button), Singleplayer, (Realms), and a row
+ * glowing over the wordmark, then Singleplayer (the accent button, key S), Multiplayer (key M), (Realms), and a row
  * of Options, Mod Menu (when installed) and Quit; under them "Jump back in" rejoins the last server
  * played from Shard's server list. Language, accessibility and the Shard menu bottom left with the
  * version, the account switcher top right. Every button does what vanilla's does.
@@ -39,7 +41,7 @@ public final class ShardTitleScreen extends MenuScreen {
     private static final int GAP = 10;
     private static final int EDGE = 24;
     private static final int LOGO = 120;
-    private static final int RECENT_H = 60;
+    private static final int RECENT_H = 64;
     private static final String COPYRIGHT = "Copyright Mojang AB. Do not distribute!";
     private float fade;
     private ServerStatusPinger pinger;
@@ -121,13 +123,16 @@ public final class ShardTitleScreen extends MenuScreen {
         int y = wy + 40 + 20 + 36;
         int x = cx - COLUMN_W / 2;
 
+        // Singleplayer first (the accent button), then Multiplayer; S and M open them.
         Component blocked = multiplayerDisabledReason();
-        button(g, "multiplayer", x, y, COLUMN_W, BIG_H, "server", I18n.get("menu.multiplayer"), 15, Style.PRIMARY, blocked == null,
-                b -> openMultiplayer());
-        if (blocked != null && hovered("multiplayer", x, y, COLUMN_W, BIG_H)) pendingTooltip = new Object[]{blocked.getString(), cx, y};
+        button(g, "singleplayer", x, y, COLUMN_W, BIG_H, "user", I18n.get("menu.singleplayer"), 15, Style.PRIMARY, true,
+                b -> openSingleplayer());
+        keycap(g, "S", x + COLUMN_W - 14, y, BIG_H, true, "singleplayer");
         y += BIG_H + GAP;
-        button(g, "singleplayer", x, y, COLUMN_W, BIG_H, "user", I18n.get("menu.singleplayer"), 15, Style.NORMAL, true,
-                b -> minecraft.setScreen(new SelectWorldScreen(this)));
+        button(g, "multiplayer", x, y, COLUMN_W, BIG_H, "server", I18n.get("menu.multiplayer"), 15, Style.NORMAL, blocked == null,
+                b -> openMultiplayer());
+        if (blocked == null) keycap(g, "M", x + COLUMN_W - 14, y, BIG_H, false, "multiplayer");
+        if (blocked != null && hovered("multiplayer", x, y, COLUMN_W, BIG_H)) pendingTooltip = new Object[]{blocked.getString(), cx, y};
         y += BIG_H + GAP;
         if (realms) {
             button(g, "realms", x, y, COLUMN_W, BIG_H, "cloud", I18n.get("menu.online"), 15, Style.NORMAL, blocked == null,
@@ -206,10 +211,47 @@ public final class ShardTitleScreen extends MenuScreen {
         int pillW = ServerCards.pingPill(g, recent, goX - 10, y + (RECENT_H - 22) / 2);
         int tx = x + 10 + icon + 12;
         int textW = goX - 10 - pillW - 12 - tx;
-        int lh = Fonts.lineHeight(10) + 2 + Fonts.lineHeight(14);
+        String playing = ServerCards.playingLine(recent);
+        int lh = Fonts.lineHeight(10) + 2 + Fonts.lineHeight(14) + (playing != null ? 1 + Fonts.lineHeight(11) : 0);
         int ty = y + (RECENT_H - lh) / 2;
         Fonts.draw(g, "JUMP BACK IN", Fonts.Weight.SEMIBOLD, 10, tx, ty, MUTED);
-        Fonts.drawClipped(g, ServerCards.displayName(recent), Fonts.Weight.SEMIBOLD, 14, tx, ty + Fonts.lineHeight(10) + 2, textW, TEXT);
+        int ny = ty + Fonts.lineHeight(10) + 2;
+        Fonts.drawClipped(g, ServerCards.displayName(recent), Fonts.Weight.SEMIBOLD, 14, tx, ny, textW, TEXT);
+        if (playing != null) Fonts.drawClipped(g, playing, Fonts.Weight.REGULAR, 11, tx, ny + Fonts.lineHeight(14) + 1, textW, SOFT);
+    }
+
+    /** A small key hint ("S") right-aligned at {@code right} inside a button; lifts with the button on hover. */
+    private void keycap(GuiGraphics g, String letter, int right, int y, int h, boolean onAccent, String buttonKey) {
+        int kw = Math.max(20, Fonts.widthInt(letter, Fonts.Weight.MEDIUM, 11) + 12);
+        int kh = 20;
+        // The button's own hover amount (read, not stepped) so the hint lifts with it.
+        int lift = Math.round(Render2D.easeInOut(Math.max(0f, animValue(buttonKey + ":hov"))));
+        int ky = y + (h - kh) / 2 - lift;
+        int border = onAccent ? 0x3306070B : BORDER_HOVER;
+        int color = onAccent ? 0x9906070B : SUBTLE;
+        Render2D.roundedOutline(g, right - kw, ky, kw, kh, 5, border);
+        Fonts.drawCentered(g, letter, Fonts.Weight.MEDIUM, 11, right - kw / 2, ky + (kh - Fonts.lineHeight(11)) / 2, color);
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (!accounts.open() && event.modifiers() == 0) {
+            if (event.key() == GLFW.GLFW_KEY_S) {
+                playClick();
+                openSingleplayer();
+                return true;
+            }
+            if (event.key() == GLFW.GLFW_KEY_M && multiplayerDisabledReason() == null) {
+                playClick();
+                openMultiplayer();
+                return true;
+            }
+        }
+        return super.keyPressed(event);
+    }
+
+    private void openSingleplayer() {
+        minecraft.setScreen(new SelectWorldScreen(this));
     }
 
     /** Joins the last server; without the multiplayer safety notice accepted, opens the list instead. */

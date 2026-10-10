@@ -596,9 +596,13 @@ public final class ShardMultiplayerScreen extends MenuScreen {
         ServerCards.drawIcon(g, e, ix, iy, ICON);
 
         int right = x + w - 16;
-        int pillW = ServerCards.pingPill(g, data, right, y + 15);
-        int playersW = ServerCards.players(g, data, right, y + 47);
-        int statusW = Math.max(pillW, playersW);
+        int pillW = ServerCards.pingPill(g, data, right, y + 12);
+        int playersY = y + 42;
+        int playersW = ServerCards.players(g, data, right, playersY);
+        // How full it is, under the player count.
+        int barW = 90;
+        boolean bar = ServerCards.capacityBar(g, data, right, playersY + Fonts.lineHeight(12) + 5, barW);
+        int statusW = Math.max(Math.max(pillW, playersW), bar ? barW : 0);
 
         // Hover actions: favourite, move up/down, edit, delete.
         boolean fav = ServerCards.isFavourite(favourites, data);
@@ -635,13 +639,13 @@ public final class ShardMultiplayerScreen extends MenuScreen {
 
         // The vanilla player list tooltip, in Shard's style.
         if (hover && playersW > 0 && data.playerList != null && !data.playerList.isEmpty()
-                && Render2D.hovered(mouseX, mouseY, right - playersW, y + 44, playersW, 22)) {
+                && Render2D.hovered(mouseX, mouseY, right - playersW, playersY - 3, playersW, 22)) {
             StringBuilder names = new StringBuilder();
             for (int i = 0; i < Math.min(12, data.playerList.size()); i++) {
                 if (i > 0) names.append(", ");
                 names.append(data.playerList.get(i).getString());
             }
-            pendingTooltip = new Object[]{Fonts.clip(names.toString(), Fonts.Weight.MEDIUM, 11, 420), right - playersW / 2, y + 44};
+            pendingTooltip = new Object[]{Fonts.clip(names.toString(), Fonts.Weight.MEDIUM, 11, 420), right - playersW / 2, playersY - 3};
         }
     }
 

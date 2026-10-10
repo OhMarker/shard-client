@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.0
+
+- **Singleplayer is now the main button** on the title screen, with Multiplayer under it.
+- **Keyboard shortcuts on the title screen:** press S for Singleplayer or M for Multiplayer (shown
+  on the buttons).
+- **Jump back in shows how many people are playing** ("64 / 500 playing").
+- **Server list:** a thin bar under each server's player count shows how full it is (it turns
+  yellow when the server is nearly full).
+
 ## 0.12.0
 
 - **New title screen and server list in Shard Launcher's look.** The launcher's dark backdrop with

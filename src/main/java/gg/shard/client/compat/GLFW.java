@@ -32,7 +32,8 @@ public final class GLFW {
             GLFW_KEY_RIGHT_BRACKET = InputConstants.KEY_RBRACKET, GLFW_KEY_GRAVE_ACCENT = InputConstants.KEY_GRAVE;
     public static final int GLFW_KEY_0 = InputConstants.KEY_0, GLFW_KEY_7 = InputConstants.KEY_7, GLFW_KEY_9 = InputConstants.KEY_9;
     public static final int GLFW_KEY_A = InputConstants.KEY_A, GLFW_KEY_C = InputConstants.KEY_C, GLFW_KEY_F = InputConstants.KEY_F,
-            GLFW_KEY_G = InputConstants.KEY_G, GLFW_KEY_R = InputConstants.KEY_R, GLFW_KEY_V = InputConstants.KEY_V,
+            GLFW_KEY_G = InputConstants.KEY_G, GLFW_KEY_M = InputConstants.KEY_M, GLFW_KEY_R = InputConstants.KEY_R,
+            GLFW_KEY_S = InputConstants.KEY_S, GLFW_KEY_V = InputConstants.KEY_V,
             GLFW_KEY_Y = InputConstants.KEY_Y, GLFW_KEY_Z = InputConstants.KEY_Z;
     public static final int GLFW_KEY_ESCAPE = InputConstants.KEY_ESCAPE, GLFW_KEY_ENTER = InputConstants.KEY_RETURN,
             GLFW_KEY_TAB = InputConstants.KEY_TAB, GLFW_KEY_BACKSPACE = InputConstants.KEY_BACKSPACE, GLFW_KEY_INSERT = InputConstants.KEY_INSERT,
