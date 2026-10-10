@@ -1718,7 +1718,7 @@ public final class ClickGuiScreen extends DesignScreen {
             }
             y += ((items.size() + cols - 1) / cols) * (tileH + gap);
             if (anyLocked) {
-                Fonts.draw(g, "Locked items are in the Shop in Shard Launcher; spend the tokens you earn by playing.", Fonts.Weight.REGULAR, HINT, x, y + 2, Theme.subtle());
+                Fonts.draw(g, "Locked items are in the Shop in Shard Launcher; spend the Shards you earn by playing, or get more in its Store.", Fonts.Weight.REGULAR, HINT, x, y + 2, Theme.subtle());
                 y += Fonts.lineHeight(HINT) + 6;
             }
         }

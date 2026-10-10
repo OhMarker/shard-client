@@ -9,6 +9,8 @@
   point to the launcher's shop. Filter by Capes, Shields or Bandanas.
 - **The menu always opens on Mods.** "Open where you left off" now only brings back your last Mods
   category.
+- **Tokens are now called Shards.** Same balance and settings; you can also buy Shards in Shard
+  Launcher's new Store.
 - Fixed: the game crashed when the pointer rested on a two- or three-option switch (for example on
   the Settings page) in the Shard menu.
 

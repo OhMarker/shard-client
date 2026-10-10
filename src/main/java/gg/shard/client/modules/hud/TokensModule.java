@@ -8,23 +8,29 @@ import gg.shard.client.modules.visual.CosmeticsModule;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 
-/** Your Shard token balance and the time to the next 10 (from the Cosmetics module's account). */
+/** Your Shard balance and the time to the next 10 (from the Cosmetics module's account). */
 public final class TokensModule extends HudModule {
-    private final BoolSetting showNext = add(new BoolSetting("Time to next", "Minutes until the next 10 tokens", true));
+    private final BoolSetting showNext = add(new BoolSetting("Time to next", "Minutes until the next 10 Shards", true));
 
     public TokensModule() {
-        super("Tokens", "Your Shard tokens for buying capes.", 0.02, 0.40);
+        super("Shards", "Your Shards for buying cosmetics.", 0.02, 0.40);
     }
 
     @Override
     protected String defaultLabel() {
-        return "Tokens";
+        return "Shards";
+    }
+
+    // 0.11.x and older called the module (and its config key) "Tokens".
+    @Override
+    protected String legacyKey() {
+        return "tokens";
     }
 
     @Override
     public String about() {
-        return "Shows how many Shard tokens you have and, optionally, the minutes until the next 10. You earn "
-                + "10 tokens for every 10 minutes you play and spend them on capes in Shard Launcher.";
+        return "Shows how many Shards you have and, optionally, the minutes until the next 10. You earn "
+                + "10 Shards for every 10 minutes you play and spend them on cosmetics in Shard Launcher.";
     }
 
     @Override

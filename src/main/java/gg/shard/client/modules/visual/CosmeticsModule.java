@@ -50,8 +50,8 @@ public final class CosmeticsModule extends Module {
     private final BoolSetting showBandana = add(new BoolSetting("Show my bandana", "Wear the bandana you equipped (hidden under a helmet)", true));
     private final BoolSetting showOthers = add(new BoolSetting("Show other players' cosmetics", "Show the capes, shields and bandanas other Shard players equipped", true));
     private final BoolSetting onElytra = add(new BoolSetting("On elytra too", "Paint elytras with the cape's elytra artwork", true));
-    private final BoolSetting earnTokens = add(new BoolSetting("Earn tokens", "Earn 10 Shard tokens for every 10 minutes you play", true));
-    private final BoolSetting tokenToasts = add(new BoolSetting("Token pop-ups", "A small pop-up each time you earn tokens", true));
+    private final BoolSetting earnTokens = add(new BoolSetting("Earn Shards", "Earn 10 Shards for every 10 minutes you play", true));
+    private final BoolSetting tokenToasts = add(new BoolSetting("Shard pop-ups", "A small pop-up each time you earn Shards", true));
 
     private final CapeLibrary library = new CapeLibrary();
     private final ShardApi api = new ShardApi(library.cacheDir());
@@ -80,7 +80,7 @@ public final class CosmeticsModule extends Module {
     private double lastZ = Double.NaN;
 
     public CosmeticsModule() {
-        super("Cosmetics", "Capes, shields and bandanas for every Shard player, and tokens for playing.", ModuleCategory.VISUALS);
+        super("Cosmetics", "Capes, shields and bandanas for every Shard player, and Shards for playing.", ModuleCategory.VISUALS);
     }
 
     @Override
@@ -106,8 +106,8 @@ public final class CosmeticsModule extends Module {
     @Override
     public String about() {
         return "Shows the cape, shield and bandana every Shard player equipped in Shard Launcher, including yours, and earns you "
-                + "10 Shard tokens for every 10 minutes you play (only while you are moving; standing idle for "
-                + "five minutes pauses it). Spend tokens on cosmetics in the launcher. You sign in with Mojang's own "
+                + "10 Shards for every 10 minutes you play (only while you are moving; standing idle for "
+                + "five minutes pauses it). Spend Shards on cosmetics in the launcher or in the Cosmetics tab. You sign in with Mojang's own "
                 + "check, the same one servers use, so your account details never reach Shard. Purely visual: "
                 + "nothing is sent to the Minecraft server, and players without Shard see normal capes.";
     }
@@ -191,6 +191,15 @@ public final class CosmeticsModule extends Module {
             if (!all.has(showOthers.key())) showOthers.fromJson(value);
             return;
         }
+        // 0.11.x and older said "tokens" where it now says "Shards".
+        if (key.equals("earn-tokens")) {
+            if (!all.has(earnTokens.key())) earnTokens.fromJson(value);
+            return;
+        }
+        if (key.equals("token-pop-ups")) {
+            if (!all.has(tokenToasts.key())) tokenToasts.fromJson(value);
+            return;
+        }
         super.migrateSetting(key, value, all, version);
     }
 
@@ -263,7 +272,7 @@ public final class CosmeticsModule extends Module {
                 ShardClient.LOGGER.info("Cosmetics: Shard sign-in failed: {}", cause.getMessage());
                 return;
             }
-            accountStatus = "Signed in as " + me.name() + ", " + me.tokens() + " tokens";
+            accountStatus = "Signed in as " + me.name() + ", " + me.tokens() + " Shards";
             ShardClient.LOGGER.info("Cosmetics: {}", accountStatus);
             nextBeat = ticks + 20 * 5; // first heartbeat soon, to start the clock
             looked.clear();
@@ -279,11 +288,11 @@ public final class CosmeticsModule extends Module {
                 ShardClient.LOGGER.debug("Cosmetics: heartbeat failed", error);
                 return;
             }
-            accountStatus = "Signed in as " + me.name() + ", " + me.tokens() + " tokens";
+            accountStatus = "Signed in as " + me.name() + ", " + me.tokens() + " Shards";
             int earned = me.tokens() - before;
             if (earned > 0 && tokenToasts.get()) {
                 SystemToast.add(Minecraft.getInstance().getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                        Component.literal("+" + earned + " Shard tokens"),
+                        Component.literal("+" + earned + " Shards"),
                         Component.literal("You have " + me.tokens() + ". Spend them on cosmetics in Shard Launcher."));
             }
         }));
@@ -363,7 +372,7 @@ public final class CosmeticsModule extends Module {
             }
             LocalPlayer player = Minecraft.getInstance().player;
             if (player != null) worn.put(player.getUUID(), me.equipped());
-            accountStatus = "Signed in as " + me.name() + ", " + me.tokens() + " tokens";
+            accountStatus = "Signed in as " + me.name() + ", " + me.tokens() + " Shards";
             nextLookup = 0;
             done.complete(me);
         }));
