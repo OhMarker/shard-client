@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.1
+
+- Fixed: backing out of Create World (what Singleplayer opens when you have no worlds yet) showed
+  Minecraft's old title screen instead of Shard's.
+
 ## 0.13.0
 
 - **Singleplayer is now the main button** on the title screen, with Multiplayer under it.

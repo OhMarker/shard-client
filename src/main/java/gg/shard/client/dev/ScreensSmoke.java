@@ -112,6 +112,9 @@ final class ScreensSmoke {
                 // The title screen's Jump back in card shows the smoke server.
                 settings.lastServer.set(server);
                 settings.jumpBackIn.set(true);
+                // No screen with no world (cancelling Create World does this) is Shard's title screen too.
+                mc.setScreen(null);
+                SmokeTest.SUMMARY.addProperty("screensNullIsShard", mc.screen instanceof ShardTitleScreen);
                 mc.setScreen(new TitleScreen());
                 SmokeTest.SUMMARY.addProperty("screensTitleIsShard", mc.screen instanceof ShardTitleScreen);
                 SmokeTest.SUMMARY.addProperty("screensBridge", AccountManager.get().available());
