@@ -1,5 +1,20 @@
 # Status (handoff for a new session)
 
+## 0.13.0: Singleplayer first, title shortcuts, capacity bar (released 2026-10-10)
+- Released: https://github.com/OhMarker/shard-client/releases/tag/v0.13.0 (17 jars built from a clean
+  worktree of commit d48d7ab, which sits on 0.12.0 alone), meta latest 0.13.0 (meta commit 1a39cb3);
+  the downloaded 26.3 jar's sha512 matches the manifest.
+- From mockup https://claude.ai/artifact/WNWZvLSUrHPyaLg9MKrT3E (design A, owner chose it and asked to
+  swap the two big buttons): Singleplayer is the accent button above Multiplayer; S / M open them
+  (keycap hints on the buttons; `compat.GLFW` gained KEY_M and KEY_S for 26.3); Jump back in shows
+  "N / M playing" (`ServerCards.playingLine`); server rows draw a capacity bar under the player
+  count (`ServerCards.capacityBar`, yellow at 90%).
+- Verified: all 17 versions build with tests; `-PsmokeOnly=screens -PfakeBridge` at 1920x1080 passed
+  on 1.21.11, 1.21 and 26.3. Not tried: pressing S / M in game (the smoke pass clicks hits).
+- Another session's branch `in-game-menu-redesign` (mod menu redesign, 16b35ed) also carries an
+  earlier copy of this commit (21a88a2) on top of it; main has d48d7ab instead. Merging that branch
+  into main brings the same changes twice (identical content).
+
 ## 0.12.0: menus in the launcher's look (released 2026-10-10)
 - Released: https://github.com/OhMarker/shard-client/releases/tag/v0.12.0 (17 jars from commit
   ccbbd5e; downloaded 26.3 jar's sha512 matches), meta latest 0.12.0 (meta commit 765d1ed).
