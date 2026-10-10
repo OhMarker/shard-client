@@ -1,17 +1,5 @@
 # Status (handoff for a new session)
 
-## 0.11.0: menus in the launcher's look (2026-10-09, not committed yet)
-- Title screen and server list redesigned to match Shard Launcher (owner approved the mockup at
-  https://claude.ai/artifact/YBpzVmNjMBApnVoiiNbMVZ after rejecting the panorama version): launcher
-  backdrop (`gui/menu/ShardBackdrop`), launcher shard mark (`ShardMarkRaster`), launcher palette in
-  `MenuScreen`, accent Multiplayer/Join buttons with glow, Jump back in card, server cards with
-  ping pill, address fallback for "Minecraft Server", hover actions (favourite/move/edit/delete),
-  favourites on top, search (Ctrl+F or type), panel sized to its rows, empty state. Shared server
-  code in `ServerCards`. Settings → Menus: Minecraft background, Jump back in. Why: DECISIONS.md.
-- Verified on 1.21.11: 151 JUnit tests, `-PsmokeOnly=screens -PfakeBridge` at 1920x1080 (shots in
-  `smoke-redesign/`; the pass now also shoots `screens-multiplayer-search.png`, sets Jump back in to
-  the smoke server and joins the smoke server by address).
-
 ## 0.11.0: in-game cosmetics, menu opens on Mods, hover crash fixed, Shards (released 2026-10-10)
 - Released: https://github.com/OhMarker/shard-client/releases/tag/v0.11.0 (17 jars built from a clean
   worktree of commit 43f8067, so another session's uncommitted menu work is not in them); meta latest 0.11.0.
