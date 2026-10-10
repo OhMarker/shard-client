@@ -1,6 +1,8 @@
 # Status (handoff for a new session)
 
-## 0.12.0: menus in the launcher's look (2026-10-10)
+## 0.12.0: menus in the launcher's look (released 2026-10-10)
+- Released: https://github.com/OhMarker/shard-client/releases/tag/v0.12.0 (17 jars from commit
+  ccbbd5e; downloaded 26.3 jar's sha512 matches), meta latest 0.12.0 (meta commit 765d1ed).
 - Title screen and server list redesigned to match Shard Launcher (owner approved the mockup at
   https://claude.ai/artifact/YBpzVmNjMBApnVoiiNbMVZ after rejecting the panorama version): launcher
   backdrop (`gui/menu/ShardBackdrop`), launcher shard mark (`ShardMarkRaster`), launcher palette in
