@@ -14,7 +14,8 @@
   DEV_AUTH:1`, seeded with `node tools/smoke-wardrobe-seed.mjs`, plus `-PapiBase` and
   `-PcatalogueUrl`) passed on 1.21.11, 1.21 and 26.3: opens on Mods, survives 20 frames hovering a
   segment, equips the Halloween cape from the tab (worn in F5), takes it off. Shots in
-  `smoke-wardrobe*/`. Not yet run on the other 14 versions.
+  `smoke-wardrobe*/`. Passed on all 17 versions (1.21.4 needed a second run: the JVM died with
+  0xC0000005 during vanilla bootstrap before Shard loaded, then passed).
 - To release: meta `shard-manifest.json` builds for 0.11.0 and a GitHub release with the 17 jars
   (`build/libs/0.11.0/`), as for 0.10.0.
 
