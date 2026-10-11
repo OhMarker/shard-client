@@ -98,11 +98,15 @@ public final class ShardMultiplayerScreen extends MenuScreen {
 
     // ---- lifecycle (mirrors JoinMultiplayerScreen) ----------------------------------------------
 
+    /** Set when another screen replaced this one; init() then reloads the list and pings again. */
+    private boolean stale;
+
     @Override
     protected void init() {
-        if (servers != null) return; // already set up (resize)
+        if (servers != null && !stale) return; // already set up (resize)
+        stale = false;
         pinger = new ServerStatusPinger();
-        servers = new ServerList(minecraft);
+        if (servers == null) servers = new ServerList(minecraft);
         servers.load();
         favourites = ServerCards.favourites();
         lanList = new LanServerDetection.LanServerList();
@@ -143,7 +147,10 @@ public final class ShardMultiplayerScreen extends MenuScreen {
         if (pinger != null) pinger.removeAll();
         for (ServerCards.Entry e : entries.values()) e.icon.close();
         entries.clear();
-        servers = null; // reloaded (and pinged again) when this screen is shown again, as vanilla does
+        // The list stays: Add, Edit, Delete and Direct connection come back through callbacks that
+        // use it before this screen is shown again (nulling it here broke all four, 0.12.0-0.14.0).
+        // It is reloaded and pinged again in init().
+        stale = true;
         super.removed();
     }
 

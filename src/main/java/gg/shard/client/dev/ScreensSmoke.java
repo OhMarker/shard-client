@@ -28,6 +28,8 @@ final class ScreensSmoke {
     private static int t = -1;
     private static String server;
     private static boolean joined;
+    /** "List" or "Direct": how the pass joined the smoke server. */
+    private static String joinedBy = "List";
     private static int inWorldTicks;
 
     static void tick(Minecraft mc) {
@@ -63,12 +65,12 @@ final class ScreensSmoke {
         if (joined) {
             if (mc.level != null && mc.player != null) {
                 if (++inWorldTicks == 60) {
-                    SmokeTest.SUMMARY.addProperty("screensJoinedFromList", true);
+                    SmokeTest.SUMMARY.addProperty("screensJoinedFrom" + joinedBy, true);
                     SmokeTest.SUMMARY.addProperty("screensCanSwitchInWorld", AccountManager.get().canSwitch());
                     SmokeTest.finish(mc);
                 }
             } else if (++t > 2000) {
-                SmokeTest.SUMMARY.addProperty("screensJoinedFromList", false);
+                SmokeTest.SUMMARY.addProperty("screensJoinedFrom" + joinedBy, false);
                 SmokeTest.finish(mc);
             }
             return;
@@ -199,6 +201,38 @@ final class ScreensSmoke {
             case 432 -> SmokeTest.shot(mc, "screens-multiplayer-search.png", null);
             case 434 -> {
                 if (mc.screen instanceof ShardMultiplayerScreen s) s.searchFor("");
+            }
+            case 436 -> click("direct");
+            case 444 -> {
+                // Direct connection: type the address, then the Join button must be clickable.
+                boolean open = mc.screen instanceof net.minecraft.client.gui.screens.DirectJoinServerScreen;
+                SmokeTest.SUMMARY.addProperty("screensDirectOpens", open);
+                if (open) {
+                    for (var child : mc.screen.children()) {
+                        if (child instanceof net.minecraft.client.gui.components.EditBox box) box.setValue(server);
+                    }
+                }
+            }
+            case 448 -> {
+                SmokeTest.shot(mc, "screens-direct.png", null);
+                if (mc.screen instanceof net.minecraft.client.gui.screens.DirectJoinServerScreen) {
+                    net.minecraft.client.gui.components.Button join = null;
+                    for (var child : mc.screen.children()) {
+                        if (child instanceof net.minecraft.client.gui.components.Button b
+                                && b.getMessage().getString().equals(net.minecraft.network.chat.Component.translatable("selectServer.select").getString())) join = b;
+                    }
+                    SmokeTest.SUMMARY.addProperty("screensDirectJoinActive", join != null && join.active);
+                    if (join != null && join.active) {
+                        ShardClient.LOGGER.info("Smoke screens: joining {} by Direct connection", server);
+                        //? if >=1.21.9 {
+                        join.onPress(new net.minecraft.client.input.KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, 0, 0));
+                        //?} else {
+                        /*join.onPress();
+                        *///?}
+                        joinedBy = "Direct";
+                        joined = true;
+                    }
+                }
             }
             case 456 -> {
                 if (mc.screen instanceof ShardMultiplayerScreen s) s.selectServer(indexOf(s.serverList(), server));
