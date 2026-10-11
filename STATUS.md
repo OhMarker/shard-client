@@ -1,5 +1,15 @@
 # Status (handoff for a new session)
 
+## 0.14.1: Direct Connection, Add, Edit, Delete fixed (released 2026-10-11)
+- Released: https://github.com/OhMarker/shard-client/releases/tag/v0.14.1 (17 jars from a clean
+  worktree of 5f36dea), meta latest 0.14.1 (8c21cf7); downloaded 1.21.8 jar's sha512 matches.
+- Owner's friend reported Direct Connection's Join doing nothing. Cause (since 0.12.0, every
+  version): `ShardMultiplayerScreen.removed()` set `servers = null`, but the Direct / Add / Edit /
+  Delete screens call back into it before it is shown again -> NPE in the callback. Now a `stale`
+  flag; init() reloads and pings again. The screens pass opens Direct connection, types the smoke
+  server and joins through it (`screensJoinedFromDirect`); it failed with the NPE before the fix and
+  passed on all 17 versions after it. Add, Edit and Delete share the fix but have no smoke step yet.
+
 ## 0.14.0: new mod menu (released 2026-10-10)
 - Released: https://github.com/OhMarker/shard-client/releases/tag/v0.14.0 (17 jars from a clean
   worktree of commit b3e3f9a), meta latest 0.14.0 (meta commit 0f2b265); the downloaded 1.21.11
