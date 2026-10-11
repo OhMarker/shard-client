@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.1
+
+- Fixed: Direct Connection's Join button did nothing in Shard's server list. Adding, editing and
+  deleting servers did not save either.
+
 ## 0.14.0
 
 - **New mod menu.** A sidebar on the left with search, All mods, Favorites, Enabled and every
