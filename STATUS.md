@@ -1,5 +1,15 @@
 # Status (handoff for a new session)
 
+## Release policy (owner, 2026-10-11)
+- **No more small releases.** Commit work, but do not publish GitHub releases or move meta's
+  `latest` until the owner asks for the one big release. The launcher's Updates list was trimmed to
+  the installed build (0.14.1, no notes); older GitHub releases stay up for testing downloads.
+
+## Unreleased
+- Menus 12% smaller: `Scale.menuPixelsPerUnit` is 1.1 px/unit at 1080p (was 1.25), rounded down to
+  0.05 (fonts raster to hundredths, so text stays 1:1). Screens and menu passes at 1920x1080 on
+  1.21.11 look right; the only clipped text is "Where the window is" (it was clipped before too).
+
 ## 0.14.1: Direct Connection, Add, Edit, Delete fixed (released 2026-10-11)
 - Released: https://github.com/OhMarker/shard-client/releases/tag/v0.14.1 (17 jars from a clean
   worktree of 5f36dea), meta latest 0.14.1 (8c21cf7); downloaded 1.21.8 jar's sha512 matches.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased (one big release later)
+
+- Shard's menus (mod menu, title screen, server list) are about 12% smaller.
+
 ## 0.14.1
 
 - Fixed: Direct Connection's Join button did nothing in Shard's server list. Adding, editing and
